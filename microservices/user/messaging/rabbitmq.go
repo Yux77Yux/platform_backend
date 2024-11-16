@@ -14,8 +14,6 @@ import (
 )
 
 var (
-	RabbitMQ        *pkgMQ.RabbitMQClass
-	err             error
 	exchangesConfig = map[string]string{
 		"register_exchange": "direct",
 		"login_exchange":    "direct",
@@ -24,16 +22,25 @@ var (
 )
 
 func init() {
-	connStr := userConfig.RABBITMQ_STR
-	RabbitMQ, err = pkgMQ.OpenRabbitMQ(connStr)
+	RabbitMQ, err := GetRabbitMQClient()
 	wiredErr := fmt.Errorf("failed to connect the rabbit client: %w", err)
 	log.Printf("error: %v", wiredErr)
 
 	for exchange, kind := range exchangesConfig {
-		err = RabbitMQ.ExchangeDeclare(exchange, kind, true, false, false, false, nil)
+		err := RabbitMQ.ExchangeDeclare(exchange, kind, true, false, false, false, nil)
 		wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
 		log.Printf("error: %v", wiredErr)
 	}
+}
+
+func GetRabbitMQClient() (*pkgMQ.RabbitMQClass, error) {
+	connStr := userConfig.RABBITMQ_STR
+	RabbitMQ, err := pkgMQ.OpenRabbitMQ(connStr)
+	if err != nil {
+		return nil, err
+	}
+
+	return RabbitMQ, nil
 }
 
 func SendMessage(exchange string, routeKey string, req proto.Message) error {
@@ -50,6 +57,11 @@ func SendMessage(exchange string, routeKey string, req proto.Message) error {
 	body, err = proto.Marshal(req)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	RabbitMQ, err := GetRabbitMQClient()
+	if err != nil {
+		return fmt.Errorf("failed to connect the rabbit client: %w", err)
 	}
 
 	for i := 0; i < retries; i++ {
@@ -83,6 +95,13 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 		msgs  <-chan amqp.Delivery
 		err   error
 	)
+
+	RabbitMQ, err := GetRabbitMQClient()
+	if err != nil {
+		wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
+		log.Printf("error: %v", wiredErr)
+		return
+	}
 
 	queue, err = RabbitMQ.QueueDeclare(queueName, true, false, true, false, nil)
 	wiredErr := fmt.Errorf("failed to declare a queue %s: %w", queueName, err)

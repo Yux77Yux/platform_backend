@@ -24,12 +24,11 @@ const (
 	delay   = 2 * time.Second
 )
 
-var (
-	err error
-)
-
 func OpenRabbitMQ(connStr string) (*RabbitMQClass, error) {
-	RabbitMQClient := &RabbitMQClass{}
+	var (
+		RabbitMQClient *RabbitMQClass = &RabbitMQClass{}
+		err            error
+	)
 
 	for i := 0; i < retries; i++ {
 		RabbitMQClient.rabbitmqClient, err = amqp.Dial(connStr)
@@ -56,7 +55,7 @@ type RabbitMQClass struct {
 }
 
 func (r *RabbitMQClass) Close() {
-	if err = r.channel.Close(); err != nil {
+	if err := r.channel.Close(); err != nil {
 		wiredErr := fmt.Errorf("failed to close channel: %w", err)
 		log.Printf("error: %v", wiredErr)
 	}
@@ -69,7 +68,7 @@ func (r *RabbitMQClass) ExchangeDeclare(name string, kind string, durable bool, 
 		return fmt.Errorf("please choose one of \"\" fanout direct topic")
 	}
 
-	if err = r.channel.ExchangeDeclare(name, kind, durable, autoDelete, internal, noWait, args); err != nil {
+	if err := r.channel.ExchangeDeclare(name, kind, durable, autoDelete, internal, noWait, args); err != nil {
 		return err
 	}
 
@@ -86,7 +85,7 @@ func (r *RabbitMQClass) QueueDeclare(name string, durable bool, autoDelete bool,
 }
 
 func (r *RabbitMQClass) ExchangeBind(destination string, key string, source string, noWait bool, args amqp.Table) error {
-	if err = r.channel.ExchangeBind(destination, key, source, noWait, args); err != nil {
+	if err := r.channel.ExchangeBind(destination, key, source, noWait, args); err != nil {
 		return err
 	}
 
@@ -94,7 +93,7 @@ func (r *RabbitMQClass) ExchangeBind(destination string, key string, source stri
 }
 
 func (r *RabbitMQClass) QueueBind(name string, key string, exchange string, noWait bool, args amqp.Table) error {
-	if err = r.channel.QueueBind(name, key, exchange, noWait, args); err != nil {
+	if err := r.channel.QueueBind(name, key, exchange, noWait, args); err != nil {
 		return err
 	}
 
@@ -109,7 +108,7 @@ func (r *RabbitMQClass) Publish(
 	immediate bool,
 	msg amqp.Publishing) error {
 
-	if err = r.channel.PublishWithContext(ctx, exchange, key, false, false, msg); err != nil {
+	if err := r.channel.PublishWithContext(ctx, exchange, key, false, false, msg); err != nil {
 		return err
 	}
 

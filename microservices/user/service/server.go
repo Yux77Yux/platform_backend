@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net"
@@ -11,15 +10,37 @@ import (
 	"google.golang.org/grpc"
 )
 
+func ServerRun(done chan struct{}) func() {
+	grpcServer := grpc.NewServer()
+	go InitServer(grpcServer)
+
+	return func() {
+		go func() {
+			log.Printf("info: shutting down gracefully...")
+			grpcServer.GracefulStop()
+			close(done)
+		}()
+
+		// 等待关闭完成或超时
+		select {
+		case <-done:
+			log.Println("info: server stopped gracefully.")
+		case <-time.After(98 * time.Second):
+			log.Println("warning: timeout reached. Forcing shutdown.")
+			grpcServer.Stop() // 强制关闭服务器
+			close(done)
+		}
+	}
+}
+
 type Server struct {
 	generatedUser.UnimplementedUserServiceServer
 }
 
-func ServerRun(ctx context.Context, done chan struct{}) {
+func InitServer(grpcServer *grpc.Server) {
 	var (
-		grpcServer *grpc.Server
-		lis        net.Listener
-		err        error
+		lis net.Listener
+		err error
 	)
 
 	lis, err = net.Listen("tcp", ":8080")
@@ -29,7 +50,6 @@ func ServerRun(ctx context.Context, done chan struct{}) {
 	}
 
 	go func() {
-		grpcServer = grpc.NewServer()
 		generatedUser.RegisterUserServiceServer(grpcServer, &Server{}) // 注册 User 服务
 
 		log.Println("info: server is running on port :50020")
@@ -39,22 +59,6 @@ func ServerRun(ctx context.Context, done chan struct{}) {
 		}
 	}()
 
-	// 等待信号
-	sig := <-ctx.Done()
-
-	go func() {
-		log.Printf("info: received signal: %s. Shutting down gracefully...", sig)
-		grpcServer.GracefulStop()
-		close(done)
-	}()
-
-	// 等待关闭完成或超时
-	select {
-	case <-done:
-		log.Println("info: server stopped gracefully.")
-	case <-time.After(98 * time.Second):
-		log.Println("warning: timeout reached. Forcing shutdown.")
-		grpcServer.Stop() // 强制关闭服务器
-		close(done)
-	}
+	forever := make(chan struct{})
+	<-forever
 }
