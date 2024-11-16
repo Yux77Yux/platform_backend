@@ -1,0 +1,20 @@
+services:
+  envoy-service:
+    image: envoyproxy/envoy:tools-dev
+    container_name: envoy-gateway
+    ports:
+      - "8080:8080"  
+    networks:
+      - auth-net
+      - user-net
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml
+      - ./descriptor.pb:/etc/envoy/descriptor.pb
+    environment:
+      - ENV_HOST=host.docker.internal  # 设置宿主机的域名
+
+networks:
+  auth-net:
+    driver: bridge
+  user-net:
+    driver: bridge

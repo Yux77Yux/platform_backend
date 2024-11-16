@@ -1,0 +1,209 @@
+# 公共
+# 定义命名空间
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-user
+
+#microservice user
+# user StorageClass
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: user-mysql-class
+provisioner: disk.alibabacloud.com
+parameters:
+  storageType: "cloud"  # "cloud" 或 "cloud_ssd"
+  fsType: ext4
+reclaimPolicy: Delete  # 回收策略
+
+# user PersistentVolumeClaim
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: user-mysql-pvc
+  namespace: platform-user
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  #storageClassName: user-mysql-class  # 指定要使用的 StorageClass
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-mysql-configMap-primary
+  namespace: platform-user
+data:
+  init.sql: |
+    ALTER USER 'yuxyuxx'@'%' IDENTIFIED WITH mysql_native_password BY 'yuxyuxx';
+    GRANT REPLICATION SLAVE ON *.* TO 'yuxyuxx'@'%';
+    FLUSH PRIVILEGES;
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-mysql-configMap-replica
+  namespace: platform-user
+data:
+  init.sql: |
+    CHANGE MASTER TO 
+    MASTER_HOST='user-mysql-primary-service', 
+    MASTER_USER='yuxyuxx', 
+    MASTER_PASSWORD='yuxyuxx',
+    MASTER_LOG_FILE='user-bin.000001', 
+    MASTER_LOG_POS=4;
+    START REPLICA;
+
+# user primary Deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-mysql-deployment-primary
+  namespace: platform-user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-mysql-deployment-primary
+  template:
+    metadata:
+      labels:
+        app: user-mysql-deployment-primary
+    spec:
+      containers:
+      - name: user-mysql-primary
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "root"
+        - name: MYSQL_USER
+          value: "yuxyuxx"
+        - name: MYSQL_PASSWORD
+          value: "yuxyuxx"
+        - name: "MYSQL_DATABASE"
+          value: "db_user_1"
+        volumeMounts:
+        - name: user-mysql-volume-config-primary
+          mountPath: /docker-entrypoint-initdb.d  # 将 init.sql 文件挂载到此路径
+        - name: user-mysql-volume-data-primary
+          mountPath: /var/lib/mysql  # MySQL 数据的持久化存储
+      volumes:
+      - name: user-mysql-volume-config-primary
+        configMap:
+          name: user-mysql-configMap-primary
+      - name: user-mysql-volume-data-primary
+        persistentVolumeClaim:
+          claimName: user-mysql-pvc
+
+# user replica Deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-mysql-deployment-replica
+  namespace: platform-user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-mysql-deployment-replica
+  template:
+    metadata:
+      labels:
+        app: user-mysql-deployment-replica
+    spec:
+      containers:
+      - name: user-mysql-replica
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "root"
+        volumeMounts:
+        - name: user-mysql-volume-config-replica
+          mountPath: /docker-entrypoint-initdb.d  # 将 init.sql 文件挂载到此路径
+      volumes:
+      - name: user-mysql-volume-config-replica
+        configMap:
+          name: user-mysql-configMap-replica
+
+#mysql primary user
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: user-mysql-deployment-primary-hpa
+  namespace: platform-user
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: user-mysql-deployment-primary
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 75  # 目标 CPU 使用率为 75%
+
+#mysql replica user
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: user-mysql-deployment-replica-hpa
+  namespace: platform-user
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: user-mysql-deployment-replica
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 75  # 目标 CPU 使用率为 75%
+
+# user primary service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-mysql-primary-service
+  namespace: platform-user
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: user-mysql-deployment-primary
+
+# user replica service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-mysql-replica-service
+  namespace: platform-user
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3306
+    targetPort: 3306
+  selector:
+    app: user-mysql-deployment-replica

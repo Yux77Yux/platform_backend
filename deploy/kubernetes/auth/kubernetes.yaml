@@ -1,0 +1,615 @@
+# 定义命名空间
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-auth
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config-primary
+  namespace: platform-auth
+data:
+  init.sql: |
+    ALTER USER 'yuxyuxx'@'%' IDENTIFIED WITH mysql_native_password  BY 'yuxyuxx';
+    GRANT REPLICATION SLAVE ON *.* TO 'yuxyuxx'@'%';
+    FLUSH PRIVILEGES;
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config-replica
+  namespace: platform-auth
+data:
+  init.sql: |
+    CHANGE REPLICATION SOURCE TO 
+      MASTER_HOST='mysql-primary-service', 
+      MASTER_USER='yuxyuxx', 
+      MASTER_PASSWORD='yuxyuxx',
+      MASTER_LOG_FILE='auth-bin.000001', 
+      MASTER_LOG_POS=4;
+    START REPLICA;
+    SET GLOBAL read_only = 1;
+    SET GLOBAL super_read_only = 1; 
+
+# PersistentVolume (PV) for MySQL
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv
+  namespace: platform-auth
+spec:
+  capacity:
+    storage: 4Gi  # 根据需求调整存储大小
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /tmp/data/mysql/primary
+  storageClassName: standard
+
+# PersistentVolume (PV) for MySQL Replica
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-replica
+  namespace: platform-auth
+spec:
+  capacity:
+    storage: 4Gi  # 根据需求调整存储大小
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /tmp/data/mysql/replica
+  storageClassName: standard
+
+# PersistentVolumeClaim (PVC) for MySQL
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: platform-auth
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 4Gi  # 请求的存储大小，应该与 PV 的大小一致或更小
+  volumeName: mysql-pv
+  storageClassName: standard
+
+# PersistentVolumeClaim (PVC) for MySQL Replica
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc-replica
+  namespace: platform-auth
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 4Gi  # 请求的存储大小，应该与 PV 的大小一致或更小
+  volumeName: mysql-pv-replica
+  storageClassName: standard
+
+# mysql StatefulSet primary
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-primary
+  namespace: platform-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-primary
+  template:
+    metadata:
+      labels:
+        app: mysql-primary
+    spec:
+      containers:
+        - name: mysql-primary
+          image: mysql:8.0
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "1Gi"
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "root"
+            - name: MYSQL_USER
+              value: "yuxyuxx"
+            - name: MYSQL_PASSWORD
+              value: "yuxyuxx"
+            - name: "MYSQL_DATABASE"
+              value: "db_auth_1"
+          volumeMounts:
+            - name: mysql-volume-config-primary
+              mountPath: /docker-entrypoint-initdb.d  # 将 init.sql 文件挂载到此路径
+            - name: mysql-volume-data-primary
+              mountPath: /var/lib/mysql  # MySQL 数据的持久化存储
+      volumes:
+        - name: mysql-volume-config-primary
+          configMap:
+            name: mysql-config-primary
+        - name: mysql-volume-data-primary
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+
+# auth StatefulSet replica
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-replica
+  namespace: platform-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-replica
+  template:
+    metadata:
+      labels:
+        app: mysql-replica
+    spec:
+      containers:
+        - name: mysql-replica
+          image: mysql:8.0
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "1Gi"
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "root"
+          command:
+            - "mysqld"
+            - "--server-id=4"
+          volumeMounts:
+            - name: mysql-volume-data-replica
+              mountPath: /var/lib/mysql  # MySQL 数据的持久化存储
+            - name: mysql-volume-config-replica
+              mountPath: /docker-entrypoint-initdb.d  # 将 init.sql 文件挂载到此路径
+      volumes:
+        - name: mysql-volume-config-replica
+          configMap:
+            name: mysql-config-replica
+        - name: mysql-volume-data-replica
+          persistentVolumeClaim:
+            claimName: mysql-pvc-replica
+
+# mysql auth primary service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-primary-service
+  namespace: platform-auth
+spec:
+  type: NodePort #ClusterIP,微服务未上集群先用NodePort
+  ports:
+    - port: 3306
+      targetPort: 3306
+      nodePort: 30306
+  selector:
+    app: mysql-primary
+
+# mysql replica service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-replica-service
+  namespace: platform-auth
+spec:
+  type: NodePort #ClusterIP,微服务未上集群先用NodePort
+  ports:
+    - port: 3306
+      targetPort: 3306
+      nodePort: 30307
+  selector:
+    app: mysql-replica
+
+# redis
+# PersistentVolume (PV) for Redis
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv
+  namespace: platform-auth
+spec:
+  capacity:
+    storage: 3Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /tmp/data/redis/primary
+  storageClassName: standard
+
+  # PersistentVolume (PV) for Redis replica
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv-replica
+  namespace: platform-auth
+spec:
+  capacity:
+    storage: 3Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /tmp/data/redis/replica
+  storageClassName: standard
+
+# PersistentVolumeClaim (PVC) for Redis
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: platform-auth
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 3Gi  # 请求的存储大小，应该与 PV 的大小一致或更小
+  volumeName: redis-pv
+  storageClassName: standard
+
+# PersistentVolumeClaim (PVC) for Redis replica
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc-replica
+  namespace: platform-auth
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 3Gi  # 请求的存储大小，应该与 PV 的大小一致或更小
+  volumeName: redis-pv-replica
+  storageClassName: standard
+
+# redis primary
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config-primary
+  namespace: platform-auth
+data:
+  redis.conf: |
+    # Redis cluster configuration
+    appendonly yes
+    appendfsync everysec
+    save 900 1
+    save 300 10
+    save 60 10000
+    dir /data
+
+# redis replica
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config-replica
+  namespace: platform-auth
+data:
+  redis.conf: |
+    # Redis cluster configuration
+    appendonly yes
+    appendfsync everysec
+    save 900 1
+    save 300 10
+    save 60 10000
+    replicaof redis-primary-service 6379
+    dir /data
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-primary
+  namespace: platform-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-primary
+      role: primary
+  template:
+    metadata:
+      labels:
+        app: redis-primary
+        role: primary
+    spec:
+      containers:
+        - name: redis-primary
+          image: redis:latest
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "1Gi"
+          ports:
+            - containerPort: 6379
+          command:
+            - "redis-server"
+            - "/etc/redis/redis.conf"
+          volumeMounts:
+            - name: redis-volume-config-primary
+              mountPath: /etc/redis
+            - name: redis-volume-data-primary
+              mountPath: /data
+      volumes:
+        - name: redis-volume-data-primary
+          persistentVolumeClaim:
+            claimName: redis-pvc
+        - name: redis-volume-config-primary
+          configMap:
+            name: redis-config-primary
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-replica
+  namespace: platform-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-replica
+      role: replica
+  template:
+    metadata:
+      labels:
+        app: redis-replica
+        role: replica
+    spec:
+      containers:
+        - name: redis-replica
+          image: redis:latest
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "1Gi"
+          ports:
+            - containerPort: 6379
+              name: redis-replica
+          command:
+            - "redis-server"
+            - "/etc/redis/redis.conf"
+          volumeMounts:
+            - name: redis-volume-config-replica
+              mountPath: /etc/redis
+            - name: redis-volume-data-replica
+              mountPath: /data
+      volumes:
+        - name: redis-volume-data-replica
+          persistentVolumeClaim:
+            claimName: redis-pvc-replica
+        - name: redis-volume-config-replica
+          configMap:
+            name: redis-config-replica
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-primary-service
+  namespace: platform-auth
+spec:
+  type: NodePort  # 先保露供后端开发使用
+  ports:
+    - port: 6379         # Redis 默认端口
+      targetPort: 6379
+      nodePort: 30379
+  selector:
+    app: redis-primary   # 匹配主节点的标签
+    role: primary
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-replica-service
+  namespace: platform-auth
+spec:
+  type: NodePort  # 先保露供后端开发使用
+  ports:
+    - port: 6379         # Redis 默认端口
+      targetPort: 6379
+      nodePort: 30380
+  selector:
+    app: redis-replica   # 匹配主节点的标签
+    role: replica
+
+# rabbitmq
+# PersistentVolume (PV) for RabbitMQ
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rabbitmq-pv
+  namespace: platform-auth
+spec:
+  capacity:
+    storage: 3Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /tmp/data/rabbitmq
+  storageClassName: standard
+
+# PersistentVolumeClaim (PVC) for RabbitMQ
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-pvc
+  namespace: platform-auth
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 3Gi  # 请求的存储大小，应该与 PV 的大小一致或更小
+  volumeName: rabbitmq-pv
+  storageClassName: standard
+
+---
+# ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # Ensure this is named correctly (e.g., rabbitmq-peer-discovery-role)
+  name: rabbitmq-peer-discovery-role
+  namespace: platform-auth
+rules:
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "list", "watch"]
+
+# ClusterRoleBinding
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rabbitmq-peer-discovery-binding
+  namespace: platform-auth
+subjects:
+  - kind: ServiceAccount
+    name: rabbitmq-sa  # This should match the ServiceAccount name in your StatefulSet
+    namespace: platform-auth
+roleRef:
+  kind: ClusterRole
+  name: rabbitmq-peer-discovery-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: platform-auth
+data:
+  rabbitmq.conf: |
+    listeners.tcp.default = 5672
+    management.listener.port = 15672
+    cluster_formation.node_cleanup.interval = 10
+    cluster_formation.node_cleanup.only_log_warning = true
+    cluster_partition_handling = autoheal
+    cluster_formation.k8s.address_type = hostname
+    cluster_formation.k8s.service_name = rabbitmq-service
+    cluster_formation.k8s.hostname_suffix = .rabbitmq-service.platform-auth.svc.cluster.local
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: platform-auth
+spec:
+  replicas: 2
+  serviceName: rabbitmq-service
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:management-alpine
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "1Gi"
+          env:
+            - name: RABBITMQ_ERLANG_COOKIE
+              value: "yuxyuxx"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RABBITMQ_NODENAME
+              value: rabbit@$(POD_NAME).rabbitmq-service.$(POD_NAMESPACE).svc.cluster.local
+            - name: RABBITMQ_USE_LONGNAME
+              value: "true"
+          ports:
+            - name: tcp-5672
+              containerPort: 5672
+              protocol: TCP
+            - name: http-15672
+              containerPort: 15672
+              protocol: TCP
+          volumeMounts:
+            - name: rabbitmq-volume-data
+              mountPath: /var/lib/rabbitmq
+            - name: rabbitmq-volume-config
+              mountPath: /etc/rabbitmq
+      volumes:
+        - name: rabbitmq-volume-data
+          persistentVolumeClaim:
+            claimName: rabbitmq-pvc
+        - name: rabbitmq-volume-config
+          configMap:
+            name: rabbitmq-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-service
+  namespace: platform-auth
+spec:
+  type: NodePort  # 先保露供后端开发使用
+  ports:
+    - name: access
+      port: 5672        
+      targetPort: 5672
+      nodePort: 30672
+    - name: management
+      port: 15672       
+      targetPort: 15672
+      nodePort: 30673
+  selector:
+    app: rabbitmq   

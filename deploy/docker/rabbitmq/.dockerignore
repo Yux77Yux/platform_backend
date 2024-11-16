@@ -1,0 +1,6 @@
+# 忽略 文件
+terminal.cmd.txt
+
+# 忽略其他临时文件
+*.tmp
+logs/

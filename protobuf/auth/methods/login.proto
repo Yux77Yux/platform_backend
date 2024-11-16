@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package auth.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/auth";
+
+import "common/refresh_token.proto";
+import "common/access_token.proto";
+
+message LoginRequest{
+    string user_uuid = 1;
+}
+
+message LoginResponse{
+    common.RefreshToken refresh_token = 1;
+    common.AccessToken access_token = 2;
+}

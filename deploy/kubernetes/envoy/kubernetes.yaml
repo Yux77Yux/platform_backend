@@ -1,0 +1,163 @@
+# 公共
+# 定义命名空间
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-gateway
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-config
+  namespace: platform-gateway
+binaryData:
+  descriptor.pb: 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
+data:
+    envoy.yaml: |
+      admin:
+        address:
+          socket_address:
+            address: 0.0.0.0
+            port_value: 9901
+
+      static_resources:
+        listeners:
+          - name: yux_listen # 监听器名称
+            address:
+              socket_address:
+                address: 0.0.0.0 # 监听所有 IP
+                port_value: 8080 # 客户端请求的 REST 端口
+            filter_chains:
+              - filters:
+                - name: envoy.filters.network.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: ingress_http
+                    codec_type: AUTO
+                    http_filters:
+                      - name: envoy.filters.http.ext_authz
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                          grpc_service:
+                            envoy_grpc:
+                              cluster_name: auth_service
+                            timeout: 6s
+                          failure_mode_allow: false
+                      - name: envoy.filters.http.grpc_json_transcoder # 转换过滤器
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder
+                          proto_descriptor: "/etc/envoy/descriptor.pb" # gRPC 描述文件路径
+                          services: ["auth.AuthService"] # gRPC 服务名称
+                          print_options:
+                            add_whitespace: true
+                            always_print_primitive_fields: true
+                      - name: envoy.filters.http.router # 路由过滤器
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                    route_config:
+                      virtual_hosts:
+                        # 虚拟主机名称，针对 auth 服务
+                        - name: auth_service
+                          domains: ["*"] # 匹配所有域名
+                          routes:
+                            - match:
+                                prefix: "/api/auth/register" # 注册 路径
+                              route:
+                                cluster: auth_service # 指定 gRPC auth 集群
+                            - match:
+                                prefix: "/api/auth/login" # 登录 路径
+                              route:
+                                cluster: auth_service # 指定 gRPC auth 集群
+                            - match:
+                                prefix: "/api/auth/refresh" # 刷新 路径
+                              route:
+                                cluster: auth_service # 指定 gRPC auth 集群
+                            - match:
+                                prefix: "/api/auth/exit" # 登出 路径
+                              route:
+                                cluster: auth_service # 指定 gRPC auth 集群
+                              typed_per_filter_config:
+                                envoy.filters.http.ext_authz:
+                                  "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                                  disabled: true 
+
+        clusters:
+          - name: auth_service # gRPC auth 服务集群
+            connect_timeout: 5s
+            lb_policy: ROUND_ROBIN
+            type: LOGICAL_DNS
+            load_assignment:
+              cluster_name: auth_service
+              endpoints:
+                - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: 10.208.58.76 # gRPC auth 服务地址 #集群的话则为${AUTH_SERVICE_HOST}
+                          port_value: 50010 # gRPC 服务端口
+  
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-config
+  namespace: platform-gateway
+data:
+  AUTH_SERVICE_HOST: "auth-service.platform-auth.svc.cluster.local"
+  AUTH_SERVICE_PORT: "50050"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: platform-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: envoy
+          image: envoyproxy/envoy:tools-dev
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "1Gi"
+          envFrom:
+            - configMapRef:
+                name: gateway-config # 引用 ConfigMap
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+      volumes:
+        - name: envoy-config
+          configMap:
+            name: envoy-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-service
+  namespace: platform-gateway
+spec:
+  type: NodePort
+  ports:
+    - name: access
+      port: 8080
+      targetPort: 8080
+      nodePort: 30000
+    - name: admin
+      port: 9901
+      targetPort: 9901
+      nodePort: 30001
+  selector:
+    app: gateway

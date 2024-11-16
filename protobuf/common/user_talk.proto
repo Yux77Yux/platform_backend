@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/common;";
+
+import "common/user_default.proto";
+
+message UserTalk{
+    common.UserDefault face_default = 1;
+    optional string face_bio = 2;
+
+    common.UserDefault oneself_default = 3;
+}
+
+message UserTalks{
+    repeated UserTalk user_talk = 1;
+}

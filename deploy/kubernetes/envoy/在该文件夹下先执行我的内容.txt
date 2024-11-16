@@ -1,0 +1,3 @@
+kubectl create namespace platform-gateway
+
+kubectl create configmap envoy-config --from-file=./envoy.yaml --from-file=./descriptor.pb -n platform-gateway
