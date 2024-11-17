@@ -7,11 +7,6 @@ import (
 	"fmt"
 	"log"
 	"time"
-
-	// "github.com/go-redis/redis/v8"
-
-	config "github.com/Yux77Yux/platform_backend/microservices/user/config"
-	pkgRedis "github.com/Yux77Yux/platform_backend/pkg/redis_cache"
 )
 
 type checkTask struct {
@@ -51,15 +46,14 @@ func InitWorker() func() {
 }
 
 func checkWorker() {
-	RedisClient, err := getRedisClient()
-	if err != nil {
-		log.Printf("error: failed to connect the redis client: %v", err)
+	CacheClient := GetCacheClient()
+	if CacheClient == nil {
 		close(checkUsernameChan) // 显式关闭通道以避免后续阻塞
 		return
 	}
 
 	for request := range checkUsernameChan {
-		pos, err := RedisClient.FindElementList(request.ctx, "List", "Username", request.username)
+		pos, err := CacheClient.FindElementList(request.ctx, "List", "Username", request.username)
 		exist := pos > -1
 
 		select {
@@ -107,13 +101,13 @@ func StoreUsername(username string) error {
 	resultCh := make(chan error)
 
 	go func() {
-		RedisClient, err := getRedisClient()
-		if err != nil {
-			log.Printf("error: failed to connect the redis client: %v", err)
+		CacheClient := GetCacheClient()
+		if CacheClient == nil {
+			log.Printf("error: failed to connect the cache client")
 			return
 		}
 
-		err = RedisClient.LPushList(ctx, "List", "Username", username)
+		err := CacheClient.LPushList(ctx, "List", "Username", username)
 		resultCh <- err
 	}()
 
@@ -127,16 +121,4 @@ func StoreUsername(username string) error {
 		}
 		return nil
 	}
-}
-
-func getRedisClient() (*pkgRedis.RedisClient, error) {
-	redisAddr := config.REDIS_STR
-	redisPassword := config.REDIS_PASSWORD
-
-	RedisClient, err := pkgRedis.OpenRedis(redisAddr, redisPassword)
-	if err != nil {
-		return nil, err
-	}
-
-	return RedisClient, nil
 }

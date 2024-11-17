@@ -1,6 +1,10 @@
 package config
 
-import "os"
+import (
+	userCache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
+	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
+	"os"
+)
 
 const (
 	MYSQL_READER_STR = "yuxyuxx:yuxyuxx(127.0.0.1:23306)/Auth?parseTime=true"
@@ -12,3 +16,8 @@ const (
 )
 
 var REDIS_PASSWORD string = os.Getenv("REDIS_PASSWORD")
+
+func init() {
+	userMQ.InitConnStr(RABBITMQ_STR)
+	userCache.InitStr(REDIS_STR, REDIS_PASSWORD)
+}

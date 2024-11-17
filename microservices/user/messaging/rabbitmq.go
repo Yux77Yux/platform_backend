@@ -8,40 +8,7 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
-
-	userConfig "github.com/Yux77Yux/platform_backend/microservices/user/config"
-	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue"
 )
-
-var (
-	exchangesConfig = map[string]string{
-		"register_exchange": "direct",
-		"login_exchange":    "direct",
-		// Add more exchanges here
-	}
-)
-
-func init() {
-	RabbitMQ, err := GetRabbitMQClient()
-	wiredErr := fmt.Errorf("failed to connect the rabbit client: %w", err)
-	log.Printf("error: %v", wiredErr)
-
-	for exchange, kind := range exchangesConfig {
-		err := RabbitMQ.ExchangeDeclare(exchange, kind, true, false, false, false, nil)
-		wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
-		log.Printf("error: %v", wiredErr)
-	}
-}
-
-func GetRabbitMQClient() (*pkgMQ.RabbitMQClass, error) {
-	connStr := userConfig.RABBITMQ_STR
-	RabbitMQ, err := pkgMQ.OpenRabbitMQ(connStr)
-	if err != nil {
-		return nil, err
-	}
-
-	return RabbitMQ, nil
-}
 
 func SendMessage(exchange string, routeKey string, req proto.Message) error {
 	log.Printf("info: start send message to exchange %s with routeKey %s", exchange, routeKey)
@@ -59,13 +26,10 @@ func SendMessage(exchange string, routeKey string, req proto.Message) error {
 		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	RabbitMQ, err := GetRabbitMQClient()
-	if err != nil {
-		return fmt.Errorf("failed to connect the rabbit client: %w", err)
-	}
+	rabbitMQ := GetRabbitMQ()
 
 	for i := 0; i < retries; i++ {
-		err := RabbitMQ.Publish(
+		err := rabbitMQ.Publish(
 			ctx,
 			exchange,
 			routeKey,
@@ -96,22 +60,17 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 		err   error
 	)
 
-	RabbitMQ, err := GetRabbitMQClient()
-	if err != nil {
-		wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
-		log.Printf("error: %v", wiredErr)
-		return
-	}
+	rabbitMQ := GetRabbitMQ()
 
-	queue, err = RabbitMQ.QueueDeclare(queueName, true, false, true, false, nil)
+	queue, err = rabbitMQ.QueueDeclare(queueName, true, false, true, false, nil)
 	wiredErr := fmt.Errorf("failed to declare a queue %s: %w", queueName, err)
 	log.Printf("error: %v", wiredErr)
 
-	err = RabbitMQ.QueueBind(queue.Name, routeKey, exchange, false, nil)
+	err = rabbitMQ.QueueBind(queue.Name, routeKey, exchange, false, nil)
 	wiredErr = fmt.Errorf("failed with queue %s bind the routeKey %s of exchange %s: %w", queue.Name, routeKey, exchange, err)
 	log.Printf("error: %v", wiredErr)
 
-	msgs, err = RabbitMQ.Consume(
+	msgs, err = rabbitMQ.Consume(
 		queue.Name, // queue
 		"",         // consumer
 		false,      // auto ack

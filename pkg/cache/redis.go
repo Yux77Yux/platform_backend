@@ -1,4 +1,4 @@
-package redis_cache
+package cache
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 )
 
 type RedisMethods interface {
+	Open(connStr string, password string) error
 	Close()
 
 	DelRelatedKeys(ctx context.Context, kindPrefix string, kindType string) error
@@ -84,13 +85,16 @@ type RedisMethods interface {
 	BitField(ctx context.Context, kind string, unique string, command ...interface{}) ([]int64, error)
 }
 
-func OpenRedis(connStr string, password string) (*RedisClient, error) {
+type RedisClient struct {
+	redisClient *redis.Client
+}
+
+func (r *RedisClient) Open(connStr string, password string) error {
 	var (
-		redisClient *redis.Client
-		err         error
+		err error
 	)
 
-	redisClient = redis.NewClient(&redis.Options{
+	redisClient := redis.NewClient(&redis.Options{
 		Addr:     connStr,
 		Password: password,
 	})
@@ -98,16 +102,11 @@ func OpenRedis(connStr string, password string) (*RedisClient, error) {
 	_, err = redisClient.Ping(context.Background()).Result()
 	if err != nil {
 		err = fmt.Errorf("failed to connect redis client: %w", err)
-		return nil, err
+		return err
 	}
 
-	return &RedisClient{
-		redisClient: redisClient,
-	}, nil
-}
-
-type RedisClient struct {
-	redisClient *redis.Client
+	r.redisClient = redisClient
+	return nil
 }
 
 func (r *RedisClient) Close() {

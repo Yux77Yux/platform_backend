@@ -10,9 +10,10 @@ import (
 )
 
 type RabbitMQMethods interface {
+	Open(connStr string) error
 	Close()
 	ExchangeDeclare(name string, kind string, durable bool, autoDelete bool, internal bool, noWait bool, args amqp.Table) error
-	QueueDeclare(name string, durable bool, autoDelete bool, exclusive bool, noWait bool, args amqp.Table) (amqp.Queue, error)
+	QueueDeclare(name string, durable bool, autoDelete bool, exclusive bool, noWait bool, args amqp.Table) (*amqp.Queue, error)
 	ExchangeBind(destination string, key string, source string, noWait bool, args amqp.Table) error
 	QueueBind(name string, key string, exchange string, noWait bool, args amqp.Table) error
 	Publish(ctx context.Context, exchange string, key string, mandatory bool, immediate bool, msg amqp.Publishing) error
@@ -24,21 +25,25 @@ const (
 	delay   = 2 * time.Second
 )
 
-func OpenRabbitMQ(connStr string) (*RabbitMQClass, error) {
+type RabbitMQClass struct {
+	rabbitmqClient *amqp.Connection
+	channel        *amqp.Channel
+}
+
+func (r *RabbitMQClass) Open(connStr string) error {
 	var (
-		RabbitMQClient *RabbitMQClass = &RabbitMQClass{}
-		err            error
+		err error
 	)
 
 	for i := 0; i < retries; i++ {
-		RabbitMQClient.rabbitmqClient, err = amqp.Dial(connStr)
+		r.rabbitmqClient, err = amqp.Dial(connStr)
 		if err == nil {
-			RabbitMQClient.channel, err = RabbitMQClient.rabbitmqClient.Channel()
+			r.channel, err = r.rabbitmqClient.Channel()
 			if err != nil {
-				return nil, err
+				return err
 			}
 
-			return RabbitMQClient, nil
+			return nil
 		}
 
 		wiredErr := fmt.Errorf("failed to connect to RabbitMQ at %s: %w (attempt %d/%d). Retrying in %d seconds", connStr, err, i+1, retries, int(delay.Seconds()))
@@ -46,12 +51,7 @@ func OpenRabbitMQ(connStr string) (*RabbitMQClass, error) {
 		time.Sleep(delay)
 	}
 
-	return nil, err
-}
-
-type RabbitMQClass struct {
-	rabbitmqClient *amqp.Connection
-	channel        *amqp.Channel
+	return err
 }
 
 func (r *RabbitMQClass) Close() {
@@ -100,13 +100,7 @@ func (r *RabbitMQClass) QueueBind(name string, key string, exchange string, noWa
 	return nil
 }
 
-func (r *RabbitMQClass) Publish(
-	ctx context.Context,
-	exchange string,
-	key string,
-	mandatory bool,
-	immediate bool,
-	msg amqp.Publishing) error {
+func (r *RabbitMQClass) Publish(ctx context.Context, exchange string, key string, mandatory bool, immediate bool, msg amqp.Publishing) error {
 
 	if err := r.channel.PublishWithContext(ctx, exchange, key, false, false, msg); err != nil {
 		return err
@@ -115,15 +109,7 @@ func (r *RabbitMQClass) Publish(
 	return nil
 }
 
-func (r *RabbitMQClass) Consume(
-	queue string,
-	consumer string,
-	autoAck bool,
-	exclusive bool,
-	noLocal bool,
-	noWait bool,
-	args amqp.Table,
-) (<-chan amqp.Delivery, error) {
+func (r *RabbitMQClass) Consume(queue string, consumer string, autoAck bool, exclusive bool, noLocal bool, noWait bool, args amqp.Table) (<-chan amqp.Delivery, error) {
 	msg, err := r.channel.Consume(
 		queue,     // queue
 		consumer,  // consumer
