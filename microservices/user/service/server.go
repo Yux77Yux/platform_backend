@@ -16,8 +16,8 @@ func ServerRun(done chan struct{}) func() {
 
 	return func() {
 		go func() {
-			log.Printf("info: shutting down gracefully...")
 			grpcServer.GracefulStop()
+			log.Printf("info: server shutting down")
 			close(done)
 		}()
 
@@ -25,7 +25,7 @@ func ServerRun(done chan struct{}) func() {
 		select {
 		case <-done:
 			log.Println("info: server stopped gracefully.")
-		case <-time.After(98 * time.Second):
+		case <-time.After(160 * time.Second):
 			log.Println("warning: timeout reached. Forcing shutdown.")
 			grpcServer.Stop() // 强制关闭服务器
 			close(done)

@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type RequestHandlerFunc func(string) error
+type RequestHandlerFunc = func(string) error
 
 type RequestDispatcher struct {
 	requestChan chan RequestHandlerFunc
@@ -22,13 +22,13 @@ func InitDispatch() *RequestDispatcher {
 
 func (r *RequestDispatcher) Start() {
 	go func() {
-		for handler := range r.requestChan {
+		for requestHandler := range r.requestChan {
 			reqId := uuid.New().String()
 			r.wg.Add(1)
 
 			go func() {
 				defer r.wg.Done()
-				if err := handler(reqId); err != nil {
+				if err := requestHandler(reqId); err != nil {
 					log.Printf("error: request_id: %s failed: %v", reqId, err)
 				}
 			}()

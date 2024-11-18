@@ -30,11 +30,20 @@ func Register(user_credentials *generatedUser.UserCredentials) (bool, error) {
 		return false, fmt.Errorf("info: username already exists")
 	}
 
+	password, err := encryptWithTimestamp(user_credentials.GetPassword())
+	if err != nil {
+		return false, err
+	}
+	credentials := &generatedUser.UserCredentials{
+		Username: user_credentials.GetUsername(),
+		Password: password,
+	}
 	select {
 	//闭包传递
 	case userRequestChannel <- func(req_id string) error {
 		log.Printf("info: handling request with ID: %s\n", req_id)
-		err := userMQ.SendMessage("register_exchange", "register", user_credentials)
+
+		err = userMQ.SendMessage("register_exchange", "register", credentials)
 		if err != nil {
 			return fmt.Errorf("err: request_id: %s ,message: %w", req_id, err)
 		}

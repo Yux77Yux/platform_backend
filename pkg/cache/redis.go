@@ -163,17 +163,17 @@ func (r *RedisClient) DelKey(ctx context.Context, kind string, unique string) er
 // String
 
 func (r *RedisClient) SetString(ctx context.Context, kind string, unique string, value interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("String_%s_%s", kind, unique)
 	return r.redisClient.SetNX(ctx, key, value, 0).Err()
 }
 
 func (r *RedisClient) ModifyString(ctx context.Context, kind string, unique string, value interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("String_%s_%s", kind, unique)
 	return r.redisClient.SetXX(ctx, key, value, 0).Err()
 }
 
 func (r *RedisClient) GetString(ctx context.Context, kind string, unique string) (string, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("String_%s_%s", kind, unique)
 	value, err := r.redisClient.Get(ctx, key).Result()
 	if err != nil {
 		return "", err
@@ -183,7 +183,7 @@ func (r *RedisClient) GetString(ctx context.Context, kind string, unique string)
 }
 
 func (r *RedisClient) ExistsString(ctx context.Context, kind string, unique string) (bool, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("String_%s_%s", kind, unique)
 	val, err := r.redisClient.Exists(ctx, key).Result()
 	if err != nil {
 		return false, fmt.Errorf("redis_utils checking key is not exists: %v", err)
@@ -196,7 +196,7 @@ func (r *RedisClient) ExistsString(ctx context.Context, kind string, unique stri
 
 // HScan 适用于字段多的大哈希表
 func (r *RedisClient) ScanHash(ctx context.Context, kind string, unique string, fliter string, cursor uint64, count int64) ([]string, uint64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	result, newCursor, err := r.redisClient.HScan(ctx, key, cursor, fliter, count).Result()
 	if err != nil {
 		return nil, 0, err
@@ -208,19 +208,19 @@ func (r *RedisClient) ScanHash(ctx context.Context, kind string, unique string, 
 // 用于批量 设置/更新
 // fieldValues : name "Mike" age 20
 func (r *RedisClient) SetFieldsHash(ctx context.Context, kind string, unique string, fieldValues ...interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	return r.redisClient.HSet(ctx, key, fieldValues...).Err()
 }
 
 // 一次一个字段，不存在时才加入
 func (r *RedisClient) SetFieldHash(ctx context.Context, kind string, unique string, field string, value interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	return r.redisClient.HSetNX(ctx, key, field, value).Err()
 }
 
 // 更新一个字段，若存在则更新
 func (r *RedisClient) ModifyFieldHash(ctx context.Context, kind string, unique string, field string, value interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 
 	exists, err := r.redisClient.HExists(ctx, key, field).Result()
 	if err != nil {
@@ -236,7 +236,7 @@ func (r *RedisClient) ModifyFieldHash(ctx context.Context, kind string, unique s
 
 // 仅获取一个字段值
 func (r *RedisClient) GetHash(ctx context.Context, kind string, unique string, field string) (string, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	value, err := r.redisClient.HGet(ctx, key, field).Result()
 	if err != nil {
 		return "", err
@@ -246,7 +246,7 @@ func (r *RedisClient) GetHash(ctx context.Context, kind string, unique string, f
 
 // 获取复数字段名和值
 func (r *RedisClient) GetAnyHash(ctx context.Context, kind string, unique string, fields ...string) ([]interface{}, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	result, err := r.redisClient.HMGet(ctx, key, fields...).Result()
 	if err != nil {
 		return nil, err
@@ -256,7 +256,7 @@ func (r *RedisClient) GetAnyHash(ctx context.Context, kind string, unique string
 
 // 获取全部字段名和值
 func (r *RedisClient) GetAllHash(ctx context.Context, kind string, unique string) (map[string]string, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	result, err := r.redisClient.HGetAll(ctx, key).Result()
 	if err != nil {
 		return nil, err
@@ -266,7 +266,7 @@ func (r *RedisClient) GetAllHash(ctx context.Context, kind string, unique string
 
 // 获取哈希表中所有字段名
 func (r *RedisClient) GetFieldsHash(ctx context.Context, kind string, unique string) ([]string, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	result, err := r.redisClient.HKeys(ctx, key).Result()
 	if err != nil {
 		return nil, err
@@ -276,7 +276,7 @@ func (r *RedisClient) GetFieldsHash(ctx context.Context, kind string, unique str
 
 // 获取哈希表中所有字段值
 func (r *RedisClient) GetValuesHash(ctx context.Context, kind string, unique string) ([]string, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	result, err := r.redisClient.HVals(ctx, key).Result()
 	if err != nil {
 		return nil, err
@@ -286,7 +286,7 @@ func (r *RedisClient) GetValuesHash(ctx context.Context, kind string, unique str
 
 // 获取哈希表中是否有此字段
 func (r *RedisClient) ExistsHash(ctx context.Context, kind string, unique string, field string) (bool, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	exists, err := r.redisClient.HExists(ctx, key, field).Result()
 	if err != nil {
 		return false, err
@@ -296,7 +296,7 @@ func (r *RedisClient) ExistsHash(ctx context.Context, kind string, unique string
 
 // 获取哈希表中字段数量
 func (r *RedisClient) GetLenHash(ctx context.Context, kind string, unique string, field string) (int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	exists, err := r.redisClient.HLen(ctx, key).Result()
 	if err != nil {
 		return 0, err
@@ -306,7 +306,7 @@ func (r *RedisClient) GetLenHash(ctx context.Context, kind string, unique string
 
 // 删除哈希表中的某些字段
 func (r *RedisClient) DelHash(ctx context.Context, kind string, unique string, fields ...string) (int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	num, err := r.redisClient.HDel(ctx, key, fields...).Result()
 	if err != nil {
 		return 0, err
@@ -318,19 +318,19 @@ func (r *RedisClient) DelHash(ctx context.Context, kind string, unique string, f
 
 // 向 List 头部推送元素
 func (r *RedisClient) LPushList(ctx context.Context, direction string, kind string, unique string, value ...interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	return r.redisClient.LPush(ctx, key, value...).Err()
 }
 
 // 向 List 尾部推送元素
 func (r *RedisClient) RPushList(ctx context.Context, direction string, kind string, unique string, value ...interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	return r.redisClient.RPush(ctx, key, value...).Err()
 }
 
 // 从 List 头部弹出元素
 func (r *RedisClient) LPopList(ctx context.Context, kind string, unique string) (string, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	value, err := r.redisClient.LPop(ctx, key).Result()
 	if err != nil {
 		return "", err
@@ -340,7 +340,7 @@ func (r *RedisClient) LPopList(ctx context.Context, kind string, unique string) 
 
 // 从 List 尾部弹出元素
 func (r *RedisClient) RPopList(ctx context.Context, kind string, unique string) (string, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	value, err := r.redisClient.RPop(ctx, key).Result()
 	if err != nil {
 		return "", err
@@ -350,7 +350,7 @@ func (r *RedisClient) RPopList(ctx context.Context, kind string, unique string) 
 
 // 从 List 指定元素之前插入
 func (r *RedisClient) InsertBeforeList(ctx context.Context, kind string, unique string, pivot, value interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	err := r.redisClient.LInsertBefore(ctx, key, pivot, value).Err()
 	if err != nil {
 		return err
@@ -360,7 +360,7 @@ func (r *RedisClient) InsertBeforeList(ctx context.Context, kind string, unique 
 
 // 从 List 指定元素之后插入
 func (r *RedisClient) InsertAfterList(ctx context.Context, kind string, unique string, pivot, value interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	err := r.redisClient.LInsertAfter(ctx, key, pivot, value).Err()
 	if err != nil {
 		return err
@@ -370,7 +370,7 @@ func (r *RedisClient) InsertAfterList(ctx context.Context, kind string, unique s
 
 // 从 List 获取指定位置元素
 func (r *RedisClient) IndexList(ctx context.Context, kind string, unique string, index int64) (string, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	value, err := r.redisClient.LIndex(ctx, key, index).Result()
 	if err != nil {
 		return "", err
@@ -380,7 +380,7 @@ func (r *RedisClient) IndexList(ctx context.Context, kind string, unique string,
 
 // 返回 List 中某个元素的第一个索引，MaxLen 查找最大长度，Rank 查找方向
 func (r *RedisClient) FindElementList(ctx context.Context, kind string, unique string, value string) (int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	result, err := r.redisClient.LPos(ctx, key, value, redis.LPosArgs{Rank: -1, MaxLen: 0}).Result()
 	if err != nil {
 		return 0, err
@@ -390,7 +390,7 @@ func (r *RedisClient) FindElementList(ctx context.Context, kind string, unique s
 
 // 返回 List 中元素的索引，count 索引个数，MaxLen 查找最大长度，Rank 查找方向
 func (r *RedisClient) FindElementsList(ctx context.Context, kind string, unique string, value string, count int64) ([]int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	result, err := r.redisClient.LPosCount(ctx, key, value, count, redis.LPosArgs{Rank: -1, MaxLen: 0}).Result()
 	if err != nil {
 		return nil, err
@@ -404,7 +404,7 @@ func (r *RedisClient) TrimList(ctx context.Context, kind string, unique string, 
 		stop = -1
 	}
 
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	err := r.redisClient.LTrim(ctx, key, start, stop).Err()
 	if err != nil {
 		return err
@@ -414,7 +414,7 @@ func (r *RedisClient) TrimList(ctx context.Context, kind string, unique string, 
 
 // 获取 List 长度
 func (r *RedisClient) GetLenList(ctx context.Context, kind string, unique string) (int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	length, err := r.redisClient.LLen(ctx, key).Result()
 	if err != nil {
 		return 0, err
@@ -428,7 +428,7 @@ func (r *RedisClient) GetElementsList(ctx context.Context, kind string, unique s
 		stop = -1
 	}
 
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	elements, err := r.redisClient.LRange(ctx, key, start, stop).Result()
 	if err != nil {
 		return nil, err
@@ -440,7 +440,7 @@ func (r *RedisClient) GetElementsList(ctx context.Context, kind string, unique s
 
 // SScan
 func (r *RedisClient) ScanSet(ctx context.Context, kind string, unique string, fliter string, cursor uint64, count int64) ([]string, uint64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Set_%s_%s", kind, unique)
 	result, newCursor, err := r.redisClient.SScan(ctx, key, cursor, fliter, count).Result()
 	if err != nil {
 		return nil, 0, err
@@ -451,19 +451,19 @@ func (r *RedisClient) ScanSet(ctx context.Context, kind string, unique string, f
 
 // 向 Set 中添加/更新元素
 func (r *RedisClient) AddToSet(ctx context.Context, kind string, unique string, value interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Set_%s_%s", kind, unique)
 	return r.redisClient.SAdd(ctx, key, value).Err()
 }
 
 // 在 Set 中删除元素
 func (r *RedisClient) RemSet(ctx context.Context, kind string, unique string, value interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Set_%s_%s", kind, unique)
 	return r.redisClient.SRem(ctx, key, value).Err()
 }
 
 // 检查 Set 中是否存在某个元素
 func (r *RedisClient) ExistsInSet(ctx context.Context, kind string, unique string, value interface{}) (bool, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Set_%s_%s", kind, unique)
 	exists, err := r.redisClient.SIsMember(ctx, key, value).Result()
 	if err != nil {
 		return false, err
@@ -473,7 +473,7 @@ func (r *RedisClient) ExistsInSet(ctx context.Context, kind string, unique strin
 
 // 在 Set 中统计元素个数
 func (r *RedisClient) CountSet(ctx context.Context, kind string, unique string) (int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Set_%s_%s", kind, unique)
 	num, err := r.redisClient.SCard(ctx, key).Result()
 	if err != nil {
 		return 0, err
@@ -484,7 +484,7 @@ func (r *RedisClient) CountSet(ctx context.Context, kind string, unique string) 
 
 // 获取 Set 中的所有成员
 func (r *RedisClient) GetMembersSet(ctx context.Context, kind string, unique string) ([]string, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Set_%s_%s", kind, unique)
 	members, err := r.redisClient.SMembers(ctx, key).Result()
 	if err != nil {
 		return nil, err
@@ -498,7 +498,7 @@ func (r *RedisClient) GetMembersSet(ctx context.Context, kind string, unique str
 
 // ZScan
 func (r *RedisClient) ScanZSet(ctx context.Context, kind string, unique string, fliter string, cursor uint64, count int64) ([]string, uint64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	result, newCursor, err := r.redisClient.ZScan(ctx, key, cursor, fliter, count).Result()
 	if err != nil {
 		return nil, 0, err
@@ -509,25 +509,25 @@ func (r *RedisClient) ScanZSet(ctx context.Context, kind string, unique string, 
 
 // 正常添加, 若重复添加则不会添加
 func (r *RedisClient) AddZSet(ctx context.Context, kind string, unique string, member string, score float64) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	return r.redisClient.ZAddNX(ctx, key, &redis.Z{Score: score, Member: member}).Err()
 }
 
 // 修改，当没有该成员则不会更新
 func (r *RedisClient) ModifyScoreZSet(ctx context.Context, kind string, unique string, member string, score float64) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	return r.redisClient.ZAddXX(ctx, key, &redis.Z{Score: score, Member: member}).Err()
 }
 
 // 删除，当没有该成员则无事发生
 func (r *RedisClient) ZRemMemberZSet(ctx context.Context, kind string, unique string, members ...interface{}) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	return r.redisClient.ZRem(ctx, key, members...).Err()
 }
 
 // 返回排名
 func (r *RedisClient) GetRankZSet(ctx context.Context, kind string, unique string, member string) (int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	rank, err := r.redisClient.ZRank(ctx, key, member).Result()
 	if err != nil {
 		return 0, err
@@ -537,7 +537,7 @@ func (r *RedisClient) GetRankZSet(ctx context.Context, kind string, unique strin
 
 // 返回分数
 func (r *RedisClient) GetScoreZSet(ctx context.Context, kind string, unique string, member string) (float64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 
 	rank, err := r.redisClient.ZScore(ctx, key, member).Result()
 	if err == redis.Nil {
@@ -554,7 +554,7 @@ func (r *RedisClient) RangeZSet(ctx context.Context, kind string, unique string,
 	if start == 0 && stop == 0 {
 		stop = -1
 	}
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	members, err := r.redisClient.ZRange(ctx, key, start, stop).Result()
 	if err == redis.Nil {
 		return nil, fmt.Errorf("member does not exist")
@@ -570,7 +570,7 @@ func (r *RedisClient) RevRangeZSet(ctx context.Context, kind string, unique stri
 	if start == 0 && stop == 0 {
 		stop = -1
 	}
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	members, err := r.redisClient.ZRevRange(ctx, key, start, stop).Result()
 	if err == redis.Nil {
 		return nil, fmt.Errorf("member does not exist")
@@ -593,7 +593,7 @@ func (r *RedisClient) RangeByScoreZSet(ctx context.Context, kind, unique, min, m
 		opt.Count = count
 	}
 
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	members, err := r.redisClient.ZRangeByScore(ctx, key, opt).Result()
 	if err == redis.Nil {
 		return nil, fmt.Errorf("member does not exist")
@@ -616,7 +616,7 @@ func (r *RedisClient) RevRangeByScoreZSet(ctx context.Context, kind, unique, min
 		opt.Count = count
 	}
 
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	members, err := r.redisClient.ZRevRangeByScore(ctx, key, opt).Result()
 	if err == redis.Nil {
 		return nil, fmt.Errorf("member does not exist")
@@ -629,7 +629,7 @@ func (r *RedisClient) RevRangeByScoreZSet(ctx context.Context, kind, unique, min
 
 // 返回有序集合的成员总数
 func (r *RedisClient) GetCountZSet(ctx context.Context, kind, unique string) (int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	rank, err := r.redisClient.ZCard(ctx, key).Result()
 	if err != nil {
 		return 0, err
@@ -643,7 +643,7 @@ func (r *RedisClient) GetCountZSet(ctx context.Context, kind, unique string) (in
 // -inf负无穷大 ，+inf正无穷大
 // "(2", "4" 大于2小于等于4的 成员数量
 func (r *RedisClient) GetScoreCountZSet(ctx context.Context, kind, unique, min, max string) (int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	rank, err := r.redisClient.ZCount(ctx, key, min, max).Result()
 	if err != nil {
 		return 0, err
@@ -662,7 +662,7 @@ func (r *RedisClient) SetBit(ctx context.Context, kind string, unique string, of
 	if value {
 		bit = 1
 	}
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Bitmap_%s_%s", kind, unique)
 	return r.redisClient.SetBit(ctx, key, offset, bit).Err()
 }
 
@@ -672,7 +672,7 @@ func (r *RedisClient) GetBit(ctx context.Context, kind string, unique string, of
 		return false, fmt.Errorf("invalid offset: %d, must be non-negative", offset)
 	}
 
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Bitmap_%s_%s", kind, unique)
 	value, err := r.redisClient.GetBit(ctx, key, offset).Result()
 	if err != nil {
 		return false, err
@@ -682,13 +682,13 @@ func (r *RedisClient) GetBit(ctx context.Context, kind string, unique string, of
 
 // 清除特定位（设置为0）
 func (r *RedisClient) ClearBit(ctx context.Context, kind string, unique string, offset int64) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Bitmap_%s_%s", kind, unique)
 	return r.redisClient.SetBit(ctx, key, offset, 0).Err()
 }
 
 // 清除指定范围的位值
 func (r *RedisClient) ClearRangeBits(ctx context.Context, kind string, unique string, startOffset, endOffset int64) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Bitmap_%s_%s", kind, unique)
 	pipeline := r.redisClient.Pipeline()
 
 	for offset := startOffset; offset <= endOffset; offset++ {
@@ -701,7 +701,7 @@ func (r *RedisClient) ClearRangeBits(ctx context.Context, kind string, unique st
 
 // 计算位图某个范围中 1 的个数
 func (r *RedisClient) CountBit(ctx context.Context, kind string, unique string, startOffset, endOffset int64) (int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Bitmap_%s_%s", kind, unique)
 	count, err := r.redisClient.BitCount(ctx, key, &redis.BitCount{Start: startOffset, End: endOffset}).Result() // 计算整个键的位图
 	if err != nil {
 		return 0, err
@@ -722,10 +722,10 @@ func (r *RedisClient) CountBit(ctx context.Context, kind string, unique string, 
 // redisClient.BitOp(ctx, "NOT", "result", "user123", []string{"A"})
 // NOT 仅支持对单个键执行 NOT 操作,忽略第二个srcKinds
 func (r *RedisClient) OpertorBit(ctx context.Context, operation string, destKind string, unique string, srcKinds []string) error {
-	destKey := fmt.Sprintf("%s_%s", destKind, unique)
+	destKey := fmt.Sprintf("Bitmap_%s_%s", destKind, unique)
 	keys := make([]string, len(srcKinds))
 	for i, srcKind := range srcKinds {
-		keys[i] = fmt.Sprintf("%s_%s", srcKind, unique)
+		keys[i] = fmt.Sprintf("Bitmap_%s_%s", srcKind, unique)
 	}
 	operation = strings.ToUpper(operation)
 	// 根据操作类型执行不同的位操作
@@ -745,7 +745,7 @@ func (r *RedisClient) OpertorBit(ctx context.Context, operation string, destKind
 
 // 修改特定位的值
 func (r *RedisClient) ModifyBit(ctx context.Context, kind string, unique string, offset int64, newValue bool) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Bitmap_%s_%s", kind, unique)
 	value := 0
 	if newValue {
 		value = 1
@@ -755,7 +755,7 @@ func (r *RedisClient) ModifyBit(ctx context.Context, kind string, unique string,
 
 // 重置整个位图
 func (r *RedisClient) ResetBitmap(ctx context.Context, kind string, unique string, length int64) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Bitmap_%s_%s", kind, unique)
 	// 创建一个全 0 的字符串，用作新值
 	// 为什么使用 (length+7)/8？
 	// 这是因为 Redis 中的位图是按字节（每个字节有 8 位）存储的。
@@ -767,7 +767,7 @@ func (r *RedisClient) ResetBitmap(ctx context.Context, kind string, unique strin
 
 // 找到第一个设置为 1 或 0 的位置
 func (r *RedisClient) FindPositionBit(ctx context.Context, kind string, unique string, bit bool) (int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Bitmap_%s_%s", kind, unique)
 	bitValue := int64(0)
 	if bit {
 		bitValue = 1
@@ -781,7 +781,7 @@ func (r *RedisClient) FindPositionBit(ctx context.Context, kind string, unique s
 
 // 按位统计多个位图
 func (r *RedisClient) CombineBitmaps(ctx context.Context, destKind string, unique string, srcKinds []string) error {
-	destKey := fmt.Sprintf("%s_%s", destKind, unique)
+	destKey := fmt.Sprintf("Bitmap_%s_%s", destKind, unique)
 	srcKeys := make([]string, len(srcKinds))
 	for i, kind := range srcKinds {
 		srcKeys[i] = fmt.Sprintf("%s_%s", kind, unique)
@@ -795,7 +795,7 @@ func (r *RedisClient) CombineBitmaps(ctx context.Context, destKind string, uniqu
 // 可能会误判：可能会判断一个元素存在（即假阳性），但不可能错判元素不存在。
 // 空间效率高：它使用固定的内存大小来处理非常大的集合。
 func (r *RedisClient) AddToBloomFilter(ctx context.Context, kind string, unique string) error {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Bitmap_%s_%s", kind, unique)
 	pipeline := r.redisClient.Pipeline()
 
 	hashValues := generateMultipleHashes(key, 8)
@@ -810,7 +810,7 @@ func (r *RedisClient) AddToBloomFilter(ctx context.Context, kind string, unique 
 
 // 检查元素是否可能存在
 func (r *RedisClient) CheckBloomFilter(ctx context.Context, kind string, unique string) (bool, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Bitmap_%s_%s", kind, unique)
 
 	hashValues := generateMultipleHashes(key, 8)
 
@@ -847,7 +847,7 @@ func generateMultipleHashes(input string, numHashes int) []int64 {
 // 使用 BITFIELD 操作批量设置/获取位图中的多个位
 // command 格式 "SET/GET/INCRBY" "i8/i16/i32/u8/u16/u32" "#0/#1/..." GET不需要"value"
 func (r *RedisClient) BitField(ctx context.Context, kind string, unique string, command ...interface{}) ([]int64, error) {
-	key := fmt.Sprintf("%s_%s", kind, unique)
+	key := fmt.Sprintf("Bitfield_%s_%s", kind, unique)
 	result, err := r.redisClient.BitField(ctx, key, command...).Result()
 	if err != nil {
 		return nil, err

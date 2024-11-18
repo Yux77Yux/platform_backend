@@ -2,24 +2,102 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 )
 
-func OpenMysql(conn_str string) (*sql.DB, error) {
-	var (
-		mysql_connection *sql.DB
-		err              error
-	)
-	if mysql_connection, err = sql.Open("mysql", conn_str); err != nil {
-		return nil, err
+type MysqlClass struct {
+	mainDB    *sql.DB
+	replicaDB *sql.DB
+}
+
+func (dbs *MysqlClass) InitDb(onlyReadStr, readWriteStr string) error {
+	var err error
+	if dbs.replicaDB, err = sql.Open("mysql", onlyReadStr); err != nil {
+		return err
 	}
 
-	if err = mysql_connection.Ping(); err != nil {
-		return nil, err
+	if err = dbs.replicaDB.Ping(); err != nil {
+		return err
 	}
 
-	mysql_connection.SetMaxOpenConns(10)    // 最大打开连接数
-	mysql_connection.SetMaxIdleConns(5)     // 最大空闲连接数
-	mysql_connection.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
+	if dbs.mainDB, err = sql.Open("mysql", readWriteStr); err != nil {
+		return err
+	}
 
-	return mysql_connection, nil
+	if err = dbs.mainDB.Ping(); err != nil {
+		return err
+	}
+
+	dbs.replicaDB.SetMaxOpenConns(20)    // 最大打开连接数
+	dbs.replicaDB.SetMaxIdleConns(10)    // 最大空闲连接数
+	dbs.replicaDB.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
+	dbs.mainDB.SetMaxOpenConns(20)       // 最大打开连接数
+	dbs.mainDB.SetMaxIdleConns(10)       // 最大空闲连接数
+	dbs.mainDB.SetConnMaxLifetime(20)    // 连接的最大生命周期（秒）
+
+	return nil
+}
+
+func (dbs *MysqlClass) Close() error {
+	err := dbs.mainDB.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close main database connection baecause %w", err)
+	}
+
+	err = dbs.replicaDB.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close replica database connection baecause %w", err)
+	}
+
+	return nil
+}
+
+// 执行查询操作
+func (dbs *MysqlClass) QueryRow(query string, args ...interface{}) *sql.Row {
+	return dbs.replicaDB.QueryRow(query, args...)
+}
+
+// 执行查询返回多个结果
+func (dbs *MysqlClass) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	result, err := dbs.replicaDB.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query failed because %w", err)
+	}
+	return result, nil
+}
+
+// 执行插入、更新或删除操作
+func (dbs *MysqlClass) Exec(query string, args ...interface{}) (sql.Result, error) {
+	result, err := dbs.mainDB.Exec(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("exec failed because %w", err)
+	}
+	return result, nil
+}
+
+// 开始一个新的事务
+func (dbs *MysqlClass) BeginTransaction() (*sql.Tx, error) {
+	tx, err := dbs.mainDB.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("open transaction failed because %w", err)
+	}
+	return tx, nil
+}
+
+// 提交事务
+func (dbs *MysqlClass) CommitTransaction(tx *sql.Tx) error {
+	err := tx.Commit()
+	if err != nil {
+		return fmt.Errorf("commit transaction failed because %w", err)
+	}
+	return nil
+}
+
+// 回滚事务
+func (dbs *MysqlClass) RollbackTransaction(tx *sql.Tx) error {
+	err := tx.Rollback()
+	if err != nil {
+		return fmt.Errorf("rollback transaction failed because %w", err)
+	}
+	return nil
 }

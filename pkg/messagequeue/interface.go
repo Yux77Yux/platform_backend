@@ -1,4 +1,4 @@
-package messaging
+package messagequeue
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type MessagequeueInterface interface {
+type RabbitMQMethods interface {
 	Open(connStr string) error
 	Close() error
 	ExchangeDeclare(name string, kind string, durable bool, autoDelete bool, internal bool, noWait bool, args amqp.Table) error
@@ -15,10 +15,4 @@ type MessagequeueInterface interface {
 	QueueBind(name string, key string, exchange string, noWait bool, args amqp.Table) error
 	Publish(ctx context.Context, exchange string, key string, mandatory bool, immediate bool, msg amqp.Publishing) error
 	Consume(queue string, consumer string, autoAck bool, exclusive bool, noLocal bool, noWait bool, args amqp.Table) (<-chan amqp.Delivery, error)
-}
-
-type DispatcherInterface interface {
-	Start()
-	GetChannel() chan RequestHandlerFunc
-	Shutdown()
 }

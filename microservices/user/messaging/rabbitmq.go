@@ -63,12 +63,10 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 	rabbitMQ := GetRabbitMQ()
 
 	queue, err = rabbitMQ.QueueDeclare(queueName, true, false, true, false, nil)
-	wiredErr := fmt.Errorf("failed to declare a queue %s: %w", queueName, err)
-	log.Printf("error: %v", wiredErr)
+	log.Printf("error: %v", err)
 
 	err = rabbitMQ.QueueBind(queue.Name, routeKey, exchange, false, nil)
-	wiredErr = fmt.Errorf("failed with queue %s bind the routeKey %s of exchange %s: %w", queue.Name, routeKey, exchange, err)
-	log.Printf("error: %v", wiredErr)
+	log.Printf("error: %v", err)
 
 	msgs, err = rabbitMQ.Consume(
 		queue.Name, // queue
@@ -79,8 +77,7 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 		false,      // no wait
 		nil,        // args
 	)
-	wiredErr = fmt.Errorf("failed to consume with queue %s: %w", queue.Name, err)
-	log.Printf("error: %v", wiredErr)
+	log.Printf("error: %v", err)
 
 	go func() {
 		for d := range msgs {
