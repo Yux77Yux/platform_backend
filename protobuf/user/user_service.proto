@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/user;";
+
+import "user/methods/register.proto";
+import "user/methods/login.proto";
+import "user/methods/exit.proto";
+
+service UserService{
+    rpc Register(user.methods.RegisterRequest) returns (user.methods.RegisterResponse);
+    rpc Login(user.methods.LoginRequest) returns (user.methods.LoginResponse);
+    rpc Exit(user.methods.ExitRequest) returns (user.methods.ExitResponse);
+}

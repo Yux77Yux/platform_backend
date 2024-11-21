@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package auth.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/auth";
+
+message CheckRequest {
+    map<string, string> headers = 1;
+    string method = 2;
+    string path = 3;
+}
+
+message CheckResponse {
+    bool allow = 1;
+    optional string message = 2;
+}

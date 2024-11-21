@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/auth";
+
+import "auth/methods/login.proto";
+import "auth/methods/refresh.proto";
+import "auth/methods/check.proto";
+
+service AuthService{
+    rpc Login(auth.methods.LoginRequest) returns (auth.methods.LoginResponse);
+    rpc Refresh(auth.methods.RefreshRequest) returns (auth.methods.RefreshResponse);
+    rpc Check(auth.methods.CheckRequest) returns (auth.methods.CheckResponse);
+}

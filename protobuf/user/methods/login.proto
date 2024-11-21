@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package user.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/user;";
+
+import "common/refresh_token.proto";
+import "common/access_token.proto";
+import "user/messages/user.proto";
+import "user/messages/user_credentials.proto";
+
+message LoginRequest{
+    user.messages.UserCredentials user_credentials = 1;
+}
+
+message LoginResponse{
+    message Token{
+        common.RefreshToken refresh_token = 1;
+        common.AccessToken access_token = 2;
+    }
+
+    user.messages.User user = 1;
+    Token token = 2;
+}
