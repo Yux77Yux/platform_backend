@@ -7,7 +7,7 @@ option go_package = "github.com/Yux77Yux/platform_backend/generated/user;";
 import "google/protobuf/timestamp.proto";
 
 import "common/custom_options.proto";
-import "common/user_default.proto";
+import "user/messages/user_login.proto";
 
 message User{
 	enum Gender {
@@ -23,7 +23,7 @@ message User{
 		LIMITED = 3;
 	}
 
-    common.UserDefault user_default = 1;
+    user.messages.UserLogin user_login = 1;
 	string user_bio = 2 [(custom_options.max_user_bio_length) = 1000];
 	Status user_status = 3;
 	Gender user_gender = 4;
