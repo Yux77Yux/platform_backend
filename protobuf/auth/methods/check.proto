@@ -12,5 +12,5 @@ message CheckRequest {
 
 message CheckResponse {
     bool allow = 1;
-    optional string message = 2;
+    optional string error = 2;
 }

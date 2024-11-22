@@ -12,4 +12,5 @@ message ExitRequest{
 
 message ExitResponse{
     bool status = 1;
+    optional string error = 2;
 }

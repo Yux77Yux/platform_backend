@@ -12,4 +12,5 @@ message RegisterRequest{
 
 message RegisterResponse{
     bool success = 1;
+    optional string error = 2;
 }

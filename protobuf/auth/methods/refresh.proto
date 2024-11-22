@@ -13,4 +13,5 @@ message RefreshRequest{
 
 message RefreshResponse{
     common.AccessToken access_token = 1;
+    optional string error = 2;
 }
