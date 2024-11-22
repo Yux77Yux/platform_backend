@@ -10,6 +10,7 @@ var (
 	addr                string
 	password            string
 	cacheRequestChannel chan RequestHandlerFunc
+	CacheClient         CacheInterface
 )
 
 func InitStr(Addr, Password string) {
@@ -29,4 +30,8 @@ func GetCacheClient() CacheInterface {
 
 func InitWorker(master *RequestProcessor) {
 	cacheRequestChannel = master.GetChannel()
+}
+
+func Init() {
+	CacheClient = GetCacheClient()
 }

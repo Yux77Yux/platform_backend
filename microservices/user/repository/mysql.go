@@ -26,7 +26,6 @@ func UserRegisterInTransaction(user_credential model.UserCredentials) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	db := GetDB()
 	tx, err := db.BeginTransaction()
 	if err != nil {
 		return err

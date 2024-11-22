@@ -9,13 +9,14 @@ import (
 
 var (
 	connStr         string
+	rabbitMQ        MessagequeueInterface
 	ExchangesConfig = map[string]string{
 		"register_exchange": "direct",
 		// Add more exchanges here
 	}
 )
 
-func InitConnStr(_str string) {
+func InitStr(_str string) {
 	connStr = _str
 }
 
@@ -28,8 +29,8 @@ func GetRabbitMQ() MessagequeueInterface {
 	return rabbitMQ
 }
 
-func init() {
-	rabbitMQ := GetRabbitMQ()
+func Init() {
+	rabbitMQ = GetRabbitMQ()
 
 	for exchange, kind := range ExchangesConfig {
 		err := rabbitMQ.ExchangeDeclare(exchange, kind, true, false, false, false, nil)

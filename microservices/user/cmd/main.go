@@ -9,15 +9,19 @@ import (
 	"time"
 
 	userCache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
+	_ "github.com/Yux77Yux/platform_backend/microservices/user/config"
 	internal "github.com/Yux77Yux/platform_backend/microservices/user/internal"
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	service "github.com/Yux77Yux/platform_backend/microservices/user/service"
 )
 
 func main() {
+	var closeServer func()
 	done := make(chan struct{})
 	// 初始化服务器
-	go service.ServerRun(done)
+	go func() {
+		closeServer = service.ServerRun(done)
+	}()
 	// 初始化internal dispatcher
 	mqMaster := userMQ.InitDispatch()
 	mqMaster.Start()
@@ -39,6 +43,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	// 取消上下文，通知服务停止
 	defer cancel()
+	// 关闭服务器
+	go closeServer()
 
 	// 等待关闭完成或超时
 	select {

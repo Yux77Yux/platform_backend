@@ -3,12 +3,13 @@ package repository
 import (
 	"log"
 
-	db "github.com/Yux77Yux/platform_backend/pkg/db"
+	pkgDb "github.com/Yux77Yux/platform_backend/pkg/db"
 )
 
 var (
 	onlyReadStr  string
 	readWriteStr string
+	db           SqlMethods
 )
 
 func InitStr(or, wr string) {
@@ -17,7 +18,7 @@ func InitStr(or, wr string) {
 }
 
 func GetDB() SqlMethods {
-	dbs := &db.MysqlClass{}
+	dbs := &pkgDb.MysqlClass{}
 	err := dbs.InitDb(onlyReadStr, readWriteStr)
 	if err != nil {
 		log.Printf("error: database init failed: %v", err)
@@ -25,4 +26,8 @@ func GetDB() SqlMethods {
 	}
 
 	return dbs
+}
+
+func Init() {
+	db = GetDB()
 }

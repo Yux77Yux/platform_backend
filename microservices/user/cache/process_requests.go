@@ -19,8 +19,6 @@ func InitDispatch() *RequestProcessor {
 }
 
 func (r *RequestProcessor) Start() {
-	CacheClient := GetCacheClient()
-
 	go func() {
 		for handler := range r.requestChan {
 			r.wg.Add(1)
@@ -39,6 +37,10 @@ func (r *RequestProcessor) Shutdown() {
 	close(r.requestChan)
 	r.wg.Wait() // 等待所有任务完成
 	log.Println("info: RequestProcessor shutdown gracefully.")
+
+	log.Println("info: cache client gracefully.")
+	CacheClient.Close()
+	log.Println("info: cache client close ok.")
 }
 
 func (r *RequestProcessor) GetChannel() chan RequestHandlerFunc {

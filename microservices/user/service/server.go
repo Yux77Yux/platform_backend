@@ -43,7 +43,7 @@ func InitServer(grpcServer *grpc.Server) {
 		err error
 	)
 
-	lis, err = net.Listen("tcp", ":8080")
+	lis, err = net.Listen("tcp", addr)
 	if err != nil {
 		err = fmt.Errorf("error: failed to listen: %w", err)
 		log.Fatalf("%v", err)
@@ -52,7 +52,7 @@ func InitServer(grpcServer *grpc.Server) {
 	go func() {
 		generatedUser.RegisterUserServiceServer(grpcServer, &Server{}) // 注册 User 服务
 
-		log.Println("info: server is running on port :50020")
+		log.Println("info: server is running on port ", addr)
 		if err = grpcServer.Serve(lis); err != nil {
 			err = fmt.Errorf("error: failed to serve: %w", err)
 			log.Fatalf("%v", err)

@@ -31,7 +31,9 @@ static_resources:
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder
                     proto_descriptor: "/etc/envoy/descriptor.pb" # gRPC 描述文件路径
-                    services: ["auth.AuthService"] # gRPC 服务名称
+                    services:
+                      - "auth.AuthService"  # 映射到 auth_service 集群
+                      - "user.UserService"  # 映射到 user_service 集群
                     print_options:
                       add_whitespace: true
                       always_print_primitive_fields: true
