@@ -3,7 +3,6 @@ syntax = "proto3";
 package auth.methods;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/auth";
-option ts_package = "generated/auth;";
 
 message CheckRequest {
     map<string, string> headers = 1;
