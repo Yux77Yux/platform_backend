@@ -79,20 +79,6 @@ static_resources:
                           cluster: user_service # 指定 gRPC auth 集
 
   clusters:
-    - name: auth_service # gRPC auth 服务集群
-      connect_timeout: 5s
-      lb_policy: ROUND_ROBIN
-      type: LOGICAL_DNS
-      http2_protocol_options: {}
-      load_assignment:
-        cluster_name: auth_service
-        endpoints:
-          - lb_endpoints:
-            - endpoint:
-                address:
-                  socket_address:
-                    address: ${ENV_HOST}
-                    port_value: 50010
     - name: user_service # gRPC auth 服务集群
       connect_timeout: 5s
       lb_policy: ROUND_ROBIN
@@ -100,6 +86,20 @@ static_resources:
       http2_protocol_options: {}
       load_assignment:
         cluster_name: user_service
+        endpoints:
+          - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: ${ENV_HOST}
+                    port_value: 50010
+    - name: auth_service # gRPC auth 服务集群
+      connect_timeout: 5s
+      lb_policy: ROUND_ROBIN
+      type: LOGICAL_DNS
+      http2_protocol_options: {}
+      load_assignment:
+        cluster_name: auth_service
         endpoints:
           - lb_endpoints:
             - endpoint:
