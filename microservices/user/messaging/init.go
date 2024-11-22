@@ -43,12 +43,10 @@ func Init() {
 		return
 	}
 
-	log.Println("exchange declare start")
 	for exchange, kind := range ExchangesConfig {
 		if err := messageQueue.ExchangeDeclare(exchange, kind, true, false, false, false, nil); err != nil {
 			wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
 			log.Printf("error: %v", wiredErr)
 		}
 	}
-	log.Println("exchange declare over")
 }
