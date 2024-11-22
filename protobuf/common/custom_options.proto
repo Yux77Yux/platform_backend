@@ -3,7 +3,6 @@ syntax = "proto3";
 package custom_options;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/common;";
-option ts_package = "generated/common;";
 
 import "google/protobuf/descriptor.proto";
 
