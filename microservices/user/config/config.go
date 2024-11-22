@@ -10,12 +10,12 @@ import (
 )
 
 const (
-	MYSQL_READER_STR = "yuxyuxx:yuxyuxx(127.0.0.1:23306)/User?parseTime=true"
-	MYSQL_WRITER_STR = "yuxyuxx:yuxyuxx(127.0.0.1:23307)/User?parseTime=true"
+	MYSQL_READER_STR = "yuxyuxx:yuxyuxx@tcp(127.0.0.1:13306)/"
+	MYSQL_WRITER_STR = "yuxyuxx:yuxyuxx@tcp(127.0.0.1:13307)/"
 
 	RABBITMQ_STR = "amqp://yuxyuxx:yuxyuxx@127.0.0.1:5672"
 
-	REDIS_STR = "redis://127.0.0.1:16379"
+	REDIS_STR = "127.0.0.1:16379"
 
 	GRPC_SERVER_ADDRESS = ":50020"
 )

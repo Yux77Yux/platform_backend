@@ -11,7 +11,7 @@ services:
       - mysql_data_primary:/var/lib/mysql
       - ./mysql/primary.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init script
     ports:
-      - "13306:3306"
+      - "23306:3306"
     networks:
       - envoy_auth-net
     command: --server-id=1 --log-bin=primary-bin
@@ -26,7 +26,7 @@ services:
       - mysql_data_replica:/var/lib/mysql
       - ./mysql/replica.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "13307:3306"
+      - "23307:3306"
     networks:
       - envoy_auth-net
     command: --server-id=4 --read-only --log-bin=primary-bin

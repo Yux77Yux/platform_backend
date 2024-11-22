@@ -22,19 +22,27 @@ func InitStr(_str string) {
 
 func GetRabbitMQ() MessagequeueInterface {
 	var messageQueue MessagequeueInterface = &pkgMQ.RabbitMQClass{}
-	err := messageQueue.Open(connStr)
-	wiredErr := fmt.Errorf("failed to connect the rabbit client: %w", err)
-	log.Printf("error: %v", wiredErr)
+	if err := messageQueue.Open(connStr); err != nil {
+		wiredErr := fmt.Errorf("failed to connect the rabbit client: %w", err)
+		log.Printf("error: %v", wiredErr)
+		return nil
+	}
 
 	return messageQueue
 }
 
 func Init() {
-	messageQueue = GetRabbitMQ()
-
-	for exchange, kind := range ExchangesConfig {
-		err := messageQueue.ExchangeDeclare(exchange, kind, true, false, false, false, nil)
-		wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
-		log.Printf("error: %v", wiredErr)
+	if messageQueue = GetRabbitMQ(); messageQueue == nil {
+		log.Printf("error: message queue open failed")
+		return
 	}
+
+	log.Println("exchange declare start")
+	for exchange, kind := range ExchangesConfig {
+		if err := messageQueue.ExchangeDeclare(exchange, kind, true, false, false, false, nil); err != nil {
+			wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
+			log.Printf("error: %v", wiredErr)
+		}
+	}
+	log.Println("exchange declare over")
 }
