@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package user.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/user;";
+
+import "common/user_default.proto";
+
+message UserLogin{
+    common.UserDefault user_default = 1;
+    string user_avator = 2;
+}
