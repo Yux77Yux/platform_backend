@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"hash/fnv"
-	"log"
 	"math"
 	"strings"
 )
@@ -35,11 +34,8 @@ func (r *RedisClient) Open(connStr string, password string) error {
 	return nil
 }
 
-func (r *RedisClient) Close() {
-	if err := r.redisClient.Close(); err != nil {
-		wiredErr := fmt.Errorf("failed to close redis client: %w", err)
-		log.Printf("error: %v", wiredErr)
-	}
+func (r *RedisClient) Close() error {
+	return r.redisClient.Close()
 }
 
 // 类型的删除

@@ -28,6 +28,12 @@ func GetDB() SqlMethods {
 	return dbs
 }
 
+func CloseClient() {
+	if err := db.Close(); err != nil {
+		log.Printf("error: database close failed: %v", err)
+	}
+}
+
 func Init() {
 	db = GetDB()
 }

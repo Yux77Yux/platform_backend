@@ -12,6 +12,7 @@ import (
 	_ "github.com/Yux77Yux/platform_backend/microservices/user/config"
 	internal "github.com/Yux77Yux/platform_backend/microservices/user/internal"
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
+	userDB "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	service "github.com/Yux77Yux/platform_backend/microservices/user/service"
 )
 
@@ -51,6 +52,10 @@ func main() {
 	case <-done:
 		mqMaster.Shutdown()
 		cacheMaster.Shutdown()
+		userCache.CloseClient()
+		userMQ.CloseClient()
+		userDB.CloseClient()
+
 		os.Exit(0)
 	case <-ctx.Done():
 		log.Println("warning: timeout reached. Forcing shutdown.")

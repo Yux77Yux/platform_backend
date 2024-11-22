@@ -47,10 +47,4 @@ func (r *RequestDispatcher) Shutdown() {
 	close(r.requestChan)
 	r.wg.Wait() // 等待所有任务完成
 	log.Println("info: RequestDispatcher shutdown gracefully.")
-
-	log.Println("info: messagequeue shutdown gracefully.")
-	if err := messageQueue.Close(); err != nil {
-		log.Printf("error: rabbitMQ close failed: %v", err)
-	}
-	log.Println("info: messagequeue shutdown gracefully.")
 }

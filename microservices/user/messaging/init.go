@@ -31,6 +31,12 @@ func GetRabbitMQ() MessagequeueInterface {
 	return messageQueue
 }
 
+func CloseClient() {
+	if err := messageQueue.Close(); err != nil {
+		log.Printf("error: failed to close message queue client: %v", err)
+	}
+}
+
 func Init() {
 	if messageQueue = GetRabbitMQ(); messageQueue == nil {
 		log.Printf("error: message queue open failed")

@@ -28,6 +28,15 @@ func GetCacheClient() CacheInterface {
 	return cache
 }
 
+func CloseClient() {
+	log.Println("info: cache client gracefully.")
+	if err := CacheClient.Close(); err != nil {
+		log.Println("error: cache client close error.")
+		return
+	}
+	log.Println("info: cache client close ok.")
+}
+
 func InitWorker(master *RequestProcessor) {
 	cacheRequestChannel = master.GetChannel()
 }
