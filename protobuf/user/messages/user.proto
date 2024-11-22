@@ -3,6 +3,7 @@ syntax = "proto3";
 package user.messages;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/user;";
+option ts_package = "generated/user;";
 
 import "google/protobuf/timestamp.proto";
 

@@ -3,6 +3,7 @@ syntax = "proto3";
 package user.methods;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/user;";
+option ts_package = "generated/user;";
 
 import "common/refresh_token.proto";
 
@@ -12,5 +13,4 @@ message ExitRequest{
 
 message ExitResponse{
     bool status = 1;
-    optional string error = 2;
 }
