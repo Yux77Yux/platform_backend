@@ -9,7 +9,7 @@ import (
 
 var (
 	connStr         string
-	rabbitMQ        MessagequeueInterface
+	messageQueue    MessagequeueInterface
 	ExchangesConfig = map[string]string{
 		"register_exchange": "direct",
 		// Add more exchanges here
@@ -21,19 +21,19 @@ func InitStr(_str string) {
 }
 
 func GetRabbitMQ() MessagequeueInterface {
-	var rabbitMQ MessagequeueInterface = &pkgMQ.RabbitMQClass{}
-	err := rabbitMQ.Open(connStr)
+	var messageQueue MessagequeueInterface = &pkgMQ.RabbitMQClass{}
+	err := messageQueue.Open(connStr)
 	wiredErr := fmt.Errorf("failed to connect the rabbit client: %w", err)
 	log.Printf("error: %v", wiredErr)
 
-	return rabbitMQ
+	return messageQueue
 }
 
 func Init() {
-	rabbitMQ = GetRabbitMQ()
+	messageQueue = GetRabbitMQ()
 
 	for exchange, kind := range ExchangesConfig {
-		err := rabbitMQ.ExchangeDeclare(exchange, kind, true, false, false, false, nil)
+		err := messageQueue.ExchangeDeclare(exchange, kind, true, false, false, false, nil)
 		wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
 		log.Printf("error: %v", wiredErr)
 	}
