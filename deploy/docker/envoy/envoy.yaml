@@ -24,7 +24,7 @@ static_resources:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
                     grpc_service:
                       google_grpc:
-                        target_uri: "${ENV_HOST}:50009"
+                        target_uri: "172.28.96.1:50009"
                         stat_prefix: "ext_authz"
                     failure_mode_allow: false
                 - name: envoy.filters.http.grpc_json_transcoder # 转换过滤器
@@ -32,58 +32,57 @@ static_resources:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder
                     proto_descriptor: "/etc/envoy/descriptor.pb" # gRPC 描述文件路径
                     services:
-                      - "auth.AuthService"  # 映射到 auth_service 集群
-                      - "user.UserService"  # 映射到 user_service 集群
+                      - "auth.AuthService"
+                      - "user.UserService"
                     print_options:
                       add_whitespace: true
                       always_print_primitive_fields: true
                 - name: envoy.filters.http.router # 路由过滤器
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              
               route_config:
                 virtual_hosts:
-                  # 虚拟主机名称，针对 auth 服务
-                  - name: auth_service
+                  - name: all_service
                     domains: ["*"] # 匹配所有域名
                     routes:
                       - match:
-                          prefix: "/api/auth/refresh" # 刷新 路径
+                          prefix: '/'
+                        route:
+                          cluster: user_service # 指定 gRPC auth 集群
+                        typed_per_filter_config:
+                          envoy.filters.http.ext_authz:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                            disabled: true # 禁用外部授权
+                      - match:
+                          path: "/user.UserService/Login" # 登录 路径
+                        route:
+                          cluster: user_service # 指定 gRPC auth 集群
+                        typed_per_filter_config:
+                          envoy.filters.http.ext_authz:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                            disabled: true # 禁用外部授权
+                      - match:
+                          path: "/api/user/exit" # 登出 路径
+                        route:
+                          cluster: user_service # 指定 gRPC auth 集
+                      - match:
+                          path: "/api/auth/refresh" # 刷新 路径
                         typed_per_filter_config:
                           envoy.filters.http.ext_authz:
                             "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
                             disabled: true # 禁用外部授权
                         route:
                           cluster: auth_service # 指定 gRPC auth 集群
-                  - name: user_service
-                    domains: ["localhost"] # 匹配所有域名
-                    routes:
-                      - match:
-                          prefix: "/api/user/register" # 注册 路径
-                        route:
-                          cluster: user_service # 指定 gRPC auth 集群
-                        typed_per_filter_config:
-                          envoy.filters.http.ext_authz:
-                            "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
-                            disabled: true # 禁用外部授权
-                      - match:
-                          prefix: "/api/user/login" # 登录 路径
-                        route:
-                          cluster: user_service # 指定 gRPC auth 集群
-                        typed_per_filter_config:
-                          envoy.filters.http.ext_authz:
-                            "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
-                            disabled: true # 禁用外部授权
-                      - match:
-                          prefix: "/api/user/exit" # 登出 路径
-                        route:
-                          cluster: user_service # 指定 gRPC auth 集
-
   clusters:
     - name: user_service # gRPC auth 服务集群
       connect_timeout: 5s
       lb_policy: ROUND_ROBIN
       type: LOGICAL_DNS
-      http2_protocol_options: {}
+      http2_protocol_options:  # 对于 HTTP/2 配置
+        initial_connection_window_size: 1048576  # 初始连接窗口大小
+        initial_stream_window_size: 1048576  # 初始流窗口大小
+        max_concurrent_streams: 1000
       load_assignment:
         cluster_name: user_service
         endpoints:
@@ -91,8 +90,17 @@ static_resources:
             - endpoint:
                 address:
                   socket_address:
-                    address: ${ENV_HOST}
+                    address: 172.28.96.1
                     port_value: 50010
+      circuit_breakers:
+        thresholds:
+          - priority: default
+            max_connections: 1000
+            max_pending_requests: 1000
+            max_requests: 1000
+            max_retries: 3
+      per_connection_buffer_limit_bytes: 32768  # 每个连接的缓冲区限制，单位字节
+
     - name: auth_service # gRPC auth 服务集群
       connect_timeout: 5s
       lb_policy: ROUND_ROBIN
@@ -105,5 +113,5 @@ static_resources:
             - endpoint:
                 address:
                   socket_address:
-                    address: ${ENV_HOST}
+                    address: 172.28.96.1
                     port_value: 50020

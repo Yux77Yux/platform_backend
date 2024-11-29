@@ -4,12 +4,24 @@ package user;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/user;";
 
+import "google/api/annotations.proto";
+
 import "user/methods/register.proto";
 import "user/methods/login.proto";
 import "user/methods/exit.proto";
 
 service UserService{
-    rpc Register(user.methods.RegisterRequest) returns (user.methods.RegisterResponse);
-    rpc Login(user.methods.LoginRequest) returns (user.methods.LoginResponse);
+    rpc Register(user.methods.RegisterRequest) returns (user.methods.RegisterResponse) {
+        option (google.api.http) = {
+            post: "/api/user/register"
+            body: "user_credentials"
+        };
+    }
+    rpc Login(user.methods.LoginRequest) returns (user.methods.LoginResponse){
+        option (google.api.http) = {
+            post: "/api/user/login"
+            body: "user_credentials"
+        };
+    }
     rpc Exit(user.methods.ExitRequest) returns (user.methods.ExitResponse);
 }

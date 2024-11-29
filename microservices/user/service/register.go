@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"google.golang.org/protobuf/proto"
@@ -12,6 +13,9 @@ import (
 
 func (s *Server) Register(ctx context.Context, req *generatedUser.RegisterRequest) (*generatedUser.RegisterResponse, error) {
 	log.Println("info: register service start")
+
+	fmt.Println("msg:: ", req)
+
 	select {
 	case <-ctx.Done():
 		err := ctx.Err()
@@ -22,6 +26,12 @@ func (s *Server) Register(ctx context.Context, req *generatedUser.RegisterReques
 		}, err
 	default:
 		success, err := internal.Register(req.GetUserCredentials())
+		if err != nil {
+			return &generatedUser.RegisterResponse{
+				Success: false,
+				Error:   proto.String(err.Error()),
+			}, err
+		}
 		return &generatedUser.RegisterResponse{
 			Success: success,
 		}, err

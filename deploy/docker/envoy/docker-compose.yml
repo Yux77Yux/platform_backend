@@ -3,15 +3,18 @@ services:
     image: envoyproxy/envoy:tools-dev
     container_name: envoy-gateway
     ports:
-      - "8080:8080"  
+      - "8080:8080"
+      - "9901:9901"
+    command: ["envoy", "-c", "/etc/envoy/envoy.yaml", "--log-level", "debug"]
     networks:
-      - auth-net
+      # - auth-net
       - user-net
     volumes:
       - ./envoy.yaml:/etc/envoy/envoy.yaml
       - ./descriptor.pb:/etc/envoy/descriptor.pb
     environment:
       - ENV_HOST=host.docker.internal  # 设置宿主机的域名
+      - ENVOY_LOG_LEVEL=debug
 
 networks:
   auth-net:

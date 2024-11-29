@@ -8,10 +8,13 @@ import (
 
 	generatedUser "github.com/Yux77Yux/platform_backend/generated/user"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func ServerRun(done chan struct{}) func() {
 	grpcServer := grpc.NewServer()
+	reflection.Register(grpcServer) // 启用 gRPC Reflection
+
 	go InitServer(grpcServer)
 
 	return func() {
