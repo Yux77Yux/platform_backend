@@ -53,7 +53,6 @@ func main() {
 		mqMaster.Shutdown()
 		cacheMaster.Shutdown()
 		userCache.CloseClient()
-		userMQ.CloseClient()
 		userDB.CloseClient()
 
 		os.Exit(0)

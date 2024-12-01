@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package aggregator.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
+
+import "user/messages/user_login.proto";
+import "user/messages/user_credentials.proto";
+import "auth/messages/tokens.proto";
+import "common/api_response.proto";
+
+message LoginRequest{
+    user.messages.UserCredentials user_credentials = 1;
+}
+
+message LoginResponse{
+    user.messages.UserLogin user_login = 1;
+    auth.messages.Tokens tokens = 2;
+    common.ApiResponse msg = 3;
+}

@@ -47,6 +47,9 @@ func (r *RabbitMQClass) Close() error {
 	if err := r.channel.Close(); err != nil {
 		return fmt.Errorf("can't close channel because %w", err)
 	}
+	if err := r.rabbitmqClient.Close(); err != nil {
+		return fmt.Errorf("can't close client because %w", err)
+	}
 	return nil
 }
 

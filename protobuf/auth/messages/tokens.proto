@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package auth.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/auth";
+
+import "auth/messages/access_token.proto";
+import "auth/messages/refresh_token.proto";
+
+message Tokens {
+  auth.messages.RefreshToken refresh_token = 1;
+  auth.messages.AccessToken access_token = 2;
+}

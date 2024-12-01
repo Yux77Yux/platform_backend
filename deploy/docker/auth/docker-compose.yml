@@ -13,7 +13,7 @@ services:
     ports:
       - "23306:3306"
     networks:
-      - envoy_auth-net
+      - auth-net
     command: --server-id=1 --log-bin=primary-bin
 
   mysql-replica-service:
@@ -28,11 +28,11 @@ services:
     ports:
       - "23307:3306"
     networks:
-      - envoy_auth-net
+      - auth-net
     command: --server-id=4 --read-only --log-bin=primary-bin
 
 networks:
-  envoy_auth-net:
+  auth-net:
     external: true
 
 volumes:

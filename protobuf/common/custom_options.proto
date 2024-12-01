@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package custom_options;
+package common;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/common;";
 

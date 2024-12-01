@@ -6,14 +6,14 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_USER: yuxyuxx
       MYSQL_PASSWORD: yuxyuxx
-      MYSQL_DATABASE: db_auth_1
+      MYSQL_DATABASE: db_user_1
     volumes:
       - mysql_data_primary:/var/lib/mysql
       - ./mysql/primary.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init script
     ports:
       - "13306:3306"
     networks:
-      - envoy_auth-net
+      - user-net
     command: --server-id=1 --log-bin=primary-bin
 
   mysql-replica-service:
@@ -28,11 +28,11 @@ services:
     ports:
       - "13307:3306"
     networks:
-      - envoy_auth-net
+      - user-net
     command: --server-id=4 --read-only --log-bin=primary-bin
 
 networks:
-  envoy_auth-net:
+  user-net:
     external: true
 
 volumes:

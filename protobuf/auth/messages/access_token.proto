@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package auth.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/auth";
+
+import "google/protobuf/timestamp.proto";// 引入 Timestamp 类型
+
+message AccessToken {
+  string value = 1;
+  google.protobuf.Timestamp expires_at = 2;// Token 到期时间
+}

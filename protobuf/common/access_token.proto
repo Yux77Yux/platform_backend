@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-package common;
-
-option go_package = "github.com/Yux77Yux/platform_backend/generated/common;";
-
-message AccessToken{
-    string value = 1;
-}

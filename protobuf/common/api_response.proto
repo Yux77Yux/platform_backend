@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/common;";
+
+message ApiResponse {
+    enum Status {
+        SUCCESS = 0;  // 操作成功
+        ERROR = 1;    // 操作失败
+        PENDING = 2;  // 操作正在处理中
+        FAILED = 3;   // 操作彻底失败
+    }
+    
+    Status status = 1;                  // 操作状态（例如: success, error）
+    string code = 2;                    // 状态码（例如: 200, 400, 500）
+    string message = 3;                 // 用户友好的消息
+    string details = 4;                 // 错误详情或附加信息
+    string trace_id = 6;                // 请求追踪 ID（可选）
+}

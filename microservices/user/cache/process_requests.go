@@ -21,6 +21,7 @@ func InitDispatch() *RequestProcessor {
 func (r *RequestProcessor) Start() {
 	go func() {
 		for handler := range r.requestChan {
+			log.Println("cache request input")
 			r.wg.Add(1)
 
 			go func() {

@@ -34,6 +34,7 @@ static_resources:
                     services:
                       - "auth.AuthService"
                       - "user.UserService"
+                      - "aggregator.AggregatorService"
                     print_options:
                       add_whitespace: true
                       always_print_primitive_fields: true
@@ -47,7 +48,7 @@ static_resources:
                     domains: ["*"] # 匹配所有域名
                     routes:
                       - match:
-                          prefix: '/'
+                          path: '/user.UserService/register'
                         route:
                           cluster: user_service # 指定 gRPC auth 集群
                         typed_per_filter_config:
@@ -55,26 +56,39 @@ static_resources:
                             "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
                             disabled: true # 禁用外部授权
                       - match:
-                          path: "/user.UserService/Login" # 登录 路径
+                          path: "/aggregator.AggregatorService/Login" # 登录 路径
                         route:
-                          cluster: user_service # 指定 gRPC auth 集群
+                          cluster: aggregator_service # 指定 gRPC auth 集群
                         typed_per_filter_config:
                           envoy.filters.http.ext_authz:
                             "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
                             disabled: true # 禁用外部授权
-                      - match:
-                          path: "/api/user/exit" # 登出 路径
-                        route:
-                          cluster: user_service # 指定 gRPC auth 集
-                      - match:
-                          path: "/api/auth/refresh" # 刷新 路径
-                        typed_per_filter_config:
-                          envoy.filters.http.ext_authz:
-                            "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
-                            disabled: true # 禁用外部授权
-                        route:
-                          cluster: auth_service # 指定 gRPC auth 集群
   clusters:
+    - name: aggregator_service # gRPC auth 服务集群
+      connect_timeout: 5s
+      lb_policy: ROUND_ROBIN
+      type: LOGICAL_DNS
+      http2_protocol_options:  # 对于 HTTP/2 配置
+        initial_connection_window_size: 1048576  # 初始连接窗口大小
+        initial_stream_window_size: 1048576  # 初始流窗口大小
+        max_concurrent_streams: 1000
+      load_assignment:
+        cluster_name: aggregator_service
+        endpoints:
+          - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: 172.28.96.1
+                    port_value: 50000
+      circuit_breakers:
+        thresholds:
+          - priority: default
+            max_connections: 1000
+            max_pending_requests: 1000
+            max_requests: 1000
+            max_retries: 3
+      per_connection_buffer_limit_bytes: 32768  # 每个连接的缓冲区限制，单位字节
     - name: user_service # gRPC auth 服务集群
       connect_timeout: 5s
       lb_policy: ROUND_ROBIN
@@ -105,9 +119,12 @@ static_resources:
       connect_timeout: 5s
       lb_policy: ROUND_ROBIN
       type: LOGICAL_DNS
-      http2_protocol_options: {}
+      http2_protocol_options:  # 对于 HTTP/2 配置
+        initial_connection_window_size: 1048576  # 初始连接窗口大小
+        initial_stream_window_size: 1048576  # 初始流窗口大小
+        max_concurrent_streams: 1000
       load_assignment:
-        cluster_name: auth_service
+        cluster_name: user_service
         endpoints:
           - lb_endpoints:
             - endpoint:
@@ -115,3 +132,11 @@ static_resources:
                   socket_address:
                     address: 172.28.96.1
                     port_value: 50020
+      circuit_breakers:
+        thresholds:
+          - priority: default
+            max_connections: 1000
+            max_pending_requests: 1000
+            max_requests: 1000
+            max_retries: 3
+      per_connection_buffer_limit_bytes: 32768  # 每个连接的缓冲区限制，单位字节

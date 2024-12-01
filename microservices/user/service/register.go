@@ -2,11 +2,9 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"google.golang.org/protobuf/proto"
-
+	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generatedUser "github.com/Yux77Yux/platform_backend/generated/user"
 	internal "github.com/Yux77Yux/platform_backend/microservices/user/internal"
 )
@@ -14,26 +12,21 @@ import (
 func (s *Server) Register(ctx context.Context, req *generatedUser.RegisterRequest) (*generatedUser.RegisterResponse, error) {
 	log.Println("info: register service start")
 
-	fmt.Println("msg:: ", req)
-
 	select {
 	case <-ctx.Done():
 		err := ctx.Err()
 		log.Printf("error: service exceeded timeout: %v", err)
 		return &generatedUser.RegisterResponse{
-			Success: false,
-			Error:   proto.String(err.Error()),
+			Msg: &common.ApiResponse{},
 		}, err
 	default:
-		success, err := internal.Register(req.GetUserCredentials())
+		response, err := internal.Register(req)
 		if err != nil {
-			return &generatedUser.RegisterResponse{
-				Success: false,
-				Error:   proto.String(err.Error()),
-			}, err
+			log.Println("error: register occur fail")
+			return response, err
 		}
-		return &generatedUser.RegisterResponse{
-			Success: success,
-		}, err
+
+		log.Println("info: register occur success")
+		return response, nil
 	}
 }

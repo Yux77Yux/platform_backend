@@ -2,21 +2,28 @@ package service
 
 import (
 	"context"
+	"log"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	//model "github.com/Yux77Yux/platform_backend/microservices/user/model"
+	internal "github.com/Yux77Yux/platform_backend/microservices/user/internal"
 )
 
 func (s *Server) Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginResponse, error) {
-	var (
-		res *generated.LoginResponse
-		err error
-	)
+	log.Println("info: login service start")
 
-	// user_credentials := &model.UserCredentials{
-	// 	Username: req.GetUserCredential().Username,
-	// 	Password: req.GetUserCredential().Password,
-	// }
+	select {
+	case <-ctx.Done():
+		err := ctx.Err()
+		log.Printf("error: service exceeded timeout: %v", err)
+		return &generated.LoginResponse{}, err
+	default:
+		response, err := internal.Login(req)
+		if err != nil {
+			log.Println("error: login occur fail")
+			return response, err
+		}
 
-	return res, err
+		log.Println("info: login occur success")
+		return response, nil
+	}
 }

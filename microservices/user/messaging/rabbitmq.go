@@ -27,6 +27,7 @@ func SendMessage(exchange string, routeKey string, req proto.Message) error {
 	}
 
 	rabbitMQ := GetRabbitMQ()
+	defer rabbitMQ.Close()
 
 	for i := 0; i < retries; i++ {
 		err := rabbitMQ.Publish(
@@ -61,6 +62,7 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 	)
 
 	rabbitMQ := GetRabbitMQ()
+	defer rabbitMQ.Close()
 
 	queue, err = rabbitMQ.QueueDeclare(queueName, true, false, true, false, nil)
 	log.Printf("error: %v", err)

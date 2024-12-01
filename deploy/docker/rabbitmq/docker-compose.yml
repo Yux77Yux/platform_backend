@@ -9,15 +9,15 @@ services:
       - "15672:15672"   # 管理界面
       - "5672:5672"     # AMQP 协议端口
     networks:
-      - envoy_auth-net
-      - envoy_user-net
+      - auth-net
+      - user-net
     volumes:
       - data:/var/lib/rabbitmq  # 持久化数据
 
 networks:
-  envoy_auth-net:
+  auth-net:
     external: true
-  envoy_user-net:
+  user-net:
     external: true
 
 volumes:

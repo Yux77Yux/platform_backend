@@ -6,7 +6,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type MessagequeueInterface interface {
+type MessageQueueInterface interface {
 	Open(connStr string) error
 	Close() error
 	ExchangeDeclare(name string, kind string, durable bool, autoDelete bool, internal bool, noWait bool, args amqp.Table) error

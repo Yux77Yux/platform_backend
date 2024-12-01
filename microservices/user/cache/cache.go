@@ -16,6 +16,7 @@ func ExistsUsername(username string) (bool, error) {
 		err   error
 	}, 1)
 
+	// 将闭包发至通道
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		exist, err := CacheClient.ExistsInSet(ctx, "User", "Username", username)
 
@@ -33,11 +34,15 @@ func ExistsUsername(username string) (bool, error) {
 	// 使用 select 来监听超时和结果
 	select {
 	case <-ctx.Done():
+		// 超时
 		return false, fmt.Errorf("timeout: %w", ctx.Err())
 	case result := <-resultCh:
 		if result.err != nil {
+			log.Printf("error: failed to execute cache method: ExistsUsername")
 			return false, result.err
 		}
+
+		// 正常返回结果
 		return result.exist, nil
 	}
 }

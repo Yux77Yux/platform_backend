@@ -8,7 +8,6 @@ import "google/api/annotations.proto";
 
 import "user/methods/register.proto";
 import "user/methods/login.proto";
-import "user/methods/exit.proto";
 
 service UserService{
     rpc Register(user.methods.RegisterRequest) returns (user.methods.RegisterResponse) {
@@ -23,5 +22,4 @@ service UserService{
             body: "user_credentials"
         };
     }
-    rpc Exit(user.methods.ExitRequest) returns (user.methods.ExitResponse);
 }

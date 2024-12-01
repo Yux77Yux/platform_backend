@@ -11,8 +11,8 @@ services:
     ports:
       - "16379:6379"
     networks:
-      - envoy_auth-net
-      - envoy_user-net
+      - auth-net
+      - user-net
 
   redis-replica-service:
     image: redis:latest
@@ -26,13 +26,13 @@ services:
     ports:
       - "16380:6379"
     networks:
-      - envoy_auth-net
-      - envoy_user-net
+      - auth-net
+      - user-net
 
 networks:
-  envoy_auth-net:
+  auth-net:
     external: true
-  envoy_user-net:
+  user-net:
     external: true
 
 volumes:

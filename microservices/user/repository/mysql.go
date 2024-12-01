@@ -5,17 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Yux77Yux/platform_backend/microservices/user/model"
+	model "github.com/Yux77Yux/platform_backend/generated/user"
 )
 
-func UserRegisterInTransaction(user_credential model.UserCredentials) error {
-	// 解开简单加密
-	pwd, err := decryptWithTimestamp(user_credential.Password)
-	if err != nil {
-		return fmt.Errorf("decrypt simple password failed because %w", err)
-	}
+func UserRegisterInTransaction(user_credential *model.UserCredentials) error {
+	pwd, err := hashPassword(user_credential.GetPassword())
+
 	// 进行复杂加密
-	if pwd, err = hashPassword(pwd); err != nil {
+	if err != nil {
 		return fmt.Errorf("decrypt hash password failed because %w", err)
 	}
 
@@ -50,7 +47,7 @@ func UserRegisterInTransaction(user_credential model.UserCredentials) error {
 
 		return err
 	default:
-		_, err = tx.Exec(query, user_credential.Username, pwd, user_credential.Email)
+		_, err = tx.Exec(query, user_credential.GetUsername(), pwd, user_credential.GetEmail())
 		if err != nil {
 			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {

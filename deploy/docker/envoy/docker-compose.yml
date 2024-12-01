@@ -7,7 +7,7 @@ services:
       - "9901:9901"
     command: ["envoy", "-c", "/etc/envoy/envoy.yaml", "--log-level", "debug"]
     networks:
-      # - auth-net
+      - auth-net
       - user-net
     volumes:
       - ./envoy.yaml:/etc/envoy/envoy.yaml
@@ -18,6 +18,6 @@ services:
 
 networks:
   auth-net:
-    driver: bridge
+    external: true
   user-net:
-    driver: bridge
+    external: true
