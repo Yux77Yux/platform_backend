@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/user"
+	generated "github.com/Yux77Yux/platform_backend/generated/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -37,7 +37,7 @@ func ServerRun(done chan struct{}) func() {
 }
 
 type Server struct {
-	generated.UnimplementedUserServiceServer
+	generated.UnimplementedAuthServiceServer
 }
 
 func InitServer(grpcServer *grpc.Server) {
@@ -53,7 +53,7 @@ func InitServer(grpcServer *grpc.Server) {
 	}
 
 	go func() {
-		generated.RegisterUserServiceServer(grpcServer, &Server{}) // 注册 User 服务
+		generated.RegisterAuthServiceServer(grpcServer, &Server{}) // 注册 Auth 服务
 
 		log.Println("info: server is running on port ", addr)
 		if err = grpcServer.Serve(lis); err != nil {

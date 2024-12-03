@@ -32,20 +32,21 @@ func GetRabbitMQ() MessageQueueInterface {
 
 func Init() {
 	messageQueue := GetRabbitMQ()
+	defer messageQueue.Close()
+
 	if messageQueue == nil {
 		log.Printf("error: message queue open failed")
 		return
 	}
-
 	for exchange, kind := range ExchangesConfig {
-		if err := messageQueue.ExchangeDeclare(exchange, kind, true, false, false, false, nil); err != nil {
-			wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
-			log.Printf("error: %v", wiredErr)
-		}
-
 		exchangeName := fmt.Sprintf("%s_exchange", exchange)
 		queueName := fmt.Sprintf("%s_queue", exchange)
 		routeKey := fmt.Sprintf("%s_route", exchange)
+
+		if err := messageQueue.ExchangeDeclare(exchangeName, kind, true, false, false, false, nil); err != nil {
+			wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
+			log.Printf("error: %v", wiredErr)
+		}
 
 		switch exchange {
 		// 不同的exchange使用不同函数

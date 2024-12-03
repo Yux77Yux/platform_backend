@@ -8,36 +8,32 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
-	generatedUser "github.com/Yux77Yux/platform_backend/generated/user"
+	generated "github.com/Yux77Yux/platform_backend/generated/user"
 )
 
-func UserAddInfoInTransaction(user_info *generatedUser.User) error {
-	query := `insert into user 
+func UserAddInfoInTransaction(user_info *generated.User) error {
+	query := `insert into db_user_1.User 
 	(user_id,
 	user_name,
 	user_avator,
 	user_bio,
 	user_status,
 	user_gender,
+	user_email,
 	user_bday,
 	user_created_at,
-	user_updated_at,
+	user_updated_at
 	)
-	values(?,?,?,?,?,?,?,?,?)`
+	values(?,?,?,?,?,?,?,?,?,?)`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	// 切换到 db_user_1
-	_, err := db.Exec("USE db_user_1")
-	if err != nil {
-		return err
-	}
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
 		return err
 	}
+
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
 	defer func() {
 		if r := recover(); r != nil {
@@ -49,16 +45,22 @@ func UserAddInfoInTransaction(user_info *generatedUser.User) error {
 	}()
 
 	var (
-		UserId        int64                     = user_info.GetUserDefault().GetUserId()
-		UserName      string                    = user_info.GetUserDefault().GetUserName()
-		UserAvator    string                    = user_info.GetUserAvator()
-		UserBio       string                    = user_info.GetUserBio()
-		UserStatus    generatedUser.User_Status = user_info.GetUserStatus()
-		UserGender    generatedUser.User_Gender = user_info.GetUserGender()
-		UserBday      *timestamppb.Timestamp
-		UserCreatedAt *timestamppb.Timestamp
-		UserUpdatedAt *timestamppb.Timestamp
+		UserId        int64                 = user_info.GetUserDefault().GetUserId()
+		UserName      string                = user_info.GetUserDefault().GetUserName()
+		UserAvator    string                = user_info.GetUserAvator()
+		UserBio       string                = user_info.GetUserBio()
+		UserStatus    generated.User_Status = user_info.GetUserStatus()
+		UserGender    generated.User_Gender = user_info.GetUserGender()
+		UserEmail     interface{}
+		UserCreatedAt time.Time = user_info.GetUserCreatedAt().AsTime()
+		UserUpdatedAt time.Time = user_info.GetUserUpdatedAt().AsTime()
 	)
+	if user_info.GetUserEmail() == "" {
+		UserEmail = nil
+	} else {
+		UserEmail = user_info.GetUserEmail()
+	}
+
 	select {
 	case <-ctx.Done():
 		err = fmt.Errorf("exec timeout :%w", ctx.Err())
@@ -76,7 +78,8 @@ func UserAddInfoInTransaction(user_info *generatedUser.User) error {
 			UserBio,
 			UserStatus,
 			UserGender,
-			UserBday,
+			UserEmail,
+			nil,
 			UserCreatedAt,
 			UserUpdatedAt,
 		)
@@ -97,31 +100,28 @@ func UserAddInfoInTransaction(user_info *generatedUser.User) error {
 	return nil
 }
 
-func UserGetInfoInTransaction(user_id int64) (*generatedUser.User, error) {
+func UserGetInfoInTransaction(user_id int64) (*generated.User, error) {
 	query := `select 
 	user_name 
 	user_avator 
 	user_bio 
 	user_status 
 	user_gender 
+	user_email 
 	user_bday 
 	user_created_at 
 	user_updated_at 
+	from db_user_1.User 
 	where user_id = ?`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 切换到 db_user_1
-	_, err := db.Exec("USE db_user_1")
-	if err != nil {
-		return nil, err
-	}
-
 	tx, err := db.BeginTransaction()
 	if err != nil {
 		return nil, err
 	}
+
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
 	defer func() {
 		if r := recover(); r != nil {
@@ -136,8 +136,8 @@ func UserGetInfoInTransaction(user_id int64) (*generatedUser.User, error) {
 		UserName      string
 		UserAvator    string
 		UserBio       string
-		UserStatus    generatedUser.User_Status
-		UserGender    generatedUser.User_Gender
+		UserStatus    generated.User_Status
+		UserGender    generated.User_Gender
 		UserBday      *timestamppb.Timestamp
 		UserCreatedAt *timestamppb.Timestamp
 		UserUpdatedAt *timestamppb.Timestamp
@@ -173,7 +173,7 @@ func UserGetInfoInTransaction(user_id int64) (*generatedUser.User, error) {
 			return nil, err
 		}
 	}
-	user_info := &generatedUser.User{
+	user_info := &generated.User{
 		UserDefault: &common.UserDefault{
 			UserId:   user_id,
 			UserName: UserName,
@@ -190,21 +190,25 @@ func UserGetInfoInTransaction(user_id int64) (*generatedUser.User, error) {
 	return user_info, nil
 }
 
-func UserVerifyInTranscation(user_credential *generatedUser.UserCredentials) (int64, error) {
-	query := `select password user_id where username = ?`
+func UserVerifyInTranscation(user_credential *generated.UserCredentials) (int64, error) {
+	query := `select 
+	password 
+	user_id 
+	from db_user_credentials_1.UserCredentials 
+	where username = ?`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 切换到 db_user_credentials_1
-	_, err := db.Exec("USE db_user_credentials_1")
+	tx, err := db.BeginTransaction()
 	if err != nil {
 		return 0, err
 	}
 
-	tx, err := db.BeginTransaction()
+	// 切换到 db_user_credentials_1
+	_, err = tx.Exec("USE db_user_credentials_1")
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("change the database error: %v", err)
 	}
 
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
@@ -259,7 +263,7 @@ func UserVerifyInTranscation(user_credential *generatedUser.UserCredentials) (in
 	return user_id, nil
 }
 
-func UserRegisterInTransaction(user_credential *generatedUser.UserCredentials, id int64) error {
+func UserRegisterInTransaction(user_credential *generated.UserCredentials, id int64) error {
 	pwd, err := hashPassword(user_credential.GetPassword())
 
 	// 进行复杂加密
@@ -267,18 +271,12 @@ func UserRegisterInTransaction(user_credential *generatedUser.UserCredentials, i
 		return fmt.Errorf("decrypt hash password failed because %w", err)
 	}
 
-	query := `insert into UserCredentials(username,password,email,user_id) 
+	query := `insert into db_user_credentials_1.UserCredentials(username,password,email,user_id) 
 	values(?,?,?,?) 
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	// 切换到 db_user_credentials_1
-	_, err = db.Exec("USE db_user_credentials_1")
-	if err != nil {
-		return err
-	}
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -304,7 +302,15 @@ func UserRegisterInTransaction(user_credential *generatedUser.UserCredentials, i
 
 		return err
 	default:
-		_, err = tx.Exec(query, user_credential.GetUsername(), pwd, user_credential.GetEmail(), id)
+		var email interface{}
+		if user_credential.GetEmail() == "" {
+			email = nil
+		} else {
+			email = user_credential.GetEmail()
+		}
+
+		_, err = tx.Exec(query, user_credential.GetUsername(), pwd, email, id)
+
 		if err != nil {
 			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {

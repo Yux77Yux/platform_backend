@@ -11,21 +11,22 @@ type MysqlClass struct {
 	replicaDB *sql.DB
 }
 
-func (dbs *MysqlClass) InitDb(onlyReadStr, readWriteStr string) error {
+func (dbs *MysqlClass) InitDb(readStr string, writeStr string) error {
 	var err error
-	if dbs.replicaDB, err = sql.Open("mysql", onlyReadStr); err != nil {
-		return err
-	}
 
-	if err = dbs.replicaDB.Ping(); err != nil {
-		return err
-	}
-
-	if dbs.mainDB, err = sql.Open("mysql", readWriteStr); err != nil {
+	if dbs.mainDB, err = sql.Open("mysql", writeStr); err != nil {
 		return err
 	}
 
 	if err = dbs.mainDB.Ping(); err != nil {
+		return err
+	}
+
+	if dbs.replicaDB, err = sql.Open("mysql", readStr); err != nil {
+		return err
+	}
+
+	if err = dbs.replicaDB.Ping(); err != nil {
 		return err
 	}
 

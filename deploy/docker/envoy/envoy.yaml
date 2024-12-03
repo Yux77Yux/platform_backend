@@ -48,7 +48,7 @@ static_resources:
                     domains: ["*"] # 匹配所有域名
                     routes:
                       - match:
-                          path: '/user.UserService/register'
+                          path: '/user.UserService/Register'
                         route:
                           cluster: user_service # 指定 gRPC auth 集群
                         typed_per_filter_config:
@@ -64,7 +64,7 @@ static_resources:
                             "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
                             disabled: true # 禁用外部授权
   clusters:
-    - name: aggregator_service # gRPC auth 服务集群
+    - name: aggregator_service # gRPC 聚合层 服务集群
       connect_timeout: 5s
       lb_policy: ROUND_ROBIN
       type: LOGICAL_DNS
@@ -89,7 +89,8 @@ static_resources:
             max_requests: 1000
             max_retries: 3
       per_connection_buffer_limit_bytes: 32768  # 每个连接的缓冲区限制，单位字节
-    - name: user_service # gRPC auth 服务集群
+
+    - name: user_service # gRPC user 服务集群
       connect_timeout: 5s
       lb_policy: ROUND_ROBIN
       type: LOGICAL_DNS

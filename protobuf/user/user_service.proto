@@ -16,10 +16,5 @@ service UserService{
             body: "user_credentials"
         };
     }
-    rpc Login(user.methods.LoginRequest) returns (user.methods.LoginResponse){
-        option (google.api.http) = {
-            post: "/api/user/login"
-            body: "user_credentials"
-        };
-    }
+    rpc Login(user.methods.LoginRequest) returns (user.methods.LoginResponse);
 }

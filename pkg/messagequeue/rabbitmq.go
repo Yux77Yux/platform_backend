@@ -20,9 +20,7 @@ type RabbitMQClass struct {
 }
 
 func (r *RabbitMQClass) Open(connStr string) error {
-	var (
-		err error
-	)
+	var err error
 
 	for i := 0; i < retries; i++ {
 		r.rabbitmqClient, err = amqp.Dial(connStr)

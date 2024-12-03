@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	MYSQL_READER_STR = "yuxyuxx:yuxyuxx@tcp(127.0.0.1:13306)/"
-	MYSQL_WRITER_STR = "yuxyuxx:yuxyuxx@tcp(127.0.0.1:13307)/"
+	MYSQL_WRITER_STR = "yuxyuxx:yuxyuxx@tcp(127.0.0.1:13306)/"
+	MYSQL_READER_STR = "yuxyuxx:yuxyuxx@tcp(127.0.0.1:13307)/"
 
 	RABBITMQ_STR = "amqp://yuxyuxx:yuxyuxx@127.0.0.1:5672"
 

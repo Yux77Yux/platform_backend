@@ -28,10 +28,11 @@ message User{
 	string user_bio = 3 [(common.max_user_bio_length) = 1000];
 	Status user_status = 4;
 	Gender user_gender = 5;
+	string user_email = 6;
 
-	google.protobuf.Timestamp user_bday = 6;
-	google.protobuf.Timestamp user_created_at = 7;
-	google.protobuf.Timestamp user_updated_at = 8;
+	google.protobuf.Timestamp user_bday = 7;
+	google.protobuf.Timestamp user_created_at = 8;
+	google.protobuf.Timestamp user_updated_at = 9;
 }
 
 // message User{
@@ -55,7 +56,7 @@ message User{
 // 	Status user_status = 5;
 // 	Gender user_gender = 6;
 
-// 	google.protobuf.Timestamp user_bday = 7;
-// 	google.protobuf.Timestamp user_created_at = 8;
-// 	google.protobuf.Timestamp user_updated_at = 9;
+// 	google.protobuf.Timestamp user_bday = 8;
+// 	google.protobuf.Timestamp user_created_at = 9;
+// 	google.protobuf.Timestamp user_updated_at = 10;
 // }

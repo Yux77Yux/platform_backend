@@ -30,7 +30,7 @@ func (s *Server) Register(ctx context.Context, req *generatedUser.RegisterReques
 			return response, err
 		}
 
-		log.Println("info: register occur success")
+		log.Println("info: register success")
 		return response, nil
 	}
 }

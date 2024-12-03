@@ -65,10 +65,16 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 	defer rabbitMQ.Close()
 
 	queue, err = rabbitMQ.QueueDeclare(queueName, true, false, true, false, nil)
-	log.Printf("error: %v", err)
+	if err != nil {
+		log.Printf("rabbitMQ QueueDeclare error: %v", err)
+		return
+	}
 
 	err = rabbitMQ.QueueBind(queue.Name, routeKey, exchange, false, nil)
-	log.Printf("error: %v", err)
+	if err != nil {
+		log.Printf("rabbitMQ QueueBind error: %v", err)
+		return
+	}
 
 	msgs, err = rabbitMQ.Consume(
 		queue.Name, // queue
@@ -79,16 +85,17 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 		false,      // no wait
 		nil,        // args
 	)
-	log.Printf("error: %v", err)
+	if err != nil {
+		log.Printf("rabbitMQ Consume error: %v", err)
+		return
+	}
 
-	go func() {
-		for msg := range msgs {
-			if err := handler(msg); err != nil {
-				log.Printf("error: message processing failed: %v", err)
-				msg.Nack(false, false) // Negatively acknowledge
-			} else {
-				msg.Ack(false) // Acknowledge successful processing
-			}
+	for msg := range msgs {
+		if err := handler(msg); err != nil {
+			log.Printf("error: message processing failed: %v", err)
+			msg.Nack(false, false) // Negatively acknowledge
+		} else {
+			msg.Ack(false) // Acknowledge successful processing
 		}
-	}()
+	}
 }

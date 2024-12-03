@@ -139,17 +139,29 @@ func StoreUserInfo(user *generated.User) error {
 
 	resultCh := make(chan error, 1)
 
+	id := strconv.FormatInt(user.GetUserDefault().GetUserId(), 10)
+
+	var userBday interface{}
+	// 判断是否为空
+	if user.GetUserBday() != nil {
+		// 将 Timestamp 转换为 time.Time 类型
+		userBday = user.GetUserBday().AsTime()
+	} else {
+		userBday = "none"
+	}
+
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		err := CacheClient.SetFieldsHash(ctx, "UserInfo", "Id",
+		err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
 			"user_id", user.GetUserDefault().GetUserId(),
 			"user_name", user.GetUserDefault().GetUserName(),
 			"user_avator", user.GetUserAvator(),
 			"user_bio", user.GetUserBio(),
 			"user_status", user.GetUserStatus().String(),
 			"user_gender", user.GetUserGender().String(),
-			"user_bday", user.GetUserBday(),
-			"user_createdAt", user.GetUserCreatedAt(),
-			"user_updatedAt", user.GetUserUpdatedAt(),
+			"user_email", user.GetUserEmail(),
+			"user_bday", userBday,
+			"user_createdAt", user.GetUserCreatedAt().AsTime(),
+			"user_updatedAt", user.GetUserUpdatedAt().AsTime(),
 		)
 		resultCh <- err
 	}
@@ -259,6 +271,7 @@ func GetUserInfo(user_id int64) (*generated.User, error) {
 			UserBio:       user_info["user_bio"],
 			UserStatus:    generated.User_Status(generated.User_Status_value[user_info["user_status"]]),
 			UserGender:    generated.User_Gender(generated.User_Gender_value[user_info["user_gender"]]),
+			UserEmail:     user_info["user_email"],
 			UserBday:      userBday,
 			UserCreatedAt: userCreatedAt,
 			UserUpdatedAt: userUpdatedAt,
@@ -267,6 +280,10 @@ func GetUserInfo(user_id int64) (*generated.User, error) {
 }
 
 func parseTimestamp(field string) (*timestamppb.Timestamp, error) {
+	if field == "none" {
+		return nil, nil
+	}
+
 	result, err := time.Parse(time.RFC3339, field)
 	if err != nil {
 		return nil, fmt.Errorf("invalid format: %v", err)
