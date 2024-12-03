@@ -28,6 +28,12 @@ func UserAddInfoInTransaction(user_info *generatedUser.User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// 切换到 db_user_1
+	_, err := db.Exec("USE db_user_1")
+	if err != nil {
+		return err
+	}
+
 	tx, err := db.BeginTransaction()
 	if err != nil {
 		return err
@@ -105,6 +111,12 @@ func UserGetInfoInTransaction(user_id int64) (*generatedUser.User, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	// 切换到 db_user_1
+	_, err := db.Exec("USE db_user_1")
+	if err != nil {
+		return nil, err
+	}
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -184,6 +196,12 @@ func UserVerifyInTranscation(user_credential *generatedUser.UserCredentials) (in
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// 切换到 db_user_credentials_1
+	_, err := db.Exec("USE db_user_credentials_1")
+	if err != nil {
+		return 0, err
+	}
+
 	tx, err := db.BeginTransaction()
 	if err != nil {
 		return 0, err
@@ -255,6 +273,12 @@ func UserRegisterInTransaction(user_credential *generatedUser.UserCredentials, i
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	// 切换到 db_user_credentials_1
+	_, err = db.Exec("USE db_user_credentials_1")
+	if err != nil {
+		return err
+	}
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
