@@ -82,12 +82,12 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 	log.Printf("error: %v", err)
 
 	go func() {
-		for d := range msgs {
-			if err := handler(d); err != nil {
+		for msg := range msgs {
+			if err := handler(msg); err != nil {
 				log.Printf("error: message processing failed: %v", err)
-				d.Nack(false, false) // Negatively acknowledge
+				msg.Nack(false, false) // Negatively acknowledge
 			} else {
-				d.Ack(false) // Acknowledge successful processing
+				msg.Ack(false) // Acknowledge successful processing
 			}
 		}
 	}()

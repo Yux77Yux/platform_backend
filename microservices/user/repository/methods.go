@@ -2,12 +2,47 @@ package repository
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"golang.org/x/crypto/argon2"
 )
 
+// 验证
+func verifyPassword(storedHashWithSalt, password string) (bool, error) {
+	saltHex, hashHex, err := splitHash(storedHashWithSalt)
+	if err != nil {
+		return false, err
+	}
+
+	salt, err := hex.DecodeString(saltHex)
+	if err != nil {
+		return false, fmt.Errorf("failed to decode salt: %w", err)
+	}
+
+	storedHash, err := hex.DecodeString(hashHex)
+	if err != nil {
+		return false, fmt.Errorf("failed to decode hash: %w", err)
+	}
+
+	// 使用提取的盐值重新计算密码的哈希
+	computedHash := argon2.IDKey([]byte(password), salt, 1, 64*1024, 4, 32)
+
+	// 比较存储的哈希和计算的哈希是否一致
+	return subtle.ConstantTimeCompare(storedHash, computedHash) == 1, nil
+}
+
+func splitHash(hashWithSalt string) (string, string, error) {
+	parts := strings.Split(hashWithSalt, ":")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid hash format")
+	}
+	return parts[0], parts[1], nil
+}
+
+// 加密
 func hashPassword(password string) (string, error) {
 	// 生成盐值
 	salt, err := generateSalt()

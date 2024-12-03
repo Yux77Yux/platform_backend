@@ -4,9 +4,6 @@ services:
     container_name: mysql-primary
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_USER: yuxyuxx
-      MYSQL_PASSWORD: yuxyuxx
-      MYSQL_DATABASE: db_user_1
     volumes:
       - mysql_data_primary:/var/lib/mysql
       - ./mysql/primary.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init script

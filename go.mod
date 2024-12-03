@@ -8,7 +8,10 @@ require (
 	google.golang.org/protobuf v1.35.2
 )
 
-require github.com/google/uuid v1.6.0
+require (
+	github.com/bwmarrin/snowflake v0.3.0
+	github.com/google/uuid v1.6.0
+)
 
 require filippo.io/edwards25519 v1.1.0 // indirect
 

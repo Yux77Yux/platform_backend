@@ -17,7 +17,11 @@ func (s *Server) Register(ctx context.Context, req *generatedUser.RegisterReques
 		err := ctx.Err()
 		log.Printf("error: service exceeded timeout: %v", err)
 		return &generatedUser.RegisterResponse{
-			Msg: &common.ApiResponse{},
+			Msg: &common.ApiResponse{
+				Status:  common.ApiResponse_FAILED,
+				Code:    "408",
+				Message: "Time out",
+			},
 		}, err
 	default:
 		response, err := internal.Register(req)

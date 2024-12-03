@@ -8,7 +8,7 @@ import "auth/messages/tokens.proto";
 import "common/api_response.proto";
 
 message LoginRequest {
-  string user_uuid = 1;
+  int64 user_id = 1;
 }
 
 message LoginResponse {

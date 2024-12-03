@@ -10,7 +10,7 @@ import (
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
-		"register_exchange": "direct",
+		"register": "direct",
 		// Add more exchanges here
 	}
 )
@@ -41,6 +41,16 @@ func Init() {
 		if err := messageQueue.ExchangeDeclare(exchange, kind, true, false, false, false, nil); err != nil {
 			wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
 			log.Printf("error: %v", wiredErr)
+		}
+
+		exchangeName := fmt.Sprintf("%s_exchange", exchange)
+		queueName := fmt.Sprintf("%s_queue", exchange)
+		routeKey := fmt.Sprintf("%s_route", exchange)
+
+		switch exchange {
+		// 不同的exchange使用不同函数
+		case "register":
+			go ListenToQueue(exchangeName, queueName, routeKey, RegisterProcessor)
 		}
 	}
 }

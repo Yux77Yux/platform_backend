@@ -127,6 +127,17 @@ func (r *RedisClient) ScanHash(ctx context.Context, kind string, unique string, 
 	return result, newCursor, nil
 }
 
+// 是否存在该哈希表
+func (r *RedisClient) ExistsHash(ctx context.Context, kind string, unique string) (bool, error) {
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
+	val, err := r.redisClient.Exists(ctx, key).Result()
+	if err != nil {
+		return false, fmt.Errorf("redis_utils checking key is not exists: %v", err)
+	}
+
+	return val > 0, nil
+}
+
 // 用于批量 设置/更新
 // fieldValues : name "Mike" age 20
 func (r *RedisClient) SetFieldsHash(ctx context.Context, kind string, unique string, fieldValues ...interface{}) error {
@@ -207,7 +218,7 @@ func (r *RedisClient) GetValuesHash(ctx context.Context, kind string, unique str
 }
 
 // 获取哈希表中是否有此字段
-func (r *RedisClient) ExistsHash(ctx context.Context, kind string, unique string, field string) (bool, error) {
+func (r *RedisClient) ExistsHashField(ctx context.Context, kind string, unique string, field string) (bool, error) {
 	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	exists, err := r.redisClient.HExists(ctx, key, field).Result()
 	if err != nil {

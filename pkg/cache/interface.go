@@ -17,6 +17,7 @@ type RedisMethods interface {
 	ExistsString(ctx context.Context, kind string, unique string) (bool, error)
 
 	ScanHash(ctx context.Context, kind string, unique string, fliter string, cursor uint64, count int64) ([]string, uint64, error)
+	ExistsHash(ctx context.Context, kind string, unique string) (bool, error)
 	SetFieldsHash(ctx context.Context, kind string, unique string, fieldValues ...interface{}) error
 	SetFieldHash(ctx context.Context, kind string, unique string, field string, value interface{}) error
 	ModifyFieldHash(ctx context.Context, kind string, unique string, field string, value interface{}) error
@@ -25,7 +26,7 @@ type RedisMethods interface {
 	GetAllHash(ctx context.Context, kind string, unique string) (map[string]string, error)
 	GetFieldsHash(ctx context.Context, kind string, unique string) ([]string, error)
 	GetValuesHash(ctx context.Context, kind string, unique string) ([]string, error)
-	ExistsHash(ctx context.Context, kind string, unique string, field string) (bool, error)
+	ExistsHashField(ctx context.Context, kind string, unique string, field string) (bool, error)
 	GetLenHash(ctx context.Context, kind string, unique string, field string) (int64, error)
 	DelHash(ctx context.Context, kind string, unique string, fields ...string) (int64, error)
 

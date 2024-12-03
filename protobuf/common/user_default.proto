@@ -7,6 +7,6 @@ option go_package = "github.com/Yux77Yux/platform_backend/generated/common;";
 import "common/custom_options.proto";
 
 message UserDefault{
-    string user_uuid = 1;
+    int64 user_id = 1;
     string user_name = 2 [(common.max_user_name_length) = 100];
 }

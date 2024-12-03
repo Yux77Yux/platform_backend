@@ -4,7 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
+
+	"github.com/Yux77Yux/platform_backend/generated/common"
+	generated "github.com/Yux77Yux/platform_backend/generated/user"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func ExistsUsername(username string) (bool, error) {
@@ -126,4 +131,145 @@ func StoreEmail(email string) error {
 		}
 		return nil
 	}
+}
+
+func StoreUserInfo(user *generated.User) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	resultCh := make(chan error, 1)
+
+	cacheRequestChannel <- func(CacheClient CacheInterface) {
+		err := CacheClient.SetFieldsHash(ctx, "UserInfo", "Id",
+			"user_id", user.GetUserDefault().GetUserId(),
+			"user_name", user.GetUserDefault().GetUserName(),
+			"user_avator", user.GetUserAvator(),
+			"user_bio", user.GetUserBio(),
+			"user_status", user.GetUserStatus().String(),
+			"user_gender", user.GetUserGender().String(),
+			"user_bday", user.GetUserBday(),
+			"user_createdAt", user.GetUserCreatedAt(),
+			"user_updatedAt", user.GetUserUpdatedAt(),
+		)
+		resultCh <- err
+	}
+
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result != nil {
+			return result
+		}
+		return nil
+	}
+}
+
+func ExistsUserInfo(user_id int64) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	resultCh := make(chan struct {
+		exist bool
+		err   error
+	}, 1)
+
+	cacheRequestChannel <- func(CacheClient CacheInterface) {
+		exist, err := CacheClient.ExistsHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
+
+		select {
+		case resultCh <- struct {
+			exist bool
+			err   error
+		}{exist, err}:
+			log.Printf("info: completely execute for cache method: ExistsUserInfo")
+		case <-ctx.Done():
+			log.Printf("warning: context canceled for cache method: ExistsUserInfo")
+		}
+	}
+
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return false, fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result.err != nil {
+			return false, result.err
+		}
+		return result.exist, nil
+	}
+}
+
+func GetUserInfo(user_id int64) (*generated.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	resultCh := make(chan struct {
+		user map[string]string
+		err  error
+	}, 1)
+
+	cacheRequestChannel <- func(CacheClient CacheInterface) {
+		result, err := CacheClient.GetAllHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
+		resultCh <- struct {
+			user map[string]string
+			err  error
+		}{
+			user: result,
+			err:  err,
+		}
+	}
+
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result.err != nil {
+			return nil, result.err
+		}
+
+		user_info := result.user
+		id, err := strconv.ParseInt(user_info["user_id"], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("strconv ParseInt error: %w", err)
+		}
+
+		userBday, err := parseTimestamp(user_info["user_bday"])
+		if err != nil {
+			return nil, err
+		}
+
+		userCreatedAt, err := parseTimestamp(user_info["user_createdAt"])
+		if err != nil {
+			return nil, err
+		}
+
+		userUpdatedAt, err := parseTimestamp(user_info["user_updatedAt"])
+		if err != nil {
+			return nil, fmt.Errorf("invalid user_bday format: %v", err)
+		}
+
+		return &generated.User{
+			UserDefault: &common.UserDefault{
+				UserId:   id,
+				UserName: user_info["user_name"],
+			},
+			UserAvator:    user_info["user_avator"],
+			UserBio:       user_info["user_bio"],
+			UserStatus:    generated.User_Status(generated.User_Status_value[user_info["user_status"]]),
+			UserGender:    generated.User_Gender(generated.User_Gender_value[user_info["user_gender"]]),
+			UserBday:      userBday,
+			UserCreatedAt: userCreatedAt,
+			UserUpdatedAt: userUpdatedAt,
+		}, nil
+	}
+}
+
+func parseTimestamp(field string) (*timestamppb.Timestamp, error) {
+	result, err := time.Parse(time.RFC3339, field)
+	if err != nil {
+		return nil, fmt.Errorf("invalid format: %v", err)
+	}
+	return timestamppb.New(result), nil
 }

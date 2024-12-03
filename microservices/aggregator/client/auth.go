@@ -27,13 +27,13 @@ func NewAuthClient() (*AuthClient, error) {
 	return client, nil
 }
 
-func (c *AuthClient) Login(uuid string) (*auth.LoginResponse, error) {
+func (c *AuthClient) Login(user_id int64) (*auth.LoginResponse, error) {
 	defer c.connection.Close()
 	// 创建客户端
 	client := auth.NewAuthServiceClient(c.connection)
 
 	// 创建请求
-	req := &auth.LoginRequest{UserUuid: uuid}
+	req := &auth.LoginRequest{UserId: user_id}
 
 	// 调用 gRPC 方法
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
