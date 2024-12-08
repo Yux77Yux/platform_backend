@@ -26,7 +26,7 @@ func (s *Server) Login(ctx context.Context, req *generated.LoginRequest) (*gener
 	default:
 		response, err := internal.Login(req)
 		if err != nil {
-			log.Println("error: login occur fail")
+			log.Printf("error: login occur fail: %v", err)
 			return response, err
 		}
 

@@ -5,10 +5,11 @@ package auth.methods;
 option go_package = "github.com/Yux77Yux/platform_backend/generated/auth";
 
 import "auth/messages/tokens.proto";
+import "user/messages/user_auth.proto";
 import "common/api_response.proto";
 
 message LoginRequest {
-  int64 user_id = 1;
+  user.messages.UserAuth user_auth = 1;
 }
 
 message LoginResponse {

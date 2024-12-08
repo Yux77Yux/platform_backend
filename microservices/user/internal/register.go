@@ -42,8 +42,8 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 	}
 
 	// redis查询邮箱是否存在，是否唯一
-	if user_credentials.GetEmail() != "" {
-		exist, err = cache.ExistsEmail(user_credentials.GetEmail())
+	if user_credentials.GetUserEmail() != "" {
+		exist, err = cache.ExistsEmail(user_credentials.GetUserEmail())
 		if err != nil {
 			log.Printf("error: failed to use redis client: %v", err)
 		}

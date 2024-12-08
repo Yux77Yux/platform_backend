@@ -10,7 +10,8 @@ import (
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
-		"register": "direct",
+		"register":         "direct",
+		"storeUserInCache": "direct",
 		// Add more exchanges here
 	}
 )
@@ -51,7 +52,9 @@ func Init() {
 		switch exchange {
 		// 不同的exchange使用不同函数
 		case "register":
-			go ListenToQueue(exchangeName, queueName, routeKey, RegisterProcessor)
+			go ListenToQueue(exchangeName, queueName, routeKey, registerProcessor)
+		case "storeUserInCache":
+			go ListenToQueue(exchangeName, queueName, routeKey, storeUserInCache)
 		}
 	}
 }

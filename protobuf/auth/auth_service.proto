@@ -4,12 +4,19 @@ package auth;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/auth";
 
+import "google/api/annotations.proto";
+
 import "auth/methods/login.proto";
 import "auth/methods/refresh.proto";
 import "auth/methods/check.proto";
 
 service AuthService{
     rpc Login(auth.methods.LoginRequest) returns (auth.methods.LoginResponse);
-    rpc Refresh(auth.methods.RefreshRequest) returns (auth.methods.RefreshResponse);
+    rpc Refresh(auth.methods.RefreshRequest) returns (auth.methods.RefreshResponse){
+        option (google.api.http) = {
+            post: "/api/auth/refresh"
+            body: "*"
+        };
+    }
     rpc Check(auth.methods.CheckRequest) returns (auth.methods.CheckResponse);
 }

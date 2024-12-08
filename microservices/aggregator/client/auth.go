@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"time"
 
 	auth "github.com/Yux77Yux/platform_backend/generated/auth" // 你生成的 package 名字
+	user "github.com/Yux77Yux/platform_backend/generated/user" // 你生成的 package 名字
 )
 
 type AuthClient struct {
@@ -15,7 +17,7 @@ type AuthClient struct {
 
 func NewAuthClient() (*AuthClient, error) {
 	// 建立与服务器的连接
-	conn, err := grpc.NewClient(auth_service_address)
+	conn, err := grpc.NewClient(auth_service_address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("did not connect: %v", err)
 	}
@@ -27,13 +29,16 @@ func NewAuthClient() (*AuthClient, error) {
 	return client, nil
 }
 
-func (c *AuthClient) Login(user_id int64) (*auth.LoginResponse, error) {
+func (c *AuthClient) Login(userLogin *user.UserLogin) (*auth.LoginResponse, error) {
 	defer c.connection.Close()
 	// 创建客户端
 	client := auth.NewAuthServiceClient(c.connection)
 
 	// 创建请求
-	req := &auth.LoginRequest{UserId: user_id}
+	req := &auth.LoginRequest{UserAuth: &user.UserAuth{
+		UserId:   userLogin.GetUserDefault().GetUserId(),
+		UserRole: userLogin.GetUserRole(),
+	}}
 
 	// 调用 gRPC 方法
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)

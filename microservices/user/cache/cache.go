@@ -7,9 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func ExistsUsername(username string) (bool, error) {
@@ -162,6 +160,7 @@ func StoreUserInfo(user *generated.User) error {
 			"user_bday", userBday,
 			"user_createdAt", user.GetUserCreatedAt().AsTime(),
 			"user_updatedAt", user.GetUserUpdatedAt().AsTime(),
+			"user_role", user.GetUserRole().String(),
 		)
 		resultCh <- err
 	}
@@ -212,7 +211,7 @@ func ExistsUserInfo(user_id int64) (bool, error) {
 	}
 }
 
-func GetUserInfo(user_id int64) (*generated.User, error) {
+func GetUserInfo(user_id int64, fields []string) (map[string]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 
@@ -222,13 +221,37 @@ func GetUserInfo(user_id int64) (*generated.User, error) {
 	}, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		result, err := CacheClient.GetAllHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
-		resultCh <- struct {
-			user map[string]string
-			err  error
-		}{
-			user: result,
-			err:  err,
+		if len(fields) == 0 {
+			result, err := CacheClient.GetAllHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
+			resultCh <- struct {
+				user map[string]string
+				err  error
+			}{
+				user: result,
+				err:  err,
+			}
+		} else {
+			values, err := CacheClient.GetAnyHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10), fields...)
+			// 构造结果 map
+			result := make(map[string]string, len(fields))
+			for i, field := range fields {
+				// 类型断言并检查 nil 值
+				if values[i] != nil {
+					strValue, ok := values[i].(string)
+					if !ok {
+						err = fmt.Errorf("unexpected value type for field %s", field)
+						break
+					}
+					result[field] = strValue
+				}
+			}
+			resultCh <- struct {
+				user map[string]string
+				err  error
+			}{
+				user: result,
+				err:  err,
+			}
 		}
 	}
 
@@ -241,52 +264,6 @@ func GetUserInfo(user_id int64) (*generated.User, error) {
 			return nil, result.err
 		}
 
-		user_info := result.user
-		id, err := strconv.ParseInt(user_info["user_id"], 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("strconv ParseInt error: %w", err)
-		}
-
-		userBday, err := parseTimestamp(user_info["user_bday"])
-		if err != nil {
-			return nil, err
-		}
-
-		userCreatedAt, err := parseTimestamp(user_info["user_createdAt"])
-		if err != nil {
-			return nil, err
-		}
-
-		userUpdatedAt, err := parseTimestamp(user_info["user_updatedAt"])
-		if err != nil {
-			return nil, fmt.Errorf("invalid user_bday format: %v", err)
-		}
-
-		return &generated.User{
-			UserDefault: &common.UserDefault{
-				UserId:   id,
-				UserName: user_info["user_name"],
-			},
-			UserAvator:    user_info["user_avator"],
-			UserBio:       user_info["user_bio"],
-			UserStatus:    generated.User_Status(generated.User_Status_value[user_info["user_status"]]),
-			UserGender:    generated.User_Gender(generated.User_Gender_value[user_info["user_gender"]]),
-			UserEmail:     user_info["user_email"],
-			UserBday:      userBday,
-			UserCreatedAt: userCreatedAt,
-			UserUpdatedAt: userUpdatedAt,
-		}, nil
+		return result.user, nil
 	}
-}
-
-func parseTimestamp(field string) (*timestamppb.Timestamp, error) {
-	if field == "none" {
-		return nil, nil
-	}
-
-	result, err := time.Parse(time.RFC3339, field)
-	if err != nil {
-		return nil, fmt.Errorf("invalid format: %v", err)
-	}
-	return timestamppb.New(result), nil
 }

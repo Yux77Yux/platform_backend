@@ -12,6 +12,7 @@ type CacheInterface interface {
 	ExistsInSet(ctx context.Context, kind string, unique string, value interface{}) (bool, error)
 
 	GetAllHash(ctx context.Context, kind string, unique string) (map[string]string, error)
+	GetAnyHash(ctx context.Context, kind string, unique string, fields ...string) ([]interface{}, error)
 	ExistsHash(ctx context.Context, kind string, unique string) (bool, error)
 	SetFieldsHash(ctx context.Context, kind string, unique string, fieldValues ...interface{}) error
 	SetFieldHash(ctx context.Context, kind string, unique string, field string, value interface{}) error

@@ -25,7 +25,6 @@ protoc -I protobuf `
           protobuf/user/messages/*.proto `
           protobuf/user/methods/*.proto
 
-
 在根目录下执行
 
 protoc -I protobuf `

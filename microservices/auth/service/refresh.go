@@ -9,15 +9,15 @@ import (
 	internal "github.com/Yux77Yux/platform_backend/microservices/auth/internal"
 )
 
-func (s *Server) Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginResponse, error) {
-	log.Println("info: auth login service start")
+func (s *Server) Refresh(ctx context.Context, req *generated.RefreshRequest) (*generated.RefreshResponse, error) {
+	log.Println("info: auth refresh service start")
 
 	select {
 	case <-ctx.Done():
 		err := ctx.Err()
 		log.Printf("error: service exceeded timeout: %v", err)
 
-		return &generated.LoginResponse{
+		return &generated.RefreshResponse{
 			Msg: &common.ApiResponse{
 				Status:  common.ApiResponse_FAILED,
 				Code:    "408",
@@ -25,13 +25,13 @@ func (s *Server) Login(ctx context.Context, req *generated.LoginRequest) (*gener
 			},
 		}, err
 	default:
-		response, err := internal.Login(req)
+		response, err := internal.Refresh(req)
 		if err != nil {
-			log.Println("error: auth login occur fail")
+			log.Println("error: auth refresh occur fail")
 			return response, err
 		}
 
-		log.Println("info: auth login occur success")
+		log.Println("info: auth refresh occur success")
 		return response, nil
 	}
 }

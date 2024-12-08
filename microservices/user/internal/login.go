@@ -9,7 +9,8 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	"github.com/Yux77Yux/platform_backend/microservices/user/cache"
+	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
+	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 )
 
@@ -63,10 +64,11 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 		}, fmt.Errorf("fail to get user info in redis: %w", err)
 	}
 
-	var user_info *generated.User
+	var user_info *generated.UserLogin
+	fields := []string{"user_name", "user_avator", "user_role"}
 	if exist {
 		// 先从redis取信息
-		user_info, err = cache.GetUserInfo(user_id)
+		result, err := cache.GetUserInfo(user_id, fields)
 		if err != nil {
 			return &generated.LoginResponse{
 				Msg: &common.ApiResponse{
@@ -76,9 +78,18 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 				},
 			}, fmt.Errorf("fail to get user info in redis: %w", err)
 		}
+
+		user_info = &generated.UserLogin{
+			UserDefault: &common.UserDefault{
+				UserId:   user_id,
+				UserName: result["user_name"],
+			},
+			UserAvator: result["user_avator"],
+			UserRole:   generated.UserRole(generated.UserRole_value[result["user_role"]]),
+		}
 	} else {
 		// redis未存有，则从数据库取信息
-		user_info, err = db.UserGetInfoInTransaction(user_id)
+		result, err := db.UserGetInfoInTransaction(user_id, nil)
 		if err != nil {
 			return &generated.LoginResponse{
 				Msg: &common.ApiResponse{
@@ -89,17 +100,30 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 			}, fmt.Errorf("fail to get user info in db: %w", err)
 		}
 
-		go func() {
-			if err := cache.StoreUserInfo(user_info); err != nil {
-				log.Println("redis StoreUserInfo failed")
-			}
-		}()
+		user_info = &generated.UserLogin{
+			UserDefault: &common.UserDefault{
+				UserId:   result["user_id"].(int64),
+				UserName: result["user_name"].(string),
+			},
+			UserAvator: result["user_avator"].(string),
+			UserRole:   generated.UserRole(generated.UserRole_value[result["user_role"].(string)]),
+		}
+
+		go userMQ.SendMessage("storeUserInCache_exchange", "storeUserInCache_route", &generated.User{
+			UserDefault: &common.UserDefault{
+				UserId:   result["user_id"].(int64),
+				UserName: result["user_name"].(string),
+			},
+			UserAvator: result["user_avator"].(string),
+			UserRole:   generated.UserRole(generated.UserRole_value[result["user_role"].(string)]),
+		})
 	}
 
 	return &generated.LoginResponse{
 		UserLogin: &generated.UserLogin{
 			UserDefault: user_info.GetUserDefault(),
 			UserAvator:  user_info.GetUserAvator(),
+			UserRole:    user_info.GetUserRole(),
 		},
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,

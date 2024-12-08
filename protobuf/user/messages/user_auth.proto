@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package user.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/user";
+
+import "user/messages/user_role.proto";
+
+message UserAuth {
+  int64 user_id = 1;
+  user.messages.UserRole user_role = 2;
+}

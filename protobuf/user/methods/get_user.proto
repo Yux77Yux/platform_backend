@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package user.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/user";
+
+import "user/messages/user.proto";
+import "common/api_response.proto";
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  user.messages.User user = 1;
+  common.ApiResponse msg = 2;
+}

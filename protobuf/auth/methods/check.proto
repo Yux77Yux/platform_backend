@@ -9,8 +9,6 @@ import "common/api_response.proto";
 
 message CheckRequest {
   auth.messages.AccessToken access_token = 1;
-  string method = 2;
-  string path = 3;
 }
 
 message CheckResponse {

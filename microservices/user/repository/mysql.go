@@ -3,12 +3,11 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
-	"google.golang.org/protobuf/types/known/timestamppb"
-
-	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func UserAddInfoInTransaction(user_info *generated.User) error {
@@ -22,9 +21,9 @@ func UserAddInfoInTransaction(user_info *generated.User) error {
 	user_email,
 	user_bday,
 	user_created_at,
-	user_updated_at
-	)
-	values(?,?,?,?,?,?,?,?,?,?)`
+	user_updated_at,
+	user_role)
+	values(?,?,?,?,?,?,?,?,?,?,?)`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -45,21 +44,17 @@ func UserAddInfoInTransaction(user_info *generated.User) error {
 	}()
 
 	var (
-		UserId        int64                 = user_info.GetUserDefault().GetUserId()
-		UserName      string                = user_info.GetUserDefault().GetUserName()
-		UserAvator    string                = user_info.GetUserAvator()
-		UserBio       string                = user_info.GetUserBio()
-		UserStatus    generated.User_Status = user_info.GetUserStatus()
-		UserGender    generated.User_Gender = user_info.GetUserGender()
-		UserEmail     interface{}
+		UserId        int64     = user_info.GetUserDefault().GetUserId()
+		UserName      string    = user_info.GetUserDefault().GetUserName()
+		UserAvator    string    = user_info.GetUserAvator()
+		UserBio       string    = user_info.GetUserBio()
+		UserStatus    string    = user_info.GetUserStatus().String()
+		UserGender    string    = user_info.GetUserGender().String()
+		UserEmail     *string   = &user_info.UserEmail
 		UserCreatedAt time.Time = user_info.GetUserCreatedAt().AsTime()
 		UserUpdatedAt time.Time = user_info.GetUserUpdatedAt().AsTime()
+		UserRole      string    = user_info.GetUserRole().String()
 	)
-	if user_info.GetUserEmail() == "" {
-		UserEmail = nil
-	} else {
-		UserEmail = user_info.GetUserEmail()
-	}
 
 	select {
 	case <-ctx.Done():
@@ -82,6 +77,7 @@ func UserAddInfoInTransaction(user_info *generated.User) error {
 			nil,
 			UserCreatedAt,
 			UserUpdatedAt,
+			UserRole,
 		)
 		if err != nil {
 			err = fmt.Errorf("transaction exec failed because %v", err)
@@ -100,19 +96,15 @@ func UserAddInfoInTransaction(user_info *generated.User) error {
 	return nil
 }
 
-func UserGetInfoInTransaction(user_id int64) (*generated.User, error) {
-	query := `select 
-	user_name 
-	user_avator 
-	user_bio 
-	user_status 
-	user_gender 
-	user_email 
-	user_bday 
-	user_created_at 
-	user_updated_at 
-	from db_user_1.User 
-	where user_id = ?`
+func UserGetInfoInTransaction(user_id int64, fields []string) (map[string]interface{}, error) {
+	var query string
+	if len(fields) > 0 {
+		// 查询指定字段
+		query = fmt.Sprintf("SELECT %s FROM db_user_1.User WHERE user_id = ?", strings.Join(fields, ", "))
+	} else {
+		// 查询全部字段
+		query = "SELECT * FROM db_user_1.User WHERE user_id = ?"
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -132,16 +124,7 @@ func UserGetInfoInTransaction(user_id int64) (*generated.User, error) {
 		}
 	}()
 
-	var (
-		UserName      string
-		UserAvator    string
-		UserBio       string
-		UserStatus    generated.User_Status
-		UserGender    generated.User_Gender
-		UserBday      *timestamppb.Timestamp
-		UserCreatedAt *timestamppb.Timestamp
-		UserUpdatedAt *timestamppb.Timestamp
-	)
+	var result map[string]interface{}
 	select {
 	case <-ctx.Done():
 		err = fmt.Errorf("exec timeout :%w", ctx.Err())
@@ -151,15 +134,7 @@ func UserGetInfoInTransaction(user_id int64) (*generated.User, error) {
 
 		return nil, err
 	default:
-		err := tx.QueryRow(query, user_id).Scan(&UserName,
-			&UserAvator,
-			&UserBio,
-			&UserStatus,
-			&UserGender,
-			&UserBday,
-			&UserCreatedAt,
-			&UserUpdatedAt,
-		)
+		rows, err := tx.Query(query, user_id)
 		if err != nil {
 			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
@@ -168,32 +143,76 @@ func UserGetInfoInTransaction(user_id int64) (*generated.User, error) {
 
 			return nil, err
 		}
+		defer rows.Close()
+
+		// 获取列名
+		cols, err := rows.Columns()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get columns: %w", err)
+		}
+
+		// 确保有结果
+		if !rows.Next() {
+			return nil, fmt.Errorf("no user found with id %d", user_id)
+		}
+
+		// 创建一个存储列值的切片
+		values := make([]interface{}, len(cols))
+		pointers := make([]interface{}, len(cols))
+		for i := range values {
+			pointers[i] = &values[i]
+		}
+
+		// 扫描结果到指针数组
+		if err := rows.Scan(pointers...); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+
+		// 将结果填充到 map 中
+		result = make(map[string]interface{})
+		for i, colName := range cols {
+			switch colName {
+			case "user_id":
+				result[colName] = user_id
+			case "user_status":
+				if value, ok := values[i].(int); ok {
+					result[colName] = generated.User_UserStatus(value)
+				} else {
+					return nil, fmt.Errorf("assert user_status type failed ")
+				}
+			case "user_gender":
+				if value, ok := values[i].(int); ok {
+					result[colName] = generated.User_UserGender(value)
+				} else {
+					return nil, fmt.Errorf("assert user_gender type failed ")
+				}
+			case "user_bday", "user_created_at", "user_updated_at":
+				if value, ok := values[i].(time.Time); ok {
+					result[colName] = timestamppb.New(value)
+				} else {
+					return nil, fmt.Errorf("assert %v type failed ", values[i])
+				}
+			default:
+				if value, ok := values[i].(string); ok {
+					result[colName] = value
+				} else {
+					return nil, fmt.Errorf("assert %v type failed ", values[i])
+				}
+			}
+		}
 
 		if err = db.CommitTransaction(tx); err != nil {
 			return nil, err
 		}
 	}
-	user_info := &generated.User{
-		UserDefault: &common.UserDefault{
-			UserId:   user_id,
-			UserName: UserName,
-		},
-		UserAvator:    UserAvator,
-		UserBio:       UserBio,
-		UserStatus:    UserStatus,
-		UserGender:    UserGender,
-		UserBday:      UserBday,
-		UserCreatedAt: UserCreatedAt,
-		UserUpdatedAt: UserUpdatedAt,
-	}
 
-	return user_info, nil
+	return result, nil
 }
 
 func UserVerifyInTranscation(user_credential *generated.UserCredentials) (int64, error) {
 	query := `select 
-	password 
-	user_id 
+	password,
+	user_id
 	from db_user_credentials_1.UserCredentials 
 	where username = ?`
 
@@ -271,8 +290,13 @@ func UserRegisterInTransaction(user_credential *generated.UserCredentials, id in
 		return fmt.Errorf("decrypt hash password failed because %w", err)
 	}
 
-	query := `insert into db_user_credentials_1.UserCredentials(username,password,email,user_id) 
-	values(?,?,?,?) 
+	query := `insert into db_user_credentials_1.UserCredentials(
+	username,
+	password,
+	user_email,
+	user_id,
+	user_role)values
+	(?,?,?,?,?) 
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -303,13 +327,13 @@ func UserRegisterInTransaction(user_credential *generated.UserCredentials, id in
 		return err
 	default:
 		var email interface{}
-		if user_credential.GetEmail() == "" {
+		if user_credential.GetUserEmail() == "" {
 			email = nil
 		} else {
-			email = user_credential.GetEmail()
+			email = user_credential.GetUserEmail()
 		}
 
-		_, err = tx.Exec(query, user_credential.GetUsername(), pwd, email, id)
+		_, err = tx.Exec(query, user_credential.GetUsername(), pwd, email, id, user_credential.GetUserRole().String())
 
 		if err != nil {
 			err = fmt.Errorf("transaction exec failed because %v", err)

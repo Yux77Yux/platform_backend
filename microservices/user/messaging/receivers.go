@@ -17,8 +17,26 @@ import (
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 )
 
-func RegisterProcessor(msg amqp.Delivery) error {
-	credentials := &generated.UserCredentials{}
+func storeUserInCache(msg amqp.Delivery) error {
+	user_info := new(generated.User)
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, user_info)
+	if err != nil {
+		log.Printf("Error unmarshaling message: %v", err)
+		return fmt.Errorf("register processor error: %w", err)
+	}
+
+	// 写入缓存
+	err = cache.StoreUserInfo(user_info)
+	if err != nil {
+		log.Printf("cache methods StoreUserInfo occur error: %v", err)
+	}
+
+	return nil
+}
+
+func registerProcessor(msg amqp.Delivery) error {
+	credentials := new(generated.UserCredentials)
 
 	// 反序列化
 	err := proto.Unmarshal(msg.Body, credentials)
@@ -39,6 +57,7 @@ func RegisterProcessor(msg amqp.Delivery) error {
 		id = node.Generate().Int64()
 	}
 
+	log.Println("db cache start")
 	// 使用反序列化后的 credentials
 	// 写入数据库注册表
 	err = db.UserRegisterInTransaction(credentials, id)
@@ -55,7 +74,8 @@ func RegisterProcessor(msg amqp.Delivery) error {
 		UserBio:       "",
 		UserStatus:    generated.User_INACTIVE,
 		UserGender:    generated.User_UNDEFINED,
-		UserEmail:     credentials.GetEmail(),
+		UserEmail:     credentials.GetUserEmail(),
+		UserRole:      credentials.GetUserRole(),
 		UserBday:      nil,
 		UserUpdatedAt: timestamppb.Now(),
 		UserCreatedAt: timestamppb.Now(),
@@ -77,7 +97,7 @@ func RegisterProcessor(msg amqp.Delivery) error {
 		log.Printf("redis methods StoreUsername occur error: %v", err)
 	}
 
-	if err := cache.StoreEmail(credentials.GetEmail()); err != nil {
+	if err := cache.StoreEmail(credentials.GetUserEmail()); err != nil {
 		log.Printf("redis methods StoreUsername occur error: %v", err)
 	}
 

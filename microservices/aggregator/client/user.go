@@ -3,8 +3,10 @@ package client
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc"
 	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	user "github.com/Yux77Yux/platform_backend/generated/user" // 你生成的 package 名字
 )
@@ -15,7 +17,7 @@ type UserClient struct {
 
 func NewUserClient() (*UserClient, error) {
 	// 建立与服务器的连接
-	conn, err := grpc.NewClient(user_service_address)
+	conn, err := grpc.NewClient(user_service_address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("did not connect: %v", err)
 	}
