@@ -31,8 +31,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	return &generated.LoginResponse{
 		Tokens: &generated.Tokens{
 			RefreshToken: &generated.RefreshToken{
-				Value:     refreshToken,
-				ExpiresAt: timestamppb.New(time.Now().Add(7 * 24 * time.Hour)),
+				Value: refreshToken,
 			},
 			AccessToken: &generated.AccessToken{
 				Value:     accessToken,

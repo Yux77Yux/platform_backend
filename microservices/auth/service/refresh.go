@@ -25,9 +25,9 @@ func (s *Server) Refresh(ctx context.Context, req *generated.RefreshRequest) (*g
 			},
 		}, err
 	default:
-		response, err := internal.Refresh(req)
+		response, err := internal.Refresh(ctx, req)
 		if err != nil {
-			log.Println("error: auth refresh occur fail")
+			log.Printf("error: auth refresh occur fail: %v", err)
 			return response, err
 		}
 

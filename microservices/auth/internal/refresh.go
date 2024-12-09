@@ -1,10 +1,13 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/auth"
@@ -12,11 +15,33 @@ import (
 	jwt "github.com/Yux77Yux/platform_backend/pkg/jwt"
 )
 
-func Refresh(req *generated.RefreshRequest) (*generated.RefreshResponse, error) {
-	refreshToken := req.GetRefreshToken()
+type ContextKey string
+
+const RefreshTokenKey ContextKey = "refreshToken"
+
+func Refresh(ctx context.Context, req *generated.RefreshRequest) (*generated.RefreshResponse, error) {
+	refreshCookie := ctx.Value(RefreshTokenKey)
+	if refreshCookie == nil {
+		return &generated.RefreshResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_ERROR,
+				Code:   "401",
+			},
+		}, status.Errorf(codes.Unauthenticated, "no refreshToken in request")
+	}
+
+	refreshToken, ok := refreshCookie.(string)
+	if !ok {
+		return &generated.RefreshResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_ERROR,
+				Code:   "500",
+			},
+		}, status.Errorf(codes.Unauthenticated, "failed to retrieve refreshToken from context")
+	}
 
 	// 检测refreshToken是否过期或无效
-	claims, err := jwt.ParseJWT(refreshToken.Value)
+	claims, err := jwt.ParseJWT(refreshToken)
 	if err != nil {
 		// 检测错误类型
 		var statusCode string

@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"log"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/aggregator"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
@@ -10,8 +9,6 @@ import (
 )
 
 func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
-	log.Println("req:: ", req)
-
 	auth_client, err := client.NewAuthClient()
 	if err != nil {
 		return nil, fmt.Errorf("error: auth client %v", err)
