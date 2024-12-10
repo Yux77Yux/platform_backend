@@ -75,7 +75,31 @@ static_resources:
                           #     "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
                           #     disabled: true # 禁用外部授权
                         - match:
+                            path: "/user.UserService/UpdateUser"
+                          route:
+                            cluster: user_service # 指定 gRPC user 集群
+                        - match:
+                            path: "/user.UserService/UpdateUserName"
+                          route:
+                            cluster: user_service # 指定 gRPC user 集群
+                        - match:
+                            path: "/user.UserService/UpdateUserAvator"
+                          route:
+                            cluster: user_service # 指定 gRPC user 集群
+                        - match:
+                            path: "/user.UserService/UpdateUserBio"
+                          route:
+                            cluster: user_service # 指定 gRPC user 集群
+                        - match:
+                            path: "/user.UserService/UpdateUserStatus"
+                          route:
+                            cluster: user_service # 指定 gRPC user 集群
+                        - match:
                             path: "/aggregator.AggregatorService/Login" # 登录 路径
+                          route:
+                            cluster: aggregator_service # 指定 gRPC aggregator 集群
+                        - match:
+                            path: "/aggregator.AggregatorService/Space" # 登录 路径
                           route:
                             cluster: aggregator_service # 指定 gRPC aggregator 集群
                           # typed_per_filter_config:

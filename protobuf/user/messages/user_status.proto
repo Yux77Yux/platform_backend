@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package user.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/user";
+
+enum UserStatus {
+  HIDING = 0;
+  INACTIVE = 1;
+  ACTIVE = 2;
+  LIMITED = 3;
+}

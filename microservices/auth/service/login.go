@@ -22,6 +22,7 @@ func (s *Server) Login(ctx context.Context, req *generated.LoginRequest) (*gener
 				Status:  common.ApiResponse_FAILED,
 				Code:    "408",
 				Message: "Time out",
+				Details: err.Error(),
 			},
 		}, err
 	default:

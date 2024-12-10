@@ -7,12 +7,22 @@ option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
 import "google/api/annotations.proto";
 
 import "aggregator/methods/login.proto";
+import "aggregator/methods/space.proto";
 
-service AggregatorService{
-    rpc Login(aggregator.methods.LoginRequest) returns (aggregator.methods.LoginResponse){
-        option (google.api.http) = {
-            post: "/api/user/login"
-            body: "user_credentials"
-        };
-    }
+service AggregatorService {
+  rpc Login(aggregator.methods.LoginRequest) returns (aggregator.methods.LoginResponse) {
+    option (google.api.http) = {
+      post: "/api/user/login"
+      body: "user_credentials"
+    };
+  }
+
+  rpc Space(aggregator.methods.SpaceRequest) returns (aggregator.methods.SpaceResponse) {
+    option (google.api.http) = {
+      get: "/api/space/{user_id}"
+      body: "*"
+    };
+  }
+
+  // watch creation 未定义服务
 }

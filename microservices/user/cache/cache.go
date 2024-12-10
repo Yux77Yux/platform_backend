@@ -150,7 +150,6 @@ func StoreUserInfo(user *generated.User) error {
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
-			"user_id", user.GetUserDefault().GetUserId(),
 			"user_name", user.GetUserDefault().GetUserName(),
 			"user_avator", user.GetUserAvator(),
 			"user_bio", user.GetUserBio(),
@@ -158,8 +157,8 @@ func StoreUserInfo(user *generated.User) error {
 			"user_gender", user.GetUserGender().String(),
 			"user_email", user.GetUserEmail(),
 			"user_bday", userBday,
-			"user_createdAt", user.GetUserCreatedAt().AsTime(),
-			"user_updatedAt", user.GetUserUpdatedAt().AsTime(),
+			"user_created_at", user.GetUserCreatedAt().AsTime(),
+			"user_updated_at", user.GetUserUpdatedAt().AsTime(),
 			"user_role", user.GetUserRole().String(),
 		)
 		resultCh <- err

@@ -4,7 +4,7 @@ package auth.methods;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/auth";
 
-import "auth/messages/access_token.proto";
+import "common/access_token.proto";
 import "auth/messages/refresh_token.proto";
 import "common/api_response.proto";
 
@@ -13,6 +13,6 @@ message RefreshRequest {
 }
 
 message RefreshResponse {
-  auth.messages.AccessToken access_token = 1;
+  common.AccessToken access_token = 1;
   common.ApiResponse msg = 2;
 }

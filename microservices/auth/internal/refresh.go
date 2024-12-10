@@ -60,7 +60,7 @@ func Refresh(ctx context.Context, req *generated.RefreshRequest) (*generated.Ref
 	}
 
 	return &generated.RefreshResponse{
-		AccessToken: &generated.AccessToken{
+		AccessToken: &common.AccessToken{
 			Value:     accessToken,
 			ExpiresAt: timestamppb.New(time.Now().Add(30 * time.Minute)),
 		},

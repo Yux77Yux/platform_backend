@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package auth.messages;
+package common;
 
-option go_package = "github.com/Yux77Yux/platform_backend/generated/auth";
+option go_package = "github.com/Yux77Yux/platform_backend/generated/common";
 
 import "google/protobuf/timestamp.proto";// 引入 Timestamp 类型
 

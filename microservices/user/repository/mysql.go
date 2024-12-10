@@ -176,13 +176,13 @@ func UserGetInfoInTransaction(user_id int64, fields []string) (map[string]interf
 				result[colName] = user_id
 			case "user_status":
 				if value, ok := values[i].(int); ok {
-					result[colName] = generated.User_UserStatus(value)
+					result[colName] = generated.UserStatus(value)
 				} else {
 					return nil, fmt.Errorf("assert user_status type failed ")
 				}
 			case "user_gender":
 				if value, ok := values[i].(int); ok {
-					result[colName] = generated.User_UserGender(value)
+					result[colName] = generated.UserGender(value)
 				} else {
 					return nil, fmt.Errorf("assert user_gender type failed ")
 				}

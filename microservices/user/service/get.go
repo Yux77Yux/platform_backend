@@ -9,14 +9,14 @@ import (
 	internal "github.com/Yux77Yux/platform_backend/microservices/user/internal"
 )
 
-func (s *Server) Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginResponse, error) {
-	log.Println("info: login service start")
+func (s *Server) GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.GetUserResponse, error) {
+	log.Println("info: get user service start")
 
 	select {
 	case <-ctx.Done():
 		err := ctx.Err()
 		log.Printf("error: service exceeded timeout: %v", err)
-		return &generated.LoginResponse{
+		return &generated.GetUserResponse{
 			Msg: &common.ApiResponse{
 				Status:  common.ApiResponse_FAILED,
 				Code:    "408",
@@ -25,13 +25,13 @@ func (s *Server) Login(ctx context.Context, req *generated.LoginRequest) (*gener
 			},
 		}, err
 	default:
-		response, err := internal.Login(req)
+		response, err := internal.GetUser(req)
 		if err != nil {
-			log.Println("error: login occur fail")
+			log.Println("error: get user occur fail: ", err)
 			return response, err
 		}
 
-		log.Println("info: login occur success")
+		log.Println("info: get user occur success")
 		return response, nil
 	}
 }

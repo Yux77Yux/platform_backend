@@ -22,6 +22,7 @@ func (s *Server) Refresh(ctx context.Context, req *generated.RefreshRequest) (*g
 				Status:  common.ApiResponse_FAILED,
 				Code:    "408",
 				Message: "Time out",
+				Details: err.Error(),
 			},
 		}, err
 	default:

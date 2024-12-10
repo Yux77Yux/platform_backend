@@ -48,3 +48,23 @@ func (c *UserClient) Login(credentials *user.UserCredentials) (*user.LoginRespon
 
 	return response, nil
 }
+
+func (c *UserClient) GetUser(userId int64) (*user.GetUserResponse, error) {
+	defer c.connection.Close()
+	// 创建客户端
+	client := user.NewUserServiceClient(c.connection)
+
+	// 创建请求
+	req := &user.GetUserRequest{UserId: userId}
+
+	// 调用 gRPC 方法
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
+	defer cancel()
+
+	response, err := client.GetUser(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("could not greet: %v", err)
+	}
+
+	return response, nil
+}

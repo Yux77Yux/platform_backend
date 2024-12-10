@@ -21,6 +21,7 @@ func (s *Server) Register(ctx context.Context, req *generatedUser.RegisterReques
 				Status:  common.ApiResponse_FAILED,
 				Code:    "408",
 				Message: "Time out",
+				Details: err.Error(),
 			},
 		}, err
 	default:

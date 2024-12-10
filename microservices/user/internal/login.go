@@ -25,6 +25,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 				Status:  common.ApiResponse_ERROR,
 				Code:    "400",
 				Message: "Username and Password cannot be empty",
+				Details: err.Error(),
 			},
 		}, err
 	}
@@ -60,6 +61,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 				Status:  common.ApiResponse_ERROR,
 				Code:    "500",
 				Message: "cache client error occur",
+				Details: err.Error(),
 			},
 		}, fmt.Errorf("fail to get user info in redis: %w", err)
 	}
@@ -75,6 +77,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 					Status:  common.ApiResponse_ERROR,
 					Code:    "500",
 					Message: "redis client error occur",
+					Details: err.Error(),
 				},
 			}, fmt.Errorf("fail to get user info in redis: %w", err)
 		}
@@ -96,6 +99,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 					Status:  common.ApiResponse_ERROR,
 					Code:    "500",
 					Message: "mysql client error occur",
+					Details: err.Error(),
 				},
 			}, fmt.Errorf("fail to get user info in db: %w", err)
 		}
@@ -109,22 +113,11 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 			UserRole:   generated.UserRole(generated.UserRole_value[result["user_role"].(string)]),
 		}
 
-		go userMQ.SendMessage("storeUserInCache_exchange", "storeUserInCache_route", &generated.User{
-			UserDefault: &common.UserDefault{
-				UserId:   result["user_id"].(int64),
-				UserName: result["user_name"].(string),
-			},
-			UserAvator: result["user_avator"].(string),
-			UserRole:   generated.UserRole(generated.UserRole_value[result["user_role"].(string)]),
-		})
+		go userMQ.SendMessage("storeUserInCache_exchange", "storeUserInCache_route", user_info)
 	}
 
 	return &generated.LoginResponse{
-		UserLogin: &generated.UserLogin{
-			UserDefault: user_info.GetUserDefault(),
-			UserAvator:  user_info.GetUserAvator(),
-			UserRole:    user_info.GetUserRole(),
-		},
+		UserLogin: user_info,
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
 			Code:   "200",
