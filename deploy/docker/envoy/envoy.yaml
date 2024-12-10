@@ -55,7 +55,7 @@ static_resources:
                           "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
                           allow_origin_string_match:
                             - safe_regex:
-                                regex: .*
+                                regex: "http://localhost:3000"
                           allow_methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
                           allow_headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,Access-Control-Allow-Origin,Cookie"
                           allow_credentials: true
@@ -69,7 +69,7 @@ static_resources:
                         - match:
                             path: "/user.UserService/Register"
                           route:
-                            cluster: user_service # 指定 gRPC auth 集群
+                            cluster: user_service # 指定 gRPC user 集群
                           # typed_per_filter_config:
                           #   envoy.filters.http.ext_authz:
                           #     "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
@@ -77,13 +77,13 @@ static_resources:
                         - match:
                             path: "/aggregator.AggregatorService/Login" # 登录 路径
                           route:
-                            cluster: aggregator_service # 指定 gRPC auth 集群
+                            cluster: aggregator_service # 指定 gRPC aggregator 集群
                           # typed_per_filter_config:
                           #   envoy.filters.http.ext_authz:
                           #     "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
                           #     disabled: true # 禁用外部授权
                         - match:
-                            path: "/auth.AuthService/Refresh" # 登录 路径
+                            path: "/auth.AuthService/Refresh" # grpc 授权 路径
                           route:
                             cluster: auth_service # 指定 gRPC auth 集群
   clusters:
@@ -149,7 +149,7 @@ static_resources:
         initial_stream_window_size: 1048576 # 初始流窗口大小
         max_concurrent_streams: 1000
       load_assignment:
-        cluster_name: user_service
+        cluster_name: auth_service
         endpoints:
           - lb_endpoints:
               - endpoint:

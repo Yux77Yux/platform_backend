@@ -31,11 +31,12 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	return &generated.LoginResponse{
 		Tokens: &generated.Tokens{
 			RefreshToken: &generated.RefreshToken{
-				Value: refreshToken,
+				Value:     refreshToken,
+				ExpiresAt: timestamppb.New(time.Now().Add(7 * 24 * time.Hour)),
 			},
 			AccessToken: &generated.AccessToken{
 				Value:     accessToken,
-				ExpiresAt: timestamppb.New(time.Now().Add(1 * time.Hour)),
+				ExpiresAt: timestamppb.New(time.Now().Add(30 * time.Minute)),
 			},
 		},
 		Msg: &common.ApiResponse{

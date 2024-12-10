@@ -16,8 +16,9 @@ import (
 func main() {
 	var closeServer func()
 	done := make(chan struct{})
-	// 初始化服务器
+
 	go func() {
+		// grpc Server
 		closeServer = service.ServerRun(done)
 	}()
 

@@ -22,7 +22,7 @@ type Claims struct {
 // GenerateJWT generates a JWT token for a user with a given role and scope
 func GenerateJWT(userID int64, role string, scope []string) (string, error) {
 	// Set expiration time based on whether it's an access token or refresh token
-	expirationTime := time.Now().Add(1 * time.Hour) // default for access token
+	expirationTime := time.Now().Add(30 * time.Minute) // default for access token
 	if len(scope) == 0 {
 		// No scope means refresh token
 		expirationTime = time.Now().Add(7 * 24 * time.Hour) // Refresh token expires in 7 days

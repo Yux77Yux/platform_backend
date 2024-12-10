@@ -15,7 +15,7 @@ service AuthService{
     rpc Refresh(auth.methods.RefreshRequest) returns (auth.methods.RefreshResponse){
         option (google.api.http) = {
             post: "/api/auth/refresh"
-            body: "*"
+            body: "refresh_token"
         };
     }
     rpc Check(auth.methods.CheckRequest) returns (auth.methods.CheckResponse);

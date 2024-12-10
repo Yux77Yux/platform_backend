@@ -7,6 +7,7 @@ import (
 
 const (
 	GRPC_SERVER_ADDRESS = ":50020"
+	HTTP_SERVER_ADDRESS = ":50021"
 )
 
 var RoleScopeMapping = map[string][]string{
@@ -43,6 +44,6 @@ func GenerateScope(role string, roleScopeMapping map[string][]string) []string {
 }
 
 func init() {
-	service.InitStr(GRPC_SERVER_ADDRESS)
+	service.InitStr(GRPC_SERVER_ADDRESS, HTTP_SERVER_ADDRESS)
 	internal.InitScope(RoleScopeMapping)
 }

@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/auth"
@@ -20,26 +18,7 @@ type ContextKey string
 const RefreshTokenKey ContextKey = "refreshToken"
 
 func Refresh(ctx context.Context, req *generated.RefreshRequest) (*generated.RefreshResponse, error) {
-	refreshCookie := ctx.Value(RefreshTokenKey)
-	if refreshCookie == nil {
-		return &generated.RefreshResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_ERROR,
-				Code:   "401",
-			},
-		}, status.Errorf(codes.Unauthenticated, "no refreshToken in request")
-	}
-
-	refreshToken, ok := refreshCookie.(string)
-	if !ok {
-		return &generated.RefreshResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_ERROR,
-				Code:   "500",
-			},
-		}, status.Errorf(codes.Unauthenticated, "failed to retrieve refreshToken from context")
-	}
-
+	refreshToken := req.GetRefreshToken().GetValue()
 	// 检测refreshToken是否过期或无效
 	claims, err := jwt.ParseJWT(refreshToken)
 	if err != nil {
@@ -83,7 +62,7 @@ func Refresh(ctx context.Context, req *generated.RefreshRequest) (*generated.Ref
 	return &generated.RefreshResponse{
 		AccessToken: &generated.AccessToken{
 			Value:     accessToken,
-			ExpiresAt: timestamppb.New(time.Now().Add(1 * time.Hour)),
+			ExpiresAt: timestamppb.New(time.Now().Add(30 * time.Minute)),
 		},
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,

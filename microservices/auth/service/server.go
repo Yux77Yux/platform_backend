@@ -16,9 +16,7 @@ import (
 )
 
 func ServerRun(done chan struct{}) func() {
-	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(refreshTokenInterceptor()),
-	)
+	grpcServer := grpc.NewServer()
 	reflection.Register(grpcServer) // 启用 gRPC Reflection
 
 	go InitServer(grpcServer)
@@ -95,7 +93,7 @@ func refreshTokenInterceptor() grpc.UnaryServerInterceptor {
 			return handler(ctx, req)
 		}
 
-		// 假设 cookies 数组只有一个元素，包含所有 cookies
+		// 只有一个元素，无论多少个cookie
 		cookieStr := cookies[0]
 
 		// 使用分号拆分多个 cookie
