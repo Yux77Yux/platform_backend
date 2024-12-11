@@ -26,6 +26,9 @@ func ParseTimestamp(field string) (*timestamppb.Timestamp, error) {
 func ensureTimestampPB(input interface{}) (*timestamppb.Timestamp, error) {
 	switch v := input.(type) {
 	case string:
+		if v == "none" {
+			return nil, nil
+		}
 		// 尝试解析字符串为 time.Time
 		parsedTime, err := time.Parse(time.RFC3339, v)
 		if err != nil {
@@ -40,6 +43,15 @@ func ensureTimestampPB(input interface{}) (*timestamppb.Timestamp, error) {
 	}
 }
 
+func MapUserByString(result map[string]string) *generated.User {
+	converted := make(map[string]interface{})
+	// 将 map[string]string 转换为 map[string]interface{}
+	for key, value := range result {
+		converted[key] = value
+	}
+	return MapUser(converted)
+}
+
 func MapUser(result map[string]interface{}) *generated.User {
 	statusStr := result["user_status"].(string)
 	genderStr := result["user_gender"].(string)
@@ -51,19 +63,19 @@ func MapUser(result map[string]interface{}) *generated.User {
 
 	bday, err := ensureTimestampPB(result["user_bday"])
 	if err != nil {
-		log.Println("error: ", err)
+		log.Println("error: user_bday ", err)
 		return nil
 	}
 
 	createdAt, err := ensureTimestampPB(result["user_created_at"])
 	if err != nil {
-		log.Println("error: ", err)
+		log.Println("error: user_created_at ", err)
 		return nil
 	}
 
 	updatedAt, err := ensureTimestampPB(result["user_updated_at"])
 	if err != nil {
-		log.Println("error: ", err)
+		log.Println("error: user_updated_at ", err)
 		return nil
 	}
 

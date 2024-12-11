@@ -26,7 +26,7 @@ service UserService {
   // 批量字段
   rpc UpdateUser(user.methods.UpdateUserRequest) returns (user.methods.UpdateUserResponse) {
     option (google.api.http) = {
-      patch: "/api/user/update/{user_id}"
+      patch: "/api/user/{user_id}"
       body: "*"
     };
   }
@@ -34,7 +34,7 @@ service UserService {
   // User Name
   rpc UpdateUserName(user.methods.UpdateUserNameRequest) returns (user.methods.UpdateUserResponse) {
     option (google.api.http) = {
-      patch: "/api/user/update/{user_id}/name"
+      patch: "/api/user/{user_id}/name"
       body: "*"
     };
   }
@@ -42,7 +42,7 @@ service UserService {
   // User Avator
   rpc UpdateUserAvator(user.methods.UpdateUserAvatorRequest) returns (user.methods.UpdateUserResponse) {
     option (google.api.http) = {
-      patch: "/api/user/update/{user_id}/avator"
+      patch: "/api/user/{user_id}/avator"
       body: "*"
     };
   }
@@ -50,7 +50,7 @@ service UserService {
   // User Bio
   rpc UpdateUserBio(user.methods.UpdateUserBioRequest) returns (user.methods.UpdateUserResponse) {
     option (google.api.http) = {
-      patch: "/api/user/update/{user_id}/bio"
+      patch: "/api/user/{user_id}/bio"
       body: "*"
     };
   }
@@ -58,7 +58,7 @@ service UserService {
   // User Status
   rpc UpdateUserStatus(user.methods.UpdateUserStatusRequest) returns (user.methods.UpdateUserResponse) {
     option (google.api.http) = {
-      patch: "/api/user/update/{user_id}/status"
+      patch: "/api/user/{user_id}/status"
       body: "*"
     };
   }

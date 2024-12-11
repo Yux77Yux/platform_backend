@@ -4,9 +4,9 @@ package aggregator.methods;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
 
-import "common/api_response.proto";
 import "user/messages/user.proto";
 import "common/access_token.proto";
+import "common/api_response.proto";
 
 message SpaceRequest {
   int64 user_id = 1;
@@ -16,5 +16,6 @@ message SpaceRequest {
 message SpaceResponse{
   common.ApiResponse msg = 1;
   bool master = 2;
-  user.messages.User user = 3;
+  bool block = 3;
+  user.messages.User user = 4;
 }

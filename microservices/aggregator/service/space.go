@@ -9,14 +9,14 @@ import (
 	internal "github.com/Yux77Yux/platform_backend/microservices/aggregator/internal"
 )
 
-func (s *Server) Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginResponse, error) {
-	log.Println("info: login service start")
+func (s *Server) Space(ctx context.Context, req *generated.SpaceRequest) (*generated.SpaceResponse, error) {
+	log.Println("info: space service start")
 
 	select {
 	case <-ctx.Done():
 		err := ctx.Err()
 		log.Printf("error: service exceeded timeout: %v", err)
-		return &generated.LoginResponse{
+		return &generated.SpaceResponse{
 			Msg: &common.ApiResponse{
 				Status:  common.ApiResponse_FAILED,
 				Code:    "408",
@@ -25,13 +25,13 @@ func (s *Server) Login(ctx context.Context, req *generated.LoginRequest) (*gener
 			},
 		}, nil
 	default:
-		response, err := internal.Login(req)
+		response, err := internal.Space(req)
 		if err != nil {
-			log.Printf("error: login occur fail: %v", err)
+			log.Printf("error: space occur fail: %v", err)
 			return response, nil
 		}
 
-		log.Println("info: login occur success")
+		log.Println("info: space occur success")
 		return response, nil
 	}
 }

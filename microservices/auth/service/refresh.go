@@ -24,12 +24,12 @@ func (s *Server) Refresh(ctx context.Context, req *generated.RefreshRequest) (*g
 				Message: "Time out",
 				Details: err.Error(),
 			},
-		}, err
+		}, nil
 	default:
 		response, err := internal.Refresh(ctx, req)
 		if err != nil {
 			log.Printf("error: auth refresh occur fail: %v", err)
-			return response, err
+			return response, nil
 		}
 
 		log.Println("info: auth refresh occur success")

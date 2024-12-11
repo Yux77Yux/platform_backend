@@ -12,6 +12,9 @@ import (
 
 func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) {
 	user_id := req.GetUserId()
+	// 用于后来的黑名单,尚未开发
+	// accessToken := req.GetAccessToken()
+	block := false
 
 	// 判断redis有无存有
 	exist, err := cache.ExistsUserInfo(user_id)
@@ -41,14 +44,8 @@ func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) 
 			}, fmt.Errorf("fail to get user info in redis: %w", err)
 		}
 
-		converted := make(map[string]interface{})
-		// 将 map[string]string 转换为 map[string]interface{}
-		for key, value := range result {
-			converted[key] = value
-		}
-
 		// 调用函数，传递转换后的 map
-		user_info = MapUser(converted)
+		user_info = MapUserByString(result)
 	} else {
 		// redis未存有，则从数据库取信息
 		result, err := db.UserGetInfoInTransaction(user_id, nil)
@@ -70,7 +67,8 @@ func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) 
 	user_info.UserDefault.UserId = user_id
 
 	return &generated.GetUserResponse{
-		User: user_info,
+		User:  user_info,
+		Block: block,
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
 			Code:   "200",

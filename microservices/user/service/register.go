@@ -23,12 +23,12 @@ func (s *Server) Register(ctx context.Context, req *generatedUser.RegisterReques
 				Message: "Time out",
 				Details: err.Error(),
 			},
-		}, err
+		}, nil
 	default:
 		response, err := internal.Register(req)
 		if err != nil {
 			log.Println("error: register occur fail")
-			return response, err
+			return response, nil
 		}
 
 		log.Println("info: register success")

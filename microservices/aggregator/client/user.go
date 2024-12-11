@@ -8,7 +8,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	user "github.com/Yux77Yux/platform_backend/generated/user" // 你生成的 package 名字
+	common "github.com/Yux77Yux/platform_backend/generated/common"
+	generated "github.com/Yux77Yux/platform_backend/generated/user" // 你生成的 package 名字
 )
 
 type UserClient struct {
@@ -29,13 +30,13 @@ func NewUserClient() (*UserClient, error) {
 	return client, nil
 }
 
-func (c *UserClient) Login(credentials *user.UserCredentials) (*user.LoginResponse, error) {
+func (c *UserClient) Login(credentials *generated.UserCredentials) (*generated.LoginResponse, error) {
 	defer c.connection.Close()
 	// 创建客户端
-	client := user.NewUserServiceClient(c.connection)
+	client := generated.NewUserServiceClient(c.connection)
 
 	// 创建请求
-	req := &user.LoginRequest{UserCredentials: credentials}
+	req := &generated.LoginRequest{UserCredentials: credentials}
 
 	// 调用 gRPC 方法
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -49,13 +50,13 @@ func (c *UserClient) Login(credentials *user.UserCredentials) (*user.LoginRespon
 	return response, nil
 }
 
-func (c *UserClient) GetUser(userId int64) (*user.GetUserResponse, error) {
+func (c *UserClient) GetUser(userId int64, accessToken *common.AccessToken) (*generated.GetUserResponse, error) {
 	defer c.connection.Close()
 	// 创建客户端
-	client := user.NewUserServiceClient(c.connection)
+	client := generated.NewUserServiceClient(c.connection)
 
 	// 创建请求
-	req := &user.GetUserRequest{UserId: userId}
+	req := &generated.GetUserRequest{UserId: userId, AccessToken: accessToken}
 
 	// 调用 gRPC 方法
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)

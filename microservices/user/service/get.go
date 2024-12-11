@@ -23,12 +23,12 @@ func (s *Server) GetUser(ctx context.Context, req *generated.GetUserRequest) (*g
 				Message: "Time out",
 				Details: err.Error(),
 			},
-		}, err
+		}, nil
 	default:
 		response, err := internal.GetUser(req)
 		if err != nil {
 			log.Println("error: get user occur fail: ", err)
-			return response, err
+			return response, nil
 		}
 
 		log.Println("info: get user occur success")

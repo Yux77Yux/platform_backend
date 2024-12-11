@@ -24,12 +24,12 @@ func (s *Server) Login(ctx context.Context, req *generated.LoginRequest) (*gener
 				Message: "Time out",
 				Details: err.Error(),
 			},
-		}, err
+		}, nil
 	default:
 		response, err := internal.Login(req)
 		if err != nil {
 			log.Println("error: auth login occur fail")
-			return response, err
+			return response, nil
 		}
 
 		log.Println("info: auth login occur success")

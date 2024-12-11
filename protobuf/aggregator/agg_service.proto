@@ -19,8 +19,7 @@ service AggregatorService {
 
   rpc Space(aggregator.methods.SpaceRequest) returns (aggregator.methods.SpaceResponse) {
     option (google.api.http) = {
-      get: "/api/space/{user_id}"
-      body: "*"
+      get: "/api/space/{user_id}/{access_token.value=*}"
     };
   }
 

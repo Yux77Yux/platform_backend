@@ -131,12 +131,12 @@ func (s *Server) UpdateUserStatus(ctx context.Context, req *generated.UpdateUser
 				Message: "Time out",
 				Details: err.Error(),
 			},
-		}, err
+		}, nil
 	default:
 		response, err := internal.UpdateUserStatus(req)
 		if err != nil {
 			log.Println("error: update user status occur fail")
-			return response, err
+			return response, nil
 		}
 
 		log.Println("info: update user status occur success")
