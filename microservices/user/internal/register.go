@@ -67,7 +67,7 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 		reqId <- reqID
 		log.Printf("info: handling request with ID: %s\n", reqID)
 
-		err = userMQ.SendMessage("register_exchange", "register_route", user_credentials)
+		err = userMQ.SendMessage("register", "register", user_credentials)
 		if err != nil {
 			return fmt.Errorf("err: request_id: %s ,message: %w", reqID, err)
 		}

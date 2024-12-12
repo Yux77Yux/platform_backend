@@ -14,7 +14,8 @@ type RequestProcessor struct {
 
 func InitDispatch() *RequestProcessor {
 	return &RequestProcessor{
-		requestChan: make(chan RequestHandlerFunc, 20),
+		// 闭包通道容纳个数
+		requestChan: make(chan RequestHandlerFunc, 100),
 	}
 }
 

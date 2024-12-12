@@ -18,6 +18,4 @@ func init() {
 	service.InitStr(GRPC_SERVER_ADDRESS)
 	queueMQ.InitStr(RABBITMQ_STR)
 	client.InitStr(USER_SERVER_ADDRESS, AUTH_SERVER_ADDRESS)
-
-	queueMQ.Init()
 }

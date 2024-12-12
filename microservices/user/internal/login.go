@@ -104,6 +104,17 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 			}, fmt.Errorf("fail to get user info in db: %w", err)
 		}
 
+		if result == nil {
+			return &generated.LoginResponse{
+				Msg: &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    "404",
+					Message: "user not found",
+					Details: "No user found with the given ID",
+				},
+			}, nil
+		}
+
 		user_info = &generated.UserLogin{
 			UserDefault: &common.UserDefault{
 				UserId:   result["user_id"].(int64),
@@ -113,7 +124,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 			UserRole:   generated.UserRole(generated.UserRole_value[result["user_role"].(string)]),
 		}
 
-		go userMQ.SendMessage("storeUserInCache_exchange", "storeUserInCache_route", user_info)
+		go userMQ.SendMessage("storeUserInCache", "storeUserInCache", user_info)
 	}
 
 	return &generated.LoginResponse{

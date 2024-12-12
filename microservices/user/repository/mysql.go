@@ -153,7 +153,7 @@ func UserGetInfoInTransaction(user_id int64, fields []string) (map[string]interf
 
 		// 确保有结果
 		if !rows.Next() {
-			return nil, fmt.Errorf("no user found with id %d", user_id)
+			return nil, nil
 		}
 
 		// 创建一个存储列值的切片

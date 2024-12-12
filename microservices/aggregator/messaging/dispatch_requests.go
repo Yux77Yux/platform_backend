@@ -16,7 +16,8 @@ type RequestDispatcher struct {
 
 func InitDispatch() *RequestDispatcher {
 	return &RequestDispatcher{
-		requestChan: make(chan RequestHandlerFunc, 20),
+		// 闭包通道容纳个数
+		requestChan: make(chan RequestHandlerFunc, 100),
 	}
 }
 

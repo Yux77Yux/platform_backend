@@ -8,6 +8,7 @@ import (
 	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	"github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
 func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) {
@@ -45,7 +46,7 @@ func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) 
 		}
 
 		// 调用函数，传递转换后的 map
-		user_info = MapUserByString(result)
+		user_info = tools.MapUserByString(result)
 	} else {
 		// redis未存有，则从数据库取信息
 		result, err := db.UserGetInfoInTransaction(user_id, nil)
@@ -60,8 +61,19 @@ func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) 
 			}, fmt.Errorf("fail to get user info in db: %w", err)
 		}
 
-		user_info = MapUser(result)
-		go userMQ.SendMessage("storeUserInCache_exchange", "storeUserInCache_route", user_info)
+		if result == nil {
+			return &generated.GetUserResponse{
+				Msg: &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    "404",
+					Message: "user not found",
+					Details: "No user found with the given ID",
+				},
+			}, nil
+		}
+
+		user_info = tools.MapUser(result)
+		go userMQ.SendMessage("storeUserInCache", "storeUserInCache", user_info)
 	}
 
 	user_info.UserDefault.UserId = user_id
