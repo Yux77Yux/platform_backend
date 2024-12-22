@@ -18,7 +18,7 @@ import (
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
-func storeUserInCache(msg amqp.Delivery) error {
+func storeUserProcessor(msg amqp.Delivery) error {
 	user_info := new(generated.User)
 	// 反序列化
 	err := proto.Unmarshal(msg.Body, user_info)
@@ -71,7 +71,7 @@ func registerProcessor(msg amqp.Delivery) error {
 			UserId:   id,
 			UserName: "",
 		},
-		UserAvator:    "",
+		UserAvatar:    "",
 		UserBio:       "",
 		UserStatus:    generated.UserStatus_INACTIVE,
 		UserGender:    generated.UserGender_UNDEFINED,
@@ -183,7 +183,7 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 		}
 
 		user_info = tools.MapUser(result)
-		go SendMessage("storeUserInCache", "storeUserInCache", user_info)
+		go SendMessage("storeUser", "storeUser", user_info)
 	}
 
 	user_info.UserDefault.UserId = user_id
@@ -196,4 +196,48 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 			Code:   "200",
 		},
 	}, nil
+}
+
+func updateUserProcessor(msg amqp.Delivery) error {
+	log.Println("Update User Info Start !!!")
+	user := new(generated.UserUpdateSpace)
+
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, user)
+	if err != nil {
+		log.Printf("Error unmarshaling message: %v", err)
+		return fmt.Errorf("update user processor error: %w", err)
+	}
+
+	// 使用反序列化后的 user
+	email := user.GetUserEmail()
+
+	// 更新 数据库用户表
+	err = db.UserUpdateInTransaction(user)
+	if err != nil {
+		return fmt.Errorf("update user in db error occur: %w", err)
+	}
+
+	// 更新 数据库注册表
+	if email != "" {
+		err = db.UserRegisterUpdateInTransaction(user)
+		if err != nil {
+			return fmt.Errorf("update user in db error occur: %w", err)
+		}
+	}
+
+	// 更新 缓存
+	err = cache.UpdateUser(user)
+	if err != nil {
+		log.Printf("cache methods UpdateUserInfo occur error: %v", err)
+	}
+
+	if email != "" {
+		if err := cache.StoreEmail(email); err != nil {
+			log.Printf("redis methods UpdateUserProcessor occur error: %v", err)
+		}
+	}
+
+	log.Println("UpdateUserProcessor success")
+	return nil
 }

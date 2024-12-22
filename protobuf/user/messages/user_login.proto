@@ -9,6 +9,6 @@ import "user/messages/user_role.proto";
 
 message UserLogin{
     common.UserDefault user_default = 1;
-    string user_avator = 2;
+    string user_avatar = 2;
     user.messages.UserRole user_role = 3;
 }

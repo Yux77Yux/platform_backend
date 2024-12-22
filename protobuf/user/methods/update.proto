@@ -4,51 +4,32 @@ package user.methods;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/user";
 
-import "user/messages/user.proto";
-import "user/messages/user_status.proto";
-import "common/api_response.proto";
+import "user/messages/user_update_space.proto";
+import "user/messages/user_update_status.proto";
+import "user/messages/user_update_avatar.proto";
 import "common/access_token.proto";
+import "common/api_response.proto";
 
 message UpdateUserRequest {
-  int64 user_id = 1;
-  string user_name = 2;
-  string user_bio = 3;
-  string user_gender = 4;
-  common.AccessToken access_token = 5;
+  user.messages.UserUpdateSpace user_update_space = 1;
+  common.AccessToken access_token = 2;
 }
 
 // 单字段 请求
 
-// name
-message UpdateUserNameRequest {
-  int64 user_id = 1;
-  string user_name = 2;
-  common.AccessToken access_token = 3;
-}
-
-// avator
-message UpdateUserAvatorRequest {
-  int64 user_id = 1;
-  string user_avator = 2;
-  common.AccessToken access_token = 3;
-}
-
-// bio
-message UpdateUserBioRequest {
-  int64 user_id = 1;
-  string user_bio = 2;
-  common.AccessToken access_token = 3;
+// avatar
+message UpdateUserAvatarRequest {
+  user.messages.UserUpdateAvatar user_update_avatar = 1;
+  common.AccessToken access_token = 2;
 }
 
 // status
 message UpdateUserStatusRequest {
-  int64 user_id = 1;
-  user.messages.UserStatus user_status = 2;
-  common.AccessToken access_token = 3;
+  user.messages.UserUpdateStatus user_update_status = 1;
+  common.AccessToken access_token = 2;
 }
 
 // 响应
 message UpdateUserResponse {
-  user.messages.User user = 1;
-  common.ApiResponse msg = 2;
+  common.ApiResponse msg = 1;
 }

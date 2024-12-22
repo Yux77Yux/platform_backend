@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -10,11 +11,12 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// SET
 func UserAddInfoInTransaction(user_info *generated.User) error {
 	query := `insert into db_user_1.User 
 	(user_id,
 	user_name,
-	user_avator,
+	user_avatar,
 	user_bio,
 	user_status,
 	user_gender,
@@ -46,15 +48,19 @@ func UserAddInfoInTransaction(user_info *generated.User) error {
 	var (
 		UserId        int64     = user_info.GetUserDefault().GetUserId()
 		UserName      string    = user_info.GetUserDefault().GetUserName()
-		UserAvator    string    = user_info.GetUserAvator()
+		UserAvatar    string    = user_info.GetUserAvatar()
 		UserBio       string    = user_info.GetUserBio()
 		UserStatus    string    = user_info.GetUserStatus().String()
 		UserGender    string    = user_info.GetUserGender().String()
-		UserEmail     *string   = &user_info.UserEmail
+		UserEmail     *string   = nil
 		UserCreatedAt time.Time = user_info.GetUserCreatedAt().AsTime()
 		UserUpdatedAt time.Time = user_info.GetUserUpdatedAt().AsTime()
 		UserRole      string    = user_info.GetUserRole().String()
 	)
+
+	if user_info.GetUserEmail() != "" {
+		UserEmail = &user_info.UserEmail
+	}
 
 	select {
 	case <-ctx.Done():
@@ -69,7 +75,7 @@ func UserAddInfoInTransaction(user_info *generated.User) error {
 			query,
 			UserId,
 			UserName,
-			UserAvator,
+			UserAvatar,
 			UserBio,
 			UserStatus,
 			UserGender,
@@ -96,6 +102,78 @@ func UserAddInfoInTransaction(user_info *generated.User) error {
 	return nil
 }
 
+func UserRegisterInTransaction(user_credential *generated.UserCredentials, id int64) error {
+	pwd, err := hashPassword(user_credential.GetPassword())
+
+	// 进行复杂加密
+	if err != nil {
+		return fmt.Errorf("decrypt hash password failed because %w", err)
+	}
+
+	query := `insert into db_user_credentials_1.UserCredentials(
+	username,
+	password,
+	user_email,
+	user_id,
+	user_role)values
+	(?,?,?,?,?) 
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	tx, err := db.BeginTransaction()
+	if err != nil {
+		return err
+	}
+
+	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("transaction failed because %v", r)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		err = fmt.Errorf("exec timeout :%w", ctx.Err())
+		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			err = fmt.Errorf("%w and %w", err, errSecond)
+		}
+
+		return err
+	default:
+		var email *string = nil
+		if user_credential.GetUserEmail() != "" {
+			email = &user_credential.UserEmail
+		}
+
+		_, err = tx.Exec(query, user_credential.GetUsername(), pwd, email, id, user_credential.GetUserRole().String())
+
+		if err != nil {
+			err = fmt.Errorf("transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return err
+		}
+
+		if err = db.CommitTransaction(tx); err != nil {
+			return err
+		}
+	}
+
+	if err != nil {
+		return fmt.Errorf("not the database error but the others occurred :%w", err)
+	}
+	return nil
+}
+
+// GET
 func UserGetInfoInTransaction(user_id int64, fields []string) (map[string]interface{}, error) {
 	var query string
 	if len(fields) > 0 {
@@ -123,7 +201,7 @@ func UserGetInfoInTransaction(user_id int64, fields []string) (map[string]interf
 			}
 		}
 	}()
-
+	log.Println("url: ", query)
 	var result map[string]interface{}
 	select {
 	case <-ctx.Done():
@@ -174,28 +252,56 @@ func UserGetInfoInTransaction(user_id int64, fields []string) (map[string]interf
 			switch colName {
 			case "user_id":
 				result[colName] = user_id
-			case "user_status":
-				if value, ok := values[i].(int); ok {
-					result[colName] = generated.UserStatus(value)
+			case "user_bday":
+				if values[i] == nil {
+					result[colName] = "none"
 				} else {
-					return nil, fmt.Errorf("assert user_status type failed ")
+					if value, ok := values[i].([]byte); ok {
+						// 将字符串解析为 time.Time（假设格式是 "YYYY-MM-DD"）
+						parsedTime, err := time.Parse("2006-01-02", string(value))
+						if err != nil {
+							log.Printf("colName %s value %v with error: %v", colName, values[i], err)
+							return nil, fmt.Errorf("failed to parse time %v: %v", value, err)
+						}
+
+						result[colName] = timestamppb.New(parsedTime)
+					} else {
+						log.Printf("colName %s value %v with error: %v", colName, values[i], err)
+						return nil, fmt.Errorf("assert %v timeType failed ", values[i])
+					}
 				}
-			case "user_gender":
-				if value, ok := values[i].(int); ok {
-					result[colName] = generated.UserGender(value)
+			case "user_created_at", "user_updated_at":
+				if value, ok := values[i].([]byte); ok {
+					// 将字符串解析为 time.Time（假设格式是 "YYYY-MM-DD HH:MM:SS"）
+					parsedTime, err := time.Parse("2006-01-02 15:04:05", string(value))
+					if err != nil {
+						log.Printf("colName %s value %v with error: %v", colName, values[i], err)
+						return nil, fmt.Errorf("failed to parse time %v: %v", string(value), err)
+					}
+
+					result[colName] = timestamppb.New(parsedTime)
 				} else {
-					return nil, fmt.Errorf("assert user_gender type failed ")
+					log.Printf("colName %s value %v with error: %v", colName, values[i], err)
+					return nil, fmt.Errorf("assert %v timeType failed ", values[i])
 				}
-			case "user_bday", "user_created_at", "user_updated_at":
-				if value, ok := values[i].(time.Time); ok {
-					result[colName] = timestamppb.New(value)
+			case "user_email":
+				if values[i] == nil {
+					continue
 				} else {
-					return nil, fmt.Errorf("assert %v type failed ", values[i])
+					if value, ok := values[i].([]byte); ok {
+						result[colName] = string(value)
+						log.Printf("%s :%s", colName, result[colName])
+					} else {
+						log.Printf("colName %s value %v with error: %v", colName, values[i], err)
+						return nil, fmt.Errorf("assert %v type failed ", values[i])
+					}
 				}
 			default:
-				if value, ok := values[i].(string); ok {
-					result[colName] = value
+				if value, ok := values[i].([]byte); ok {
+					result[colName] = string(value)
+					log.Printf("%s :%s", colName, result[colName])
 				} else {
+					log.Printf("colName %s value %v with error: %v", colName, values[i], err)
 					return nil, fmt.Errorf("assert %v type failed ", values[i])
 				}
 			}
@@ -205,10 +311,10 @@ func UserGetInfoInTransaction(user_id int64, fields []string) (map[string]interf
 			return nil, err
 		}
 	}
-
 	return result, nil
 }
 
+// Verify
 func UserVerifyInTranscation(user_credential *generated.UserCredentials) (int64, error) {
 	query := `select 
 	password,
@@ -282,22 +388,12 @@ func UserVerifyInTranscation(user_credential *generated.UserCredentials) (int64,
 	return user_id, nil
 }
 
-func UserRegisterInTransaction(user_credential *generated.UserCredentials, id int64) error {
-	pwd, err := hashPassword(user_credential.GetPassword())
-
-	// 进行复杂加密
-	if err != nil {
-		return fmt.Errorf("decrypt hash password failed because %w", err)
-	}
-
-	query := `insert into db_user_credentials_1.UserCredentials(
-	username,
-	password,
-	user_email,
-	user_id,
-	user_role)values
-	(?,?,?,?,?) 
-	`
+// UPDATE
+func UserRegisterUpdateInTransaction(user_info *generated.UserUpdateSpace) error {
+	query := `UPDATE db_user_credentials_1.UserCredentials
+		SET 
+    		user_email = ?
+		WHERE user_id = ? `
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -317,6 +413,14 @@ func UserRegisterInTransaction(user_credential *generated.UserCredentials, id in
 		}
 	}()
 
+	var (
+		UserId    int64   = user_info.GetUserDefault().GetUserId()
+		UserEmail *string = nil
+	)
+	if user_info.GetUserEmail() != "" {
+		UserEmail = &user_info.UserEmail
+	}
+
 	select {
 	case <-ctx.Done():
 		err = fmt.Errorf("exec timeout :%w", ctx.Err())
@@ -326,14 +430,110 @@ func UserRegisterInTransaction(user_credential *generated.UserCredentials, id in
 
 		return err
 	default:
-		var email interface{}
-		if user_credential.GetUserEmail() == "" {
-			email = nil
-		} else {
-			email = user_credential.GetUserEmail()
+		_, err := tx.Exec(
+			query,
+			UserEmail,
+			UserId,
+		)
+		if err != nil {
+			err = fmt.Errorf("transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return err
 		}
 
-		_, err = tx.Exec(query, user_credential.GetUsername(), pwd, email, id, user_credential.GetUserRole().String())
+		if err = db.CommitTransaction(tx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func UserUpdateInTransaction(user_info *generated.UserUpdateSpace) error {
+	query := `UPDATE db_user_1.User 
+		SET 
+    		user_name = ?,
+    		user_bio = ?,
+    		user_gender = ?,
+    		user_email = ?,
+    		user_bday = ?,
+    		user_updated_at = ?
+		WHERE user_id = ? `
+	email := user_info.GetUserEmail()
+	if email == "" {
+		query = `UPDATE db_user_1.User 
+		SET 
+    		user_name = ?,
+    		user_bio = ?,
+    		user_gender = ?,
+    		user_bday = ?,
+    		user_updated_at = ?
+		WHERE user_id = ? `
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	tx, err := db.BeginTransaction()
+	if err != nil {
+		return err
+	}
+
+	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("transaction failed because %v", r)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+		}
+	}()
+
+	var (
+		UserId        int64     = user_info.GetUserDefault().GetUserId()
+		UserName      string    = user_info.GetUserDefault().GetUserName()
+		UserBio       string    = user_info.GetUserBio()
+		UserGender    string    = user_info.GetUserGender().String()
+		UserEmail     string    = email
+		UserUpdatedAt time.Time = time.Now()
+		UserBday      time.Time = user_info.GetUserBday().AsTime()
+	)
+
+	select {
+	case <-ctx.Done():
+		err = fmt.Errorf("exec timeout :%w", ctx.Err())
+		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			err = fmt.Errorf("%w and %w", err, errSecond)
+		}
+
+		return err
+	default:
+		var err error
+		if email == "" {
+			_, err = tx.Exec(
+				query,
+				UserName,
+				UserBio,
+				UserGender,
+				UserBday,
+				UserUpdatedAt,
+				UserId,
+			)
+		} else {
+			_, err = tx.Exec(
+				query,
+				UserName,
+				UserBio,
+				UserGender,
+				UserEmail,
+				UserBday,
+				UserUpdatedAt,
+				UserId,
+			)
+		}
 
 		if err != nil {
 			err = fmt.Errorf("transaction exec failed because %v", err)
@@ -349,8 +549,125 @@ func UserRegisterInTransaction(user_credential *generated.UserCredentials, id in
 		}
 	}
 
+	return nil
+}
+
+func UserUpdateAvatarInTransaction(user_info *generated.UserUpdateAvatar) error {
+	query := `UPDATE db_user_1.User 
+		SET 
+    		user_avatar = ?
+		WHERE user_id = ? `
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	tx, err := db.BeginTransaction()
 	if err != nil {
-		return fmt.Errorf("not the database error but the others occurred :%w", err)
+		return err
 	}
+
+	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("transaction failed because %v", r)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+		}
+	}()
+
+	var (
+		UserId     int64  = user_info.GetUserId()
+		UserAvatar string = user_info.GetUserAvatar()
+	)
+
+	select {
+	case <-ctx.Done():
+		err = fmt.Errorf("exec timeout :%w", ctx.Err())
+		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			err = fmt.Errorf("%w and %w", err, errSecond)
+		}
+
+		return err
+	default:
+		_, err := tx.Exec(
+			query,
+			UserAvatar,
+			UserId,
+		)
+		if err != nil {
+			err = fmt.Errorf("transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return err
+		}
+
+		if err = db.CommitTransaction(tx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func UserUpdateStatusInTransaction(user_info *generated.UserUpdateStatus) error {
+	query := `UPDATE db_user_1.User 
+		SET 
+    		user_status = ?
+		WHERE user_id = ? `
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	tx, err := db.BeginTransaction()
+	if err != nil {
+		return err
+	}
+
+	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("transaction failed because %v", r)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+		}
+	}()
+
+	var (
+		UserId     int64                = user_info.GetUserId()
+		UserStatus generated.UserStatus = user_info.GetUserStatus()
+	)
+
+	select {
+	case <-ctx.Done():
+		err = fmt.Errorf("exec timeout :%w", ctx.Err())
+		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			err = fmt.Errorf("%w and %w", err, errSecond)
+		}
+
+		return err
+	default:
+		_, err := tx.Exec(
+			query,
+			UserStatus,
+			UserId,
+		)
+		if err != nil {
+			err = fmt.Errorf("transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return err
+		}
+
+		if err = db.CommitTransaction(tx); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

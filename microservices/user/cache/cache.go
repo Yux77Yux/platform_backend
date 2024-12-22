@@ -151,7 +151,7 @@ func StoreUserInfo(user *generated.User) error {
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
 			"user_name", user.GetUserDefault().GetUserName(),
-			"user_avator", user.GetUserAvator(),
+			"user_avatar", user.GetUserAvatar(),
 			"user_bio", user.GetUserBio(),
 			"user_status", user.GetUserStatus().String(),
 			"user_gender", user.GetUserGender().String(),
@@ -160,6 +160,119 @@ func StoreUserInfo(user *generated.User) error {
 			"user_created_at", user.GetUserCreatedAt().AsTime(),
 			"user_updated_at", user.GetUserUpdatedAt().AsTime(),
 			"user_role", user.GetUserRole().String(),
+		)
+		resultCh <- err
+	}
+
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result != nil {
+			return result
+		}
+		return nil
+	}
+}
+
+func UpdateUser(user *generated.UserUpdateSpace) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	resultCh := make(chan error, 1)
+
+	id := strconv.FormatInt(user.GetUserDefault().GetUserId(), 10)
+
+	var userBday interface{}
+	// 判断是否为空
+	if user.GetUserBday() != nil {
+		// 将 Timestamp 转换为 time.Time 类型
+		userBday = user.GetUserBday().AsTime()
+	} else {
+		userBday = "none"
+	}
+
+	var reqFunc func(CacheInterface)
+	if user.GetUserEmail() != "" {
+		reqFunc = func(CacheClient CacheInterface) {
+			err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
+				"user_name", user.GetUserDefault().GetUserName(),
+				"user_bio", user.GetUserBio(),
+				"user_gender", user.GetUserGender().String(),
+				"user_email", user.GetUserEmail(),
+				"user_bday", userBday,
+				"user_updated_at", time.Now(),
+			)
+			resultCh <- err
+		}
+	} else {
+		reqFunc = func(CacheClient CacheInterface) {
+			err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
+				"user_name", user.GetUserDefault().GetUserName(),
+				"user_bio", user.GetUserBio(),
+				"user_gender", user.GetUserGender().String(),
+				"user_bday", userBday,
+				"user_updated_at", time.Now(),
+			)
+			resultCh <- err
+		}
+	}
+
+	cacheRequestChannel <- reqFunc
+
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result != nil {
+			return result
+		}
+		return nil
+	}
+}
+
+func UpdateUserAvatar(user *generated.UserUpdateAvatar) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	resultCh := make(chan error, 1)
+
+	id := strconv.FormatInt(user.GetUserId(), 10)
+
+	cacheRequestChannel <- func(CacheClient CacheInterface) {
+		err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
+			"user_avatar", user.GetUserAvatar(),
+			"user_updated_at", time.Now(),
+		)
+		resultCh <- err
+	}
+
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result != nil {
+			return result
+		}
+		return nil
+	}
+}
+
+func UpdateUserStatus(user *generated.UserUpdateStatus) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	resultCh := make(chan error, 1)
+
+	id := strconv.FormatInt(user.GetUserId(), 10)
+
+	cacheRequestChannel <- func(CacheClient CacheInterface) {
+		err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
+			"user_status", user.GetUserStatus(),
+			"user_updated_at", time.Now(),
 		)
 		resultCh <- err
 	}

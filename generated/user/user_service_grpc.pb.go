@@ -23,9 +23,7 @@ const (
 	UserService_Login_FullMethodName            = "/user.UserService/Login"
 	UserService_GetUser_FullMethodName          = "/user.UserService/GetUser"
 	UserService_UpdateUser_FullMethodName       = "/user.UserService/UpdateUser"
-	UserService_UpdateUserName_FullMethodName   = "/user.UserService/UpdateUserName"
-	UserService_UpdateUserAvator_FullMethodName = "/user.UserService/UpdateUserAvator"
-	UserService_UpdateUserBio_FullMethodName    = "/user.UserService/UpdateUserBio"
+	UserService_UpdateUserAvatar_FullMethodName = "/user.UserService/UpdateUserAvatar"
 	UserService_UpdateUserStatus_FullMethodName = "/user.UserService/UpdateUserStatus"
 )
 
@@ -38,12 +36,8 @@ type UserServiceClient interface {
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
 	// 批量字段
 	UpdateUser(ctx context.Context, in *UpdateUserRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
-	// User Name
-	UpdateUserName(ctx context.Context, in *UpdateUserNameRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
-	// User Avator
-	UpdateUserAvator(ctx context.Context, in *UpdateUserAvatorRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
-	// User Bio
-	UpdateUserBio(ctx context.Context, in *UpdateUserBioRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
+	// User Avatar
+	UpdateUserAvatar(ctx context.Context, in *UpdateUserAvatarRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
 	// User Status
 	UpdateUserStatus(ctx context.Context, in *UpdateUserStatusRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
 }
@@ -96,30 +90,10 @@ func (c *userServiceClient) UpdateUser(ctx context.Context, in *UpdateUserReques
 	return out, nil
 }
 
-func (c *userServiceClient) UpdateUserName(ctx context.Context, in *UpdateUserNameRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
+func (c *userServiceClient) UpdateUserAvatar(ctx context.Context, in *UpdateUserAvatarRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateUserResponse)
-	err := c.cc.Invoke(ctx, UserService_UpdateUserName_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *userServiceClient) UpdateUserAvator(ctx context.Context, in *UpdateUserAvatorRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateUserResponse)
-	err := c.cc.Invoke(ctx, UserService_UpdateUserAvator_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *userServiceClient) UpdateUserBio(ctx context.Context, in *UpdateUserBioRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateUserResponse)
-	err := c.cc.Invoke(ctx, UserService_UpdateUserBio_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, UserService_UpdateUserAvatar_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,12 +119,8 @@ type UserServiceServer interface {
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
 	// 批量字段
 	UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error)
-	// User Name
-	UpdateUserName(context.Context, *UpdateUserNameRequest) (*UpdateUserResponse, error)
-	// User Avator
-	UpdateUserAvator(context.Context, *UpdateUserAvatorRequest) (*UpdateUserResponse, error)
-	// User Bio
-	UpdateUserBio(context.Context, *UpdateUserBioRequest) (*UpdateUserResponse, error)
+	// User Avatar
+	UpdateUserAvatar(context.Context, *UpdateUserAvatarRequest) (*UpdateUserResponse, error)
 	// User Status
 	UpdateUserStatus(context.Context, *UpdateUserStatusRequest) (*UpdateUserResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
@@ -175,14 +145,8 @@ func (UnimplementedUserServiceServer) GetUser(context.Context, *GetUserRequest) 
 func (UnimplementedUserServiceServer) UpdateUser(context.Context, *UpdateUserRequest) (*UpdateUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateUser not implemented")
 }
-func (UnimplementedUserServiceServer) UpdateUserName(context.Context, *UpdateUserNameRequest) (*UpdateUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateUserName not implemented")
-}
-func (UnimplementedUserServiceServer) UpdateUserAvator(context.Context, *UpdateUserAvatorRequest) (*UpdateUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateUserAvator not implemented")
-}
-func (UnimplementedUserServiceServer) UpdateUserBio(context.Context, *UpdateUserBioRequest) (*UpdateUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateUserBio not implemented")
+func (UnimplementedUserServiceServer) UpdateUserAvatar(context.Context, *UpdateUserAvatarRequest) (*UpdateUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateUserAvatar not implemented")
 }
 func (UnimplementedUserServiceServer) UpdateUserStatus(context.Context, *UpdateUserStatusRequest) (*UpdateUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateUserStatus not implemented")
@@ -280,56 +244,20 @@ func _UserService_UpdateUser_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserService_UpdateUserName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateUserNameRequest)
+func _UserService_UpdateUserAvatar_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateUserAvatarRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(UserServiceServer).UpdateUserName(ctx, in)
+		return srv.(UserServiceServer).UpdateUserAvatar(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: UserService_UpdateUserName_FullMethodName,
+		FullMethod: UserService_UpdateUserAvatar_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).UpdateUserName(ctx, req.(*UpdateUserNameRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UserService_UpdateUserAvator_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateUserAvatorRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserServiceServer).UpdateUserAvator(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UserService_UpdateUserAvator_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).UpdateUserAvator(ctx, req.(*UpdateUserAvatorRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UserService_UpdateUserBio_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateUserBioRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserServiceServer).UpdateUserBio(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UserService_UpdateUserBio_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).UpdateUserBio(ctx, req.(*UpdateUserBioRequest))
+		return srv.(UserServiceServer).UpdateUserAvatar(ctx, req.(*UpdateUserAvatarRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -376,16 +304,8 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_UpdateUser_Handler,
 		},
 		{
-			MethodName: "UpdateUserName",
-			Handler:    _UserService_UpdateUserName_Handler,
-		},
-		{
-			MethodName: "UpdateUserAvator",
-			Handler:    _UserService_UpdateUserAvator_Handler,
-		},
-		{
-			MethodName: "UpdateUserBio",
-			Handler:    _UserService_UpdateUserBio_Handler,
+			MethodName: "UpdateUserAvatar",
+			Handler:    _UserService_UpdateUserAvatar_Handler,
 		},
 		{
 			MethodName: "UpdateUserStatus",

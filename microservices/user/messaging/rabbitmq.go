@@ -43,13 +43,13 @@ func SendMessage(exchange string, routeKey string, req proto.Message) error {
 			})
 
 		if err == nil {
+			log.Println("info: success in sending mq")
 			return nil
 		}
 
 		log.Printf("error: failed to publish message, retrying... (%d/3)\n", i+1)
 		time.Sleep(time.Second * 2) // Wait before retrying
 	}
-
 	return fmt.Errorf("failed to publish request: %w", err)
 }
 
@@ -94,6 +94,7 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 	}
 
 	for msg := range msgs {
+		log.Println("info: update user processor handle start")
 		if err := handler(msg); err != nil {
 			log.Printf("error: message processing failed: %v", err)
 			msg.Nack(false, false) // Negatively acknowledge

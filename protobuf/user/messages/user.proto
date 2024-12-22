@@ -14,7 +14,7 @@ import "common/custom_options.proto";
 
 message User {
   common.UserDefault user_default = 1;
-  string user_avator = 2;
+  string user_avatar = 2;
   string user_bio = 3 [(common.max_user_bio_length) = 1000];
   user.messages.UserStatus user_status = 4;
   user.messages.UserGender user_gender = 5;

@@ -5,6 +5,7 @@ import (
 
 	userCache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
+	oss "github.com/Yux77Yux/platform_backend/microservices/user/oss"
 	userDB "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	service "github.com/Yux77Yux/platform_backend/microservices/user/service"
 )
@@ -31,4 +32,5 @@ func init() {
 	userMQ.Init()
 	userDB.Init()
 	userCache.Init()
+	oss.Init()
 }

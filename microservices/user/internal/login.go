@@ -67,7 +67,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	}
 
 	var user_info *generated.UserLogin
-	fields := []string{"user_name", "user_avator", "user_role"}
+	fields := []string{"user_name", "user_avatar", "user_role"}
 	if exist {
 		// 先从redis取信息
 		result, err := cache.GetUserInfo(user_id, fields)
@@ -87,7 +87,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 				UserId:   user_id,
 				UserName: result["user_name"],
 			},
-			UserAvator: result["user_avator"],
+			UserAvatar: result["user_avatar"],
 			UserRole:   generated.UserRole(generated.UserRole_value[result["user_role"]]),
 		}
 	} else {
@@ -120,11 +120,11 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 				UserId:   result["user_id"].(int64),
 				UserName: result["user_name"].(string),
 			},
-			UserAvator: result["user_avator"].(string),
+			UserAvatar: result["user_avatar"].(string),
 			UserRole:   generated.UserRole(generated.UserRole_value[result["user_role"].(string)]),
 		}
 
-		go userMQ.SendMessage("storeUserInCache", "storeUserInCache", user_info)
+		go userMQ.SendMessage("storeUser", "storeUser", user_info)
 	}
 
 	return &generated.LoginResponse{

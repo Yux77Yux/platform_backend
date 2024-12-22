@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package user.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/user";
+
+import "google/protobuf/timestamp.proto";
+
+import "user/messages/user_gender.proto";
+import "common/user_default.proto";
+
+message UserUpdateSpace {
+  common.UserDefault user_default = 1;
+  string user_bio = 2;
+  user.messages.UserGender user_gender = 3;
+  google.protobuf.Timestamp user_bday = 4;
+  string user_email = 5;
+}

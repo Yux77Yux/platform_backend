@@ -73,7 +73,7 @@ func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) 
 		}
 
 		user_info = tools.MapUser(result)
-		go userMQ.SendMessage("storeUserInCache", "storeUserInCache", user_info)
+		go userMQ.SendMessage("storeUser", "storeUser", user_info)
 	}
 
 	user_info.UserDefault.UserId = user_id

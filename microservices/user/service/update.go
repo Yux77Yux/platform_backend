@@ -23,7 +23,7 @@ func (s *Server) UpdateUser(ctx context.Context, req *generated.UpdateUserReques
 				Message: "Time out",
 				Details: err.Error(),
 			},
-		}, err
+		}, nil
 	default:
 		response, err := internal.UpdateUser(req)
 		if err != nil {
@@ -36,8 +36,8 @@ func (s *Server) UpdateUser(ctx context.Context, req *generated.UpdateUserReques
 	}
 }
 
-func (s *Server) UpdateUserName(ctx context.Context, req *generated.UpdateUserNameRequest) (*generated.UpdateUserResponse, error) {
-	log.Println("info: update user name service start")
+func (s *Server) UpdateUserAvatar(ctx context.Context, req *generated.UpdateUserAvatarRequest) (*generated.UpdateUserResponse, error) {
+	log.Println("info: update user avatar service start")
 
 	select {
 	case <-ctx.Done():
@@ -50,69 +50,15 @@ func (s *Server) UpdateUserName(ctx context.Context, req *generated.UpdateUserNa
 				Message: "Time out",
 				Details: err.Error(),
 			},
-		}, err
+		}, nil
 	default:
-		response, err := internal.UpdateUserName(req)
+		response, err := internal.UpdateUserAvatar(req)
 		if err != nil {
-			log.Println("error: update user name occur fail")
+			log.Println("error: update user avatar occur fail")
 			return response, err
 		}
 
-		log.Println("info: update user name occur success")
-		return response, nil
-	}
-}
-
-func (s *Server) UpdateUserAvator(ctx context.Context, req *generated.UpdateUserAvatorRequest) (*generated.UpdateUserResponse, error) {
-	log.Println("info: update user avator service start")
-
-	select {
-	case <-ctx.Done():
-		err := ctx.Err()
-		log.Printf("error: service exceeded timeout: %v", err)
-		return &generated.UpdateUserResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_FAILED,
-				Code:    "408",
-				Message: "Time out",
-				Details: err.Error(),
-			},
-		}, err
-	default:
-		response, err := internal.UpdateUserAvator(req)
-		if err != nil {
-			log.Println("error: update user avator occur fail")
-			return response, err
-		}
-
-		log.Println("info: update user avator occur success")
-		return response, nil
-	}
-}
-
-func (s *Server) UpdateUserBio(ctx context.Context, req *generated.UpdateUserBioRequest) (*generated.UpdateUserResponse, error) {
-	log.Println("info: update user bio service start")
-
-	select {
-	case <-ctx.Done():
-		err := ctx.Err()
-		log.Printf("error: service exceeded timeout: %v", err)
-		return &generated.UpdateUserResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_FAILED,
-				Code:    "408",
-				Message: "Time out",
-				Details: err.Error(),
-			},
-		}, err
-	default:
-		response, err := internal.UpdateUserBio(req)
-		if err != nil {
-			log.Println("error: update user bio occur fail")
-			return response, err
-		}
-
-		log.Println("info: update user bio occur success")
+		log.Println("info: update user avatar occur success")
 		return response, nil
 	}
 }

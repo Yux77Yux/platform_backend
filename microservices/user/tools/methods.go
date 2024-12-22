@@ -3,6 +3,7 @@ package tools
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -10,6 +11,25 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 )
+
+func SaveImage(fileBytes []byte, fileName string) error {
+	// 指定保存路径和文件名
+	filePath := fmt.Sprintf("./%s.png", fileName) // 保存为 PNG 格式
+	file, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer file.Close()
+
+	// 写入字节到文件
+	_, err = file.Write(fileBytes)
+	if err != nil {
+		return fmt.Errorf("failed to write to file: %w", err)
+	}
+
+	fmt.Printf("Image saved successfully at %s\n", filePath)
+	return nil
+}
 
 func ParseTimestamp(field string) (*timestamppb.Timestamp, error) {
 	if field == "none" {
@@ -61,10 +81,19 @@ func MapUser(result map[string]interface{}) *generated.User {
 	gender := generated.UserGender(generated.UserGender_value[genderStr])
 	role := generated.UserRole(generated.UserRole_value[roleStr])
 
-	bday, err := ensureTimestampPB(result["user_bday"])
-	if err != nil {
-		log.Println("error: user_bday ", err)
-		return nil
+	var bday *timestamppb.Timestamp = nil
+	if result["user_bday"] != nil {
+		var err error
+		bday, err = ensureTimestampPB(result["user_bday"])
+		if err != nil {
+			log.Println("error: user_bday ", err)
+			return nil
+		}
+	}
+
+	email := ""
+	if result["user_email"] != nil {
+		email = result["user_email"].(string)
 	}
 
 	createdAt, err := ensureTimestampPB(result["user_created_at"])
@@ -83,9 +112,9 @@ func MapUser(result map[string]interface{}) *generated.User {
 		UserDefault: &common.UserDefault{
 			UserName: result["user_name"].(string),
 		},
-		UserAvator:    result["user_avator"].(string),
+		UserAvatar:    result["user_avatar"].(string),
 		UserBio:       result["user_bio"].(string),
-		UserEmail:     result["user_email"].(string),
+		UserEmail:     email,
 		UserStatus:    status,
 		UserGender:    gender,
 		UserBday:      bday,

@@ -21,36 +21,24 @@ service UserService {
 
   rpc Login(user.methods.LoginRequest) returns (user.methods.LoginResponse);
 
-  rpc GetUser(user.methods.GetUserRequest) returns (user.methods.GetUserResponse);
+  rpc GetUser(user.methods.GetUserRequest) returns (user.methods.GetUserResponse) {
+    option (google.api.http) = {
+      get: "/api/user/{user_id}/{access_token.value=*}"
+    };
+  }
 
   // 批量字段
   rpc UpdateUser(user.methods.UpdateUserRequest) returns (user.methods.UpdateUserResponse) {
     option (google.api.http) = {
-      patch: "/api/user/{user_id}"
+      patch: "/api/user/{user_update_space.user_default.user_id=*}"
       body: "*"
     };
   }
 
-  // User Name
-  rpc UpdateUserName(user.methods.UpdateUserNameRequest) returns (user.methods.UpdateUserResponse) {
+  // User Avatar
+  rpc UpdateUserAvatar(user.methods.UpdateUserAvatarRequest) returns (user.methods.UpdateUserResponse) {
     option (google.api.http) = {
-      patch: "/api/user/{user_id}/name"
-      body: "*"
-    };
-  }
-
-  // User Avator
-  rpc UpdateUserAvator(user.methods.UpdateUserAvatorRequest) returns (user.methods.UpdateUserResponse) {
-    option (google.api.http) = {
-      patch: "/api/user/{user_id}/avator"
-      body: "*"
-    };
-  }
-
-  // User Bio
-  rpc UpdateUserBio(user.methods.UpdateUserBioRequest) returns (user.methods.UpdateUserResponse) {
-    option (google.api.http) = {
-      patch: "/api/user/{user_id}/bio"
+      patch: "/api/user/{user_update_avatar.user_id}/avatar"
       body: "*"
     };
   }
@@ -58,7 +46,7 @@ service UserService {
   // User Status
   rpc UpdateUserStatus(user.methods.UpdateUserStatusRequest) returns (user.methods.UpdateUserResponse) {
     option (google.api.http) = {
-      patch: "/api/user/{user_id}/status"
+      patch: "/api/user/{user_update_status.user_id}/status"
       body: "*"
     };
   }
