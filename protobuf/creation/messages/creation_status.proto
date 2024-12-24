@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package creation.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/creation";
+
+enum CreationStatus {
+  DRAFT = 0;
+  PENDING = 1;
+  PUBLISHED = 2;
+  REJECTED = 3;
+}

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package creation.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/creation";
+
+import "common/api_response.proto";
+import "creation/messages/creation_upload.proto";
+import "common/access_token.proto";
+
+message UploadCreationRequest {
+  creation.messages.CreationUpload base_info = 1;
+  common.AccessToken access_token = 2;
+}
+
+message UploadCreationResponse {
+  common.ApiResponse msg = 1;
+}

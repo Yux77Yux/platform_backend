@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package creation;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/creation";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+import "creation/methods/post.proto";
+import "creation/methods/update.proto";
+import "creation/methods/get.proto";
+import "creation/methods/delete.proto";
+
+service CreationService {
+  rpc UploadCreation(creation.methods.UploadCreationRequest) returns (creation.methods.UploadCreationResponse) {
+    option (google.api.http) = {
+      post: "/api/creation"
+      body: "*"
+    };
+  }
+
+  rpc GetCreation(creation.methods.GetCreationRequest) returns (creation.methods.GetCreationResponse) {
+    option (google.api.http) = {
+      get: "/api/creation/{creation_id}/{user_id}"
+    };
+  }
+
+  rpc DeleteCreation(creation.methods.DeleteCreationRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/api/creation/{creation_id}/{access_token.value=*}"
+    };
+  }
+
+  rpc UpdateCreation(creation.methods.UpdateCreationRequest) returns (creation.methods.UpdateCreationResponse) {
+    option (google.api.http) = {
+      patch: "/api/creation"
+      body: "*"
+    };
+  }
+}

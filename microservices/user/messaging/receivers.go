@@ -75,7 +75,6 @@ func registerProcessor(msg amqp.Delivery) error {
 		UserBio:       "",
 		UserStatus:    generated.UserStatus_INACTIVE,
 		UserGender:    generated.UserGender_UNDEFINED,
-		UserEmail:     credentials.GetUserEmail(),
 		UserRole:      credentials.GetUserRole(),
 		UserBday:      nil,
 		UserUpdatedAt: timestamppb.Now(),
@@ -209,33 +208,16 @@ func updateUserProcessor(msg amqp.Delivery) error {
 		return fmt.Errorf("update user processor error: %w", err)
 	}
 
-	// 使用反序列化后的 user
-	email := user.GetUserEmail()
-
 	// 更新 数据库用户表
 	err = db.UserUpdateInTransaction(user)
 	if err != nil {
 		return fmt.Errorf("update user in db error occur: %w", err)
 	}
 
-	// 更新 数据库注册表
-	if email != "" {
-		err = db.UserRegisterUpdateInTransaction(user)
-		if err != nil {
-			return fmt.Errorf("update user in db error occur: %w", err)
-		}
-	}
-
 	// 更新 缓存
 	err = cache.UpdateUser(user)
 	if err != nil {
 		log.Printf("cache methods UpdateUserInfo occur error: %v", err)
-	}
-
-	if email != "" {
-		if err := cache.StoreEmail(email); err != nil {
-			log.Printf("redis methods UpdateUserProcessor occur error: %v", err)
-		}
 	}
 
 	log.Println("UpdateUserProcessor success")

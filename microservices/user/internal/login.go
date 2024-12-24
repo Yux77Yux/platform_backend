@@ -31,7 +31,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	}
 
 	// 验证密码
-	user_id, err := db.UserVerifyInTranscation(user_credentials)
+	user_part_info, err := db.UserVerifyInTranscation(user_credentials)
 	if err != nil {
 		return &generated.LoginResponse{
 			Msg: &common.ApiResponse{
@@ -43,7 +43,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 		}, err
 	}
 
-	if user_id == -1 {
+	if user_part_info == nil {
 		return &generated.LoginResponse{
 			Msg: &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,
@@ -53,6 +53,8 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 		}, nil
 	}
 
+	log.Printf("user_part_info %v", user_part_info)
+	user_id := user_part_info.GetUserId()
 	// 判断redis有无存有
 	exist, err := cache.ExistsUserInfo(user_id)
 	if err != nil {
@@ -117,11 +119,11 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 
 		user_info = &generated.UserLogin{
 			UserDefault: &common.UserDefault{
-				UserId:   result["user_id"].(int64),
-				UserName: result["user_name"].(string),
+				UserId:   result["id"].(int64),
+				UserName: result["name"].(string),
 			},
-			UserAvatar: result["user_avatar"].(string),
-			UserRole:   generated.UserRole(generated.UserRole_value[result["user_role"].(string)]),
+			UserAvatar: result["avatar"].(string),
+			UserRole:   user_part_info.GetUserRole(),
 		}
 
 		go userMQ.SendMessage("storeUser", "storeUser", user_info)

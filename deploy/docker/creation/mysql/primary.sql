@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS Creation (
     bio VARCHAR(1000),     -- 作品简介，最大 1000 个字符
     status ENUM('DRAFT', 'PENDING', 'PUBLISHED', 'REJECTED') NOT NULL DEFAULT 'DRAFT', -- 作品状态，草稿、审核中、已发布、已拒绝
     duration INT DEFAULT 0,        -- 视频时长，单位秒
+    category_id INT NOT NULL,    -- 作品ID
     upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 默认当前时间
 
     PRIMARY KEY (id),                   -- 使用 id 作为主键
@@ -54,7 +55,6 @@ USE db_creation_category_1;
 
 CREATE TABLE IF NOT EXISTS Category (
     id INT NOT NULL AUTO_INCREMENT,    -- 分区ID
-    creation_id INT NOT NULL,    -- 作品ID
     parent INT NOT NULL DEFAULT 0,              -- 父分区ID，0 表示大分区，非0表示二级分区
     name VARCHAR(255) NOT NULL,                 -- 分类名称
     description VARCHAR(1000),                  -- 分类描述

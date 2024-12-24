@@ -1,35 +1,4 @@
 services:
-  mysql-primary-service:
-    image: mysql:8.0
-    container_name: mysql-primary
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_USER: yuxyuxx
-      MYSQL_PASSWORD: yuxyuxx
-      MYSQL_DATABASE: db_auth_1
-    volumes:
-      - mysql_data_primary:/var/lib/mysql
-      - ./mysql/primary.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init script
-    ports:
-      - "23306:3306"
-    networks:
-      - auth-net
-    command: --server-id=1 --log-bin=primary-bin
-
-  mysql-replica-service:
-    image: mysql:8.0
-    container_name: mysql-replica
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      
-    volumes:
-      - mysql_data_replica:/var/lib/mysql
-      - ./mysql/replica.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "23307:3306"
-    networks:
-      - auth-net
-    command: --server-id=4 --read-only --log-bin=primary-bin
 
 networks:
   auth-net:

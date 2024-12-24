@@ -155,7 +155,6 @@ func StoreUserInfo(user *generated.User) error {
 			"user_bio", user.GetUserBio(),
 			"user_status", user.GetUserStatus().String(),
 			"user_gender", user.GetUserGender().String(),
-			"user_email", user.GetUserEmail(),
 			"user_bday", userBday,
 			"user_created_at", user.GetUserCreatedAt().AsTime(),
 			"user_updated_at", user.GetUserUpdatedAt().AsTime(),
@@ -193,30 +192,15 @@ func UpdateUser(user *generated.UserUpdateSpace) error {
 		userBday = "none"
 	}
 
-	var reqFunc func(CacheInterface)
-	if user.GetUserEmail() != "" {
-		reqFunc = func(CacheClient CacheInterface) {
-			err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
-				"user_name", user.GetUserDefault().GetUserName(),
-				"user_bio", user.GetUserBio(),
-				"user_gender", user.GetUserGender().String(),
-				"user_email", user.GetUserEmail(),
-				"user_bday", userBday,
-				"user_updated_at", time.Now(),
-			)
-			resultCh <- err
-		}
-	} else {
-		reqFunc = func(CacheClient CacheInterface) {
-			err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
-				"user_name", user.GetUserDefault().GetUserName(),
-				"user_bio", user.GetUserBio(),
-				"user_gender", user.GetUserGender().String(),
-				"user_bday", userBday,
-				"user_updated_at", time.Now(),
-			)
-			resultCh <- err
-		}
+	reqFunc := func(CacheClient CacheInterface) {
+		err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
+			"user_name", user.GetUserDefault().GetUserName(),
+			"user_bio", user.GetUserBio(),
+			"user_gender", user.GetUserGender().String(),
+			"user_bday", userBday,
+			"user_updated_at", time.Now(),
+		)
+		resultCh <- err
 	}
 
 	cacheRequestChannel <- reqFunc

@@ -25,6 +25,6 @@ CREATE TABLE IF NOT EXISTS Review (
     reviewer_id BIGINT, -- 审核人ID
 
     PRIMARY KEY (id),                   -- 使用 id 作为主键
-    INDEX idx_reviewer (reviewer_id),       -- 按作者 ID 索引
+    INDEX idx_reviewer (reviewer_id,status),       -- 按作者 ID 索引
     INDEX idx_target (target_id, target_type)  -- 针对 target_id 和 target_type 的复合索引
 );

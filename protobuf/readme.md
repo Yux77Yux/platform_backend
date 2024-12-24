@@ -8,7 +8,10 @@ protoc -I protobuf --go_out=./generated --go-grpc_out=./generated `
           protobuf/auth/methods/*.proto `
           protobuf/user/*.proto `
           protobuf/user/messages/*.proto `
-          protobuf/user/methods/*.proto
+          protobuf/user/methods/*.proto `
+          protobuf/creation/*.proto `
+          protobuf/creation/messages/*.proto `
+          protobuf/creation/methods/*.proto
 
           # 根目录下的环境
 protoc -I protobuf `
@@ -23,7 +26,10 @@ protoc -I protobuf `
           protobuf/auth/methods/*.proto `
           protobuf/user/*.proto `
           protobuf/user/messages/*.proto `
-          protobuf/user/methods/*.proto
+          protobuf/user/methods/*.proto `
+          protobuf/creation/*.proto `
+          protobuf/creation/messages/*.proto `
+          protobuf/creation/methods/*.proto
 
 在根目录下执行
 

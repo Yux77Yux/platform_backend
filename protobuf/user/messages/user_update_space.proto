@@ -14,5 +14,4 @@ message UserUpdateSpace {
   string user_bio = 2;
   user.messages.UserGender user_gender = 3;
   google.protobuf.Timestamp user_bday = 4;
-  string user_email = 5;
 }

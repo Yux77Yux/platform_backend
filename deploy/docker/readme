@@ -1,0 +1,13 @@
+#下载好docker
+
+#先 依条 执行
+
+docker network create --driver bridge user-net 
+docker network create --driver bridge creation-net 
+docker network create --driver bridge interaction-net 
+docker network create --driver bridge announcement-net 
+docker network create --driver bridge auth-net 
+docker network create --driver bridge comments-net 
+docker network create --driver bridge review-net
+
+然后依次在各个目录执行 docker-compose up -d

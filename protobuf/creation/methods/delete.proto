@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package creation.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/creation";
+
+import "common/access_token.proto";
+
+message DeleteCreationRequest {
+  int64 creation_id = 1;
+  common.AccessToken access_token = 2;
+}

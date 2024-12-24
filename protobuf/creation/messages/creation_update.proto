@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package creation.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/creation";
+
+message CreationUpdated {
+  int64 creation_id = 1;
+  string thumbnail = 2;
+  string title = 3;
+  string bio = 4;
+}

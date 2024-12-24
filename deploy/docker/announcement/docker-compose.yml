@@ -1,21 +1,21 @@
 services:
   mysql-primary-service:
     image: mysql:8.0
-    container_name: mysql-primary
+    container_name: announcement-mysql-primary
     environment:
       MYSQL_ROOT_PASSWORD: root
     volumes:
       - mysql_data_primary:/var/lib/mysql
       - ./mysql/primary.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init script
     ports:
-      - "13306:3306"
+      - "11306:3306"
     networks:
-      - creation-net
+      - announcement-net
     command: --server-id=1 --log-bin=primary-bin
 
   mysql-replica-service:
     image: mysql:8.0
-    container_name: mysql-replica
+    container_name: announcement-mysql-replica
     environment:
       MYSQL_ROOT_PASSWORD: root
       
@@ -23,13 +23,13 @@ services:
       - mysql_data_replica:/var/lib/mysql
       - ./mysql/replica.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "13307:3306"
+      - "11307:3306"
     networks:
-      - user-net
+      - announcement-net
     command: --server-id=4 --read-only --log-bin=primary-bin
 
 networks:
-  creation-net:
+  announcement-net:
     external: true
 
 volumes:

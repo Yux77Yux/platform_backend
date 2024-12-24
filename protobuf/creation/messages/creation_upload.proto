@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package creation.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/creation";
+
+import "creation/messages/creation_status.proto";
+
+message CreationUpload {
+  int64 author_id = 1;
+  string src = 2;
+  string thumbnail = 3;
+  string title = 4;
+  string bio = 5;
+  creation.messages.CreationStatus status = 6;
+  int32 duration = 7;
+  int32 category_id = 8;
+}

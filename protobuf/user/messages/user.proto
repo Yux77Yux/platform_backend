@@ -18,10 +18,9 @@ message User {
   string user_bio = 3 [(common.max_user_bio_length) = 1000];
   user.messages.UserStatus user_status = 4;
   user.messages.UserGender user_gender = 5;
-  string user_email = 6;
+  user.messages.UserRole user_role = 6;
 
   google.protobuf.Timestamp user_bday = 7;
   google.protobuf.Timestamp user_created_at = 8;
   google.protobuf.Timestamp user_updated_at = 9;
-  user.messages.UserRole user_role = 10;
 }

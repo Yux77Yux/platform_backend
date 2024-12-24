@@ -91,11 +91,6 @@ func MapUser(result map[string]interface{}) *generated.User {
 		}
 	}
 
-	email := ""
-	if result["user_email"] != nil {
-		email = result["user_email"].(string)
-	}
-
 	createdAt, err := ensureTimestampPB(result["user_created_at"])
 	if err != nil {
 		log.Println("error: user_created_at ", err)
@@ -114,7 +109,6 @@ func MapUser(result map[string]interface{}) *generated.User {
 		},
 		UserAvatar:    result["user_avatar"].(string),
 		UserBio:       result["user_bio"].(string),
-		UserEmail:     email,
 		UserStatus:    status,
 		UserGender:    gender,
 		UserBday:      bday,

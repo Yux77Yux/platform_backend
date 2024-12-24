@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package creation.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/creation";
+
+import "common/api_response.proto";
+import "creation/messages/creation.proto";
+
+message GetCreationRequest {
+  int64 creation_id = 1;
+  int64 user_id = 2;
+}
+
+message GetCreationResponse {
+  creation.messages.Creation creation = 1;
+  common.ApiResponse msg = 2;
+}
