@@ -1,37 +1,41 @@
 services:
-  mysql-primary-service:
+  interaction-mysql-primary-service:
     image: mysql:8.0
     container_name: interaction-mysql-primary
     environment:
       MYSQL_ROOT_PASSWORD: root
     volumes:
-      - mysql_data_primary:/var/lib/mysql
+      - interaction-mysql_data_primary:/var/lib/mysql
       - ./mysql/primary.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init script
+    mem_limit: 1024m   # 限制最大内存为1024MB
+    mem_reservation: 512m  # 内存保留值为512MB
     ports:
-      - "15306:3306"
+      - "14306:3306"
     networks:
       - interaction-net
-    command: --server-id=1 --log-bin=primary-bin
+    command: --server-id=4 --log-bin=interaction-primary-bin
 
-  mysql-replica-service:
-    image: mysql:8.0
-    container_name: interaction-mysql-replica
-    environment:
-      MYSQL_ROOT_PASSWORD: root
+  # interaction-mysql-replica-service:
+  #   image: mysql:8.0
+  #   container_name: interaction-mysql-replica
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: root
       
-    volumes:
-      - mysql_data_replica:/var/lib/mysql
-      - ./mysql/replica.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "15307:3306"
-    networks:
-      - interaction-net
-    command: --server-id=4 --read-only --log-bin=primary-bin
+  #   volumes:
+  #     - interaction-mysql_data_replica:/var/lib/mysql
+  #     - ./mysql/replica.sql:/docker-entrypoint-initdb.d/init.sql
+  #   mem_limit: 512m   # 限制最大内存为512MB
+  #   mem_reservation: 256m  # 内存保留值为256MB
+  #   ports:
+  #     - "14307:3306"
+  #   networks:
+  #     - interaction-net
+  #   command: --server-id=14 --read-only --log-bin=interaction-primary-bin
 
 networks:
   interaction-net:
     external: true
 
 volumes:
-  mysql_data_primary:
-  mysql_data_replica:
+  interaction-mysql_data_primary:
+  # interaction-mysql_data_replica:

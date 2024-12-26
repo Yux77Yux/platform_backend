@@ -1,37 +1,41 @@
 services:
-  mysql-primary-service:
+  review-mysql-primary-service:
     image: mysql:8.0
     container_name: review-mysql-primary
     environment:
       MYSQL_ROOT_PASSWORD: root
     volumes:
-      - mysql_data_primary:/var/lib/mysql
+      - review-mysql_data_primary:/var/lib/mysql
       - ./mysql/primary.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init script
+    mem_limit: 512m   # 限制最大内存为512MB
+    mem_reservation: 256m  # 内存保留值为256MB
     ports:
-      - "16306:3306"
+      - "15306:3306"
     networks:
       - review-net
-    command: --server-id=1 --log-bin=primary-bin
+    command: --server-id=5 --log-bin=review-primary-bin
 
-  mysql-replica-service:
-    image: mysql:8.0
-    container_name: review-mysql-replica
-    environment:
-      MYSQL_ROOT_PASSWORD: root
+  # review-mysql-replica-service:
+  #   image: mysql:8.0
+  #   container_name: review-mysql-replica
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: root
       
-    volumes:
-      - mysql_data_replica:/var/lib/mysql
-      - ./mysql/replica.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "16307:3306"
-    networks:
-      - review-net
-    command: --server-id=4 --read-only --log-bin=primary-bin
+  #   volumes:
+  #     - review-mysql_data_replica:/var/lib/mysql
+  #     - ./mysql/replica.sql:/docker-entrypoint-initdb.d/init.sql
+  #   mem_limit: 512m   # 限制最大内存为512MB
+  #   mem_reservation: 256m  # 内存保留值为256MB
+  #   ports:
+  #     - "15307:3306"
+  #   networks:
+  #     - review-net
+  #   command: --server-id=15 --read-only --log-bin=review-primary-bin
 
 networks:
   review-net:
     external: true
 
 volumes:
-  mysql_data_primary:
-  mysql_data_replica:
+  review-mysql_data_primary:
+  # review-mysql_data_replica:

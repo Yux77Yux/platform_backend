@@ -9,6 +9,7 @@ services:
     networks:
       - auth-net
       - user-net
+      - creation-net
     volumes:
       - ./envoy.yaml:/etc/envoy/envoy.yaml
       - ./descriptor.pb:/etc/envoy/descriptor.pb
@@ -20,4 +21,6 @@ networks:
   auth-net:
     external: true
   user-net:
+    external: true
+  creation-net:
     external: true

@@ -8,16 +8,13 @@ import (
 )
 
 var (
-	connStr string
-	// ExchangesConfig = map[string]string{
-	// 	"register":   "direct",
-	// 	"storeUser":  "direct",
-	// 	"updateUser": "direct",
-	// 	// Add more exchanges here
-	// }
-	// ListenRPCs = []string{
-	// 	"agg_user",
-	// }
+	connStr         string
+	ExchangesConfig = map[string]string{
+		"draftCreation":   "direct",
+		"pendingCreation": "direct",
+		// "updateCreation":  "direct",
+		// Add more exchanges here
+	}
 )
 
 func InitStr(_str string) {
@@ -44,22 +41,22 @@ func Init() {
 		log.Printf("error: message queue open failed")
 		return
 	}
-	// for exchange, kind := range ExchangesConfig {
-	// 	if err := rabbitMQ.ExchangeDeclare(exchange, kind, true, false, false, false, nil); err != nil {
-	// 		wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
-	// 		log.Printf("error: %v", wiredErr)
-	// 	}
+	for exchange, kind := range ExchangesConfig {
+		if err := rabbitMQ.ExchangeDeclare(exchange, kind, true, false, false, false, nil); err != nil {
+			wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
+			log.Printf("error: %v", wiredErr)
+		}
 
-	// 	switch exchange {
-	// 	// 不同的exchange使用不同函数
-	// 	case "register":
-	// 		go ListenToQueue(exchange, "register", "register", registerProcessor)
-	// 	case "storeUser":
-	// 		go ListenToQueue(exchange, "storeUser", "storeUser", storeUserProcessor)
-	// 	case "updateUser":
-	// 		go ListenToQueue(exchange, "updateUser", "updateUser", updateUserProcessor)
-	// 	}
-	// }
+		switch exchange {
+		// 不同的exchange使用不同函数
+		case "pendingCreation":
+			go ListenToQueue(exchange, "pendingCreation", "pendingCreation", pendingCreationProcessor)
+		// case "updateCreation":
+		// 	go ListenToQueue(exchange, "updateCreation", "updateCreation", updateCreationProcessor)
+		case "draftCreation":
+			go ListenToQueue(exchange, "draftCreation", "draftCreation", draftCreationProcessor)
+		}
+	}
 
 	// for _, exchange := range ListenRPCs {
 	// 	switch exchange {
@@ -67,5 +64,4 @@ func Init() {
 	// 	case "agg_user":
 	// 		go ListenRPC(exchange, "getUser", "getUser", getUserProcessor)
 	// 	}
-	// }
 }

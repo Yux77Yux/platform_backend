@@ -42,7 +42,7 @@ func ParseTimestamp(field string) (*timestamppb.Timestamp, error) {
 	return timestamppb.New(result), nil
 }
 
-func ensureTimestampPB(input interface{}) (*timestamppb.Timestamp, error) {
+func EnsureTimestampPB(input interface{}) (*timestamppb.Timestamp, error) {
 	switch v := input.(type) {
 	case string:
 		if v == "none" {

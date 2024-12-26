@@ -94,7 +94,7 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 	}
 
 	for msg := range msgs {
-		log.Println("info: update user processor handle start")
+		log.Println("info: creation processor handle start")
 		if err := handler(msg); err != nil {
 			log.Printf("error: message processing failed: %v", err)
 			msg.Nack(false, false) // Negatively acknowledge

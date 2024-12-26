@@ -6,9 +6,11 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+// 内存不够了，把主从复制去掉
+
 type MysqlClass struct {
-	mainDB    *sql.DB
-	replicaDB *sql.DB
+	mainDB *sql.DB
+	// replicaDB *sql.DB
 }
 
 func (dbs *MysqlClass) InitDb(readStr string, writeStr string) error {
@@ -22,20 +24,20 @@ func (dbs *MysqlClass) InitDb(readStr string, writeStr string) error {
 		return err
 	}
 
-	if dbs.replicaDB, err = sql.Open("mysql", readStr); err != nil {
-		return err
-	}
+	// if dbs.replicaDB, err = sql.Open("mysql", readStr); err != nil {
+	// 	return err
+	// }
 
-	if err = dbs.replicaDB.Ping(); err != nil {
-		return err
-	}
+	// if err = dbs.replicaDB.Ping(); err != nil {
+	// 	return err
+	// }
 
-	dbs.replicaDB.SetMaxOpenConns(20)    // 最大打开连接数
-	dbs.replicaDB.SetMaxIdleConns(10)    // 最大空闲连接数
-	dbs.replicaDB.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
-	dbs.mainDB.SetMaxOpenConns(20)       // 最大打开连接数
-	dbs.mainDB.SetMaxIdleConns(10)       // 最大空闲连接数
-	dbs.mainDB.SetConnMaxLifetime(20)    // 连接的最大生命周期（秒）
+	// dbs.replicaDB.SetMaxOpenConns(20)    // 最大打开连接数
+	// dbs.replicaDB.SetMaxIdleConns(10)    // 最大空闲连接数
+	// dbs.replicaDB.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
+	dbs.mainDB.SetMaxOpenConns(20)    // 最大打开连接数
+	dbs.mainDB.SetMaxIdleConns(10)    // 最大空闲连接数
+	dbs.mainDB.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
 
 	return nil
 }
@@ -46,22 +48,24 @@ func (dbs *MysqlClass) Close() error {
 		return fmt.Errorf("failed to close main database connection baecause %w", err)
 	}
 
-	err = dbs.replicaDB.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close replica database connection baecause %w", err)
-	}
+	// err = dbs.replicaDB.Close()
+	// if err != nil {
+	// 	return fmt.Errorf("failed to close replica database connection baecause %w", err)
+	// }
 
 	return nil
 }
 
 // 执行查询操作
 func (dbs *MysqlClass) QueryRow(query string, args ...interface{}) *sql.Row {
-	return dbs.replicaDB.QueryRow(query, args...)
+	return dbs.mainDB.QueryRow(query, args...)
+	// return dbs.replicaDB.QueryRow(query, args...)
 }
 
 // 执行查询返回多个结果
 func (dbs *MysqlClass) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	result, err := dbs.replicaDB.Query(query, args...)
+	result, err := dbs.mainDB.Query(query, args...)
+	// result, err := dbs.replicaDB.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query failed because %w", err)
 	}

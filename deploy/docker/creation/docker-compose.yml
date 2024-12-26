@@ -1,37 +1,40 @@
 services:
-  mysql-primary-service:
+  creation-mysql-primary-service:
     image: mysql:8.0
     container_name: creation-mysql-primary
     environment:
       MYSQL_ROOT_PASSWORD: root
     volumes:
-      - mysql_data_primary:/var/lib/mysql
+      - creation-mysql_data_primary:/var/lib/mysql
       - ./mysql/primary.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init script
+    mem_limit: 1024m   # 限制最大内存为1024MB
+    mem_reservation: 512m  # 内存保留值为512MB
     ports:
-      - "14306:3306"
+      - "13306:3306"
     networks:
       - creation-net
-    command: --server-id=1 --log-bin=primary-bin
+    command: --server-id=3 --log-bin=creation-primary-bin
 
-  mysql-replica-service:
-    image: mysql:8.0
-    container_name: creation-mysql-replica
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      
-    volumes:
-      - mysql_data_replica:/var/lib/mysql
-      - ./mysql/replica.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "14307:3306"
-    networks:
-      - creation-net
-    command: --server-id=4 --read-only --log-bin=primary-bin
+  # creation-mysql-replica-service:
+  #   image: mysql:8.0
+  #   container_name: creation-mysql-replica
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: root
+  #   volumes:
+  #     - creation-mysql_data_replica:/var/lib/mysql
+  #     - ./mysql/replica.sql:/docker-entrypoint-initdb.d/init.sql
+  #   mem_limit: 512m   # 限制最大内存为512MB
+  #   mem_reservation: 256m  # 内存保留值为256MB
+  #   ports:
+  #     - "13307:3306"
+  #   networks:
+  #     - creation-net
+  #   command: --server-id=13 --read-only --log-bin=creation-primary-bin
 
 networks:
   creation-net:
     external: true
 
 volumes:
-  mysql_data_primary:
-  mysql_data_replica:
+  creation-mysql_data_primary:
+  # creation-mysql_data_replica:

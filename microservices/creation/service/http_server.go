@@ -9,9 +9,15 @@ import (
 	// "google.golang.org/protobuf/types/known/timestamppb"
 )
 
+func Handlers(mux *http.ServeMux) {
+	router := GetRouter(mux)
+
+	router.Handler("/http/creation", UploadVideo)
+}
+
 func HttpServerRun() {
 	mux := http.NewServeMux()
-	UserHandlers(mux)
+	Handlers(mux)
 
 	wrap_handler := ApplyMiddlewares(mux, CorsMiddleware)
 
@@ -48,24 +54,6 @@ func CorsMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
-}
-
-func refreshByHttp(w http.ResponseWriter, r *http.Request) {
-
-	// 设置响应头为 JSON 格式
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	// 将响应写入 HTTP 响应体
-	// if err := json.NewEncoder(w).Encode(httpResponse); err != nil {
-	// 	http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
-	// }
-}
-
-func UserHandlers(mux *http.ServeMux) {
-	router := GetRouter(mux)
-
-	router.Handler("/api/http/auth/refresh", refreshByHttp)
 }
 
 type handlerFunc func(http.ResponseWriter, *http.Request)

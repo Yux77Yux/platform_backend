@@ -28,7 +28,7 @@ func (s *Server) UploadCreation(ctx context.Context, req *generated.UploadCreati
 		response, err := internal.UploadCreation(req)
 		if err != nil {
 			log.Println("error: upload creation occur fail")
-			return response, err
+			return response, nil
 		}
 
 		log.Println("info: upload creation occur success")

@@ -108,7 +108,7 @@ func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.Update
 
 	// 操作oss上传
 	fileBytesStr := req.GetUserUpdateAvatar().GetUserAvatar()
-	fileName := fmt.Sprintf("user_avatar_%v_%v.png", req.GetUserUpdateAvatar().GetUserId(), timestamppb.Now())
+	fileName := fmt.Sprintf("avatar/%v_%v.png", req.GetUserUpdateAvatar().GetUserId(), timestamppb.Now())
 	fileBytes, err := base64.StdEncoding.DecodeString(fileBytesStr)
 	if err != nil {
 		log.Fatal("Error decoding Base64 string: ", err)

@@ -1,8 +1,10 @@
 package oss
 
 import (
+	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"strings"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
@@ -97,6 +99,45 @@ func (o *OssClient) UploadFile(file io.Reader, objectName string) (string, error
 
 	parts := strings.Split(presignedURL, "?")
 	return parts[0], nil
+}
+
+func (o *OssClient) UploadFirstSlice(file multipart.File, isEnd bool, size int64, partNumber int, fileName, objectName string) (*oss.InitiateMultipartUploadResult, error) {
+	bucket, err := o.client.Bucket(o.BucketName)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	// 步骤1：初始化一个分片上传事件
+	imur, err := bucket.InitiateMultipartUpload(objectName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initiate multipart upload: %w", err)
+	}
+
+	// 步骤2：上传分片
+	_, err = bucket.UploadPart(imur, file, size, partNumber)
+	if err != nil {
+		// 如果上传某个部分失败，尝试取消整个上传任务
+		if abortErr := bucket.AbortMultipartUpload(imur); abortErr != nil {
+			log.Printf("Failed to abort multipart upload: %v", abortErr)
+		}
+		return nil, fmt.Errorf("failed to upload part: %w", err)
+	}
+
+	// 步骤3：如果是最后一个分片，完成上传
+	if isEnd {
+		objectAcl := oss.ObjectACL(oss.ACLPublicRead) // 根据需要设置权限
+
+		// 调用 CompleteMultipartUpload 完成上传
+		_, err := bucket.CompleteMultipartUpload(imur, nil, objectAcl)
+		if err != nil {
+			// 如果完成上传失败，尝试取消上传
+			if abortErr := bucket.AbortMultipartUpload(imur); abortErr != nil {
+				log.Printf("Failed to abort multipart upload: %v", abortErr)
+			}
+			return nil, fmt.Errorf("failed to complete multipart upload: %w", err)
+		}
+	}
+	return nil, nil
 }
 
 // deleteObject 用于删除OSS存储空间中的一个对象。
