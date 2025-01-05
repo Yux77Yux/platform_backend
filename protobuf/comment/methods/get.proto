@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package comment.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/comment";
+
+import "comment/messages/comment.proto";
+
+import "common/access_token.proto";
+import "common/api_response.proto";
+
+// 作品的一级评论
+message GetTopCommentRequest {
+  int64 creation_id = 1;
+}
+
+// 一级评论内的评论
+message GetSecondCommentRequest {
+  int64 creation_id = 1;
+  int64 root = 2;   // 一级评论所在
+}
+
+// 回复我的评论，在页面的消息内显示,权限类
+message GetReplyCommentRequest {
+  // comments = from user_id = 自己的id select comment_id ;
+  // filterComments = from parent = comment_id select *;
+  int64 user_id = 1;   // 自己的id，
+  common.AccessToken access_token = 2;
+}
+
+message GetCommentsResponse {
+  repeated comment.messages.Comment comments = 1;
+  common.ApiResponse msg = 2;
+}

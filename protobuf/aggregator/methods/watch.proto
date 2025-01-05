@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package aggregator.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
+
+import "creation/messages/creation.proto";
+import "comment/messages/comment.proto";
+
+import "common/user_creation_comment.proto";
+import "common/api_response.proto";
+import "common/access_token.proto";
+
+import "aggregator/messages/comment_info.proto";
+
+message WatchCreationRequest {
+  int64 creation_id = 1;
+  common.AccessToken access_token = 2;
+}
+
+message WatchCreationResponse {
+  common.ApiResponse msg = 1;// 返回的响应
+
+  common.UserCreationComment creation_user = 2;// 作品的用户信息
+  creation.messages.CreationInfo creation_info = 3;// 作品的详细信息
+
+  comment.messages.CommentArea comment_area = 4;// 作品的评论总数
+  repeated aggregator.messages.CommentInfo comments_top = 5;// 返回页面上的一级评论
+}

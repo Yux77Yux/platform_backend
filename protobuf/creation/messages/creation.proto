@@ -8,6 +8,12 @@ import "google/protobuf/timestamp.proto";
 
 import "creation/messages/creation_upload.proto";
 
+message CreationInfo {
+  Creation creation = 1;
+  CreationEngagement creation_engagement = 2;
+  Category category =3;
+}
+
 message Creation {
   int64 creation_id = 1;
   creation.messages.CreationUpload base_info = 2;

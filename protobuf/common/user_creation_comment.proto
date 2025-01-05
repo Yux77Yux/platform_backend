@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/common";
+
+import "common/user_default.proto";
+import "common/custom_options.proto";
+
+message UserCreationComment {
+    common.UserDefault user_default = 1;
+    string user_avatar = 2;
+    string user_bio = 3 [(common.max_user_bio_length) = 1000];
+}

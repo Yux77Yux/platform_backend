@@ -8,6 +8,7 @@ import "google/api/annotations.proto";
 
 import "aggregator/methods/login.proto";
 import "aggregator/methods/space.proto";
+import "aggregator/methods/watch.proto";
 
 service AggregatorService {
   rpc Login(aggregator.methods.LoginRequest) returns (aggregator.methods.LoginResponse) {
@@ -23,5 +24,9 @@ service AggregatorService {
     };
   }
 
-  // watch creation 未定义服务
+  rpc WatchCreation(aggregator.methods.WatchCreationRequest) returns (aggregator.methods.WatchCreationResponse) {
+    option (google.api.http) = {
+      get: "/api/watch/{creation_id}/{access_token.value=*}"
+    };
+  }
 }

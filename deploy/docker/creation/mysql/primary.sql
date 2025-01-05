@@ -82,46 +82,48 @@ INSERT INTO Category (id, parent, name, description) VALUES
 (12, 7, 'BoardGames', '桌面游戏和棋牌内容'),
 (13, 7, 'MusicGames', '音乐游戏相关内容');
 
--- 音乐分区及其二级分区
+-- 音乐分区及其二级分区（新增音乐综合）
 INSERT INTO Category (id, parent, name, description) VALUES
 (14, 0, 'Music', '与音乐相关的内容，包括表演和教程'),
 (15, 14, 'OriginalMusic', '原创音乐创作'),
 (16, 14, 'Covers', '翻唱歌曲分享'),
-(17, 14, 'Performances', '乐器演奏相关内容');
+(17, 14, 'Performances', '乐器演奏相关内容'),
+(18, 14, 'MusicReviews', '乐评盘点和音乐内容分析'),
+(19, 14, 'MusicGeneral', '综合音乐内容，含多样化主题');
 
 -- 影视分区及其二级分区
 INSERT INTO Category (id, parent, name, description) VALUES
-(18, 0, 'Movies', '与影视相关的内容，包括影评和电影解说'),
-(19, 18, 'MovieTalks', '对影视剧的评论和分析'),
-(20, 18, 'MovieEdits', '影视片段的剪辑和创意编辑');
+(20, 0, 'Movies', '与影视相关的内容，包括影评和电影解说'),
+(21, 20, 'MovieTalks', '对影视剧的评论和分析'),
+(22, 20, 'MovieEdits', '影视片段的剪辑和创意编辑');
 
 -- 知识分区及其二级分区
 INSERT INTO Category (id, parent, name, description) VALUES
-(21, 0, 'Knowledge', '关于各种主题的教育和知识内容'),
-(22, 21, 'Science', '科学知识普及'),
-(23, 21, 'SocialScience', '社会科学、法律、心理学内容'),
-(24, 21, 'History', '历史、人文学科相关内容'),
-(25, 21, 'Finance', '财经和商业相关知识');
+(23, 0, 'Knowledge', '关于各种主题的教育和知识内容'),
+(24, 23, 'Science', '科学知识普及'),
+(25, 23, 'SocialScience', '社会科学、法律、心理学内容'),
+(26, 23, 'History', '历史、人文学科相关内容'),
+(27, 23, 'Finance', '财经和商业相关知识');
 
 -- 科技分区及其二级分区
 INSERT INTO Category (id, parent, name, description) VALUES
-(26, 0, 'Technology', '与科技相关的话题，包括科技产品和创新'),
-(27, 26, 'DigitalProducts', '数码产品评测与资讯'),
-(28, 26, 'ComputerTech', '计算机技术与知识分享'),
-(29, 26, 'GeekDIY', '极客精神下的创意DIY');
+(28, 0, 'Technology', '与科技相关的话题，包括科技产品和创新'),
+(29, 28, 'DigitalProducts', '数码产品评测与资讯'),
+(30, 28, 'ComputerTech', '计算机技术与知识分享'),
+(31, 28, 'GeekDIY', '极客精神下的创意DIY');
 
 -- 美食分区及其二级分区
 INSERT INTO Category (id, parent, name, description) VALUES
-(30, 0, 'Food', '美食的制作、食谱和烹饪技巧'),
-(31, 30, 'FoodMaking', '美食的制作方法和教程'),
-(32, 30, 'FoodDetective', '美食探索与发现'),
-(33, 30, 'FoodReviews', '美食的测评和体验'),
-(34, 30, 'FoodDiary', '记录日常美食和生活');
+(32, 0, 'Food', '美食的制作、食谱和烹饪技巧'),
+(33, 32, 'FoodMaking', '美食的制作方法和教程'),
+(34, 32, 'FoodDetective', '美食探索与发现'),
+(35, 32, 'FoodReviews', '美食的测评和体验'),
+(36, 32, 'FoodDiary', '记录日常美食和生活');
 
 -- 动物圈分区及其二级分区
 INSERT INTO Category (id, parent, name, description) VALUES
-(35, 0, 'Animals', '关于动物的相关内容'),
-(36, 35, 'Cats', '关于猫的内容'),
-(37, 35, 'Dogs', '关于狗的内容'),
-(38, 35, 'ExoticPets', '关于奇特宠物的内容'),
-(39, 35, 'WildAnimals', '关于野生动物的内容');
+(37, 0, 'Animals', '关于动物的相关内容'),
+(38, 37, 'Cats', '关于猫的内容'),
+(39, 37, 'Dogs', '关于狗的内容'),
+(40, 37, 'ExoticPets', '关于奇特宠物的内容'),
+(41, 37, 'WildAnimals', '关于野生动物的内容');

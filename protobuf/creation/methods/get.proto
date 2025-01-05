@@ -4,15 +4,34 @@ package creation.methods;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/creation";
 
+import "common/access_token.proto";
 import "common/api_response.proto";
 import "creation/messages/creation.proto";
 
+// 视频详细页
 message GetCreationRequest {
   int64 creation_id = 1;
-  int64 user_id = 2;
+  common.AccessToken access_token = 2;// 个性化，登录后返回的
 }
 
 message GetCreationResponse {
-  creation.messages.Creation creation = 1;
+  creation.messages.CreationInfo creation_info = 1;
   common.ApiResponse msg = 2;
+}
+
+// 空间的作品
+message GetSpaceCreationListRequest {
+  int64 user_id = 1;
+  common.AccessToken access_token = 2;// 个性化，登录后返回的
+}
+
+// 主页的推荐视频
+message GetHomePageCreationListRequest {
+  // 请求的视频数组
+  repeated int64 creation_id = 1;
+}
+
+message GetCreationListResponse {
+  common.ApiResponse msg = 1;
+  creation.messages.CreationInfo creation_info = 2;
 }

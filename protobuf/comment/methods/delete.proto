@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package comment.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/comment";
+
+import "common/access_token.proto";
+
+message DeleteCommentRequest {
+  int64 comment_id = 1;
+  common.AccessToken access_token = 2;
+}

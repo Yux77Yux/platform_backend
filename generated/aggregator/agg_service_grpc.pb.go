@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AggregatorService_Login_FullMethodName = "/aggregator.AggregatorService/Login"
-	AggregatorService_Space_FullMethodName = "/aggregator.AggregatorService/Space"
+	AggregatorService_Login_FullMethodName         = "/aggregator.AggregatorService/Login"
+	AggregatorService_Space_FullMethodName         = "/aggregator.AggregatorService/Space"
+	AggregatorService_WatchCreation_FullMethodName = "/aggregator.AggregatorService/WatchCreation"
 )
 
 // AggregatorServiceClient is the client API for AggregatorService service.
@@ -29,6 +30,7 @@ const (
 type AggregatorServiceClient interface {
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Space(ctx context.Context, in *SpaceRequest, opts ...grpc.CallOption) (*SpaceResponse, error)
+	WatchCreation(ctx context.Context, in *WatchCreationRequest, opts ...grpc.CallOption) (*WatchCreationResponse, error)
 }
 
 type aggregatorServiceClient struct {
@@ -59,12 +61,23 @@ func (c *aggregatorServiceClient) Space(ctx context.Context, in *SpaceRequest, o
 	return out, nil
 }
 
+func (c *aggregatorServiceClient) WatchCreation(ctx context.Context, in *WatchCreationRequest, opts ...grpc.CallOption) (*WatchCreationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WatchCreationResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_WatchCreation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AggregatorServiceServer is the server API for AggregatorService service.
 // All implementations must embed UnimplementedAggregatorServiceServer
 // for forward compatibility.
 type AggregatorServiceServer interface {
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Space(context.Context, *SpaceRequest) (*SpaceResponse, error)
+	WatchCreation(context.Context, *WatchCreationRequest) (*WatchCreationResponse, error)
 	mustEmbedUnimplementedAggregatorServiceServer()
 }
 
@@ -80,6 +93,9 @@ func (UnimplementedAggregatorServiceServer) Login(context.Context, *LoginRequest
 }
 func (UnimplementedAggregatorServiceServer) Space(context.Context, *SpaceRequest) (*SpaceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Space not implemented")
+}
+func (UnimplementedAggregatorServiceServer) WatchCreation(context.Context, *WatchCreationRequest) (*WatchCreationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method WatchCreation not implemented")
 }
 func (UnimplementedAggregatorServiceServer) mustEmbedUnimplementedAggregatorServiceServer() {}
 func (UnimplementedAggregatorServiceServer) testEmbeddedByValue()                           {}
@@ -138,6 +154,24 @@ func _AggregatorService_Space_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AggregatorService_WatchCreation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WatchCreationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).WatchCreation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_WatchCreation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).WatchCreation(ctx, req.(*WatchCreationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AggregatorService_ServiceDesc is the grpc.ServiceDesc for AggregatorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +186,10 @@ var AggregatorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Space",
 			Handler:    _AggregatorService_Space_Handler,
+		},
+		{
+			MethodName: "WatchCreation",
+			Handler:    _AggregatorService_WatchCreation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

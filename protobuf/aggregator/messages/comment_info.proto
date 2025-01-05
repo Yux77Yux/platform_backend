@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package aggregator.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
+
+import "comment/messages/comment.proto";
+import "common/user_creation_comment.proto";
+
+message CommentInfo {
+  common.UserCreationComment comment_user = 1;// 评论中的用户信息
+  comment.messages.Comment comment = 2;
+}

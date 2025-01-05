@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package comment;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/comment";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+import "comment/methods/post.proto";
+import "comment/methods/get.proto";
+import "comment/methods/delete.proto";
+
+service CommentService {
+  rpc PublishComment(comment.methods.PublishCommentRequest) returns (comment.methods.PublishCommentResponse) {
+    option (google.api.http) = {
+      post: "/api/comment"
+      body: "*"
+    };
+  }
+
+  rpc GetTopComment(comment.methods.GetTopCommentRequest) returns (comment.methods.GetCommentsResponse) {
+    option (google.api.http) = {
+      //get: "/api/comment/{creation_id}/pagination/{number}"
+      get: "/api/comment/{creation_id}"
+    };
+  }
+
+  rpc GetSecondComment(comment.methods.GetSecondCommentRequest) returns (comment.methods.GetCommentsResponse) {
+    option (google.api.http) = {
+      get: "/api/comment/{creation_id}/{root_id}"
+    };
+  }
+
+  rpc GetReplyComment(comment.methods.GetReplyCommentRequest) returns (comment.methods.GetCommentsResponse) {
+    option (google.api.http) = {
+      get: "/api/comment/user/{user_id}/{access_token.value=*}"
+    };
+  }
+
+  rpc DeleteComment(comment.methods.DeleteCommentRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/api/comment/{comment_id}/{access_token.value=*}"
+    };
+  }
+}

@@ -2,6 +2,7 @@ protoc -I protobuf --go_out=./generated --go-grpc_out=./generated `
           protobuf/google/api/*.proto `
           protobuf/common/*.proto `
           protobuf/aggregator/*.proto `
+          protobuf/aggregator/messages/*.proto `
           protobuf/aggregator/methods/*.proto `
           protobuf/auth/*.proto `
           protobuf/auth/messages/*.proto `
@@ -11,7 +12,10 @@ protoc -I protobuf --go_out=./generated --go-grpc_out=./generated `
           protobuf/user/methods/*.proto `
           protobuf/creation/*.proto `
           protobuf/creation/messages/*.proto `
-          protobuf/creation/methods/*.proto
+          protobuf/creation/methods/*.proto `
+          protobuf/comment/*.proto `
+          protobuf/comment/messages/*.proto `
+          protobuf/comment/methods/*.proto 
 
           # 根目录下的环境
 protoc -I protobuf `
@@ -20,6 +24,7 @@ protoc -I protobuf `
           protobuf/google/api/*.proto `
           protobuf/common/*.proto `
           protobuf/aggregator/*.proto `
+          protobuf/aggregator/messages/*.proto `
           protobuf/aggregator/methods/*.proto `
           protobuf/auth/*.proto `
           protobuf/auth/messages/*.proto `
@@ -29,7 +34,10 @@ protoc -I protobuf `
           protobuf/user/methods/*.proto `
           protobuf/creation/*.proto `
           protobuf/creation/messages/*.proto `
-          protobuf/creation/methods/*.proto
+          protobuf/creation/methods/*.proto `
+          protobuf/comment/*.proto `
+          protobuf/comment/messages/*.proto `
+          protobuf/comment/methods/*.proto 
 
 在根目录下执行
 

@@ -33,15 +33,10 @@ CREATE TABLE IF NOT EXISTS Comments (
     dialog BIGINT DEFAULT 0,                   -- 二级评论ID
     user_id BIGINT NOT NULL,                   -- 发言的用户ID
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
-    creation_id BIGINT NOT NULL                -- 作品ID
-);
+    creation_id BIGINT NOT NULL,                -- 作品ID
 
-CREATE INDEX idx_root_parent_dialog ON Comments(root, parent, dialog);
-CREATE INDEX idx_user_id ON Comments(user_id);
-CREATE INDEX idx_creation_id ON Comments(creation_id);
-CREATE INDEX idx_created_at ON Comments(created_at);
-CREATE INDEX idx_root_parent_created_at ON Comments(root, parent, created_at);
-CREATE INDEX idx_root_parent_dialog_created_at ON Comments(root, parent, dialog, created_at);
+    INDEX idx_root_parent_dialog(creation_id, root, parent)
+);
 
 -- 使用 db_comment_content_1 数据库
 USE db_comment_content_1;

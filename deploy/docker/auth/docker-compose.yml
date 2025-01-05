@@ -1,9 +1,0 @@
-services:
-
-networks:
-  auth-net:
-    external: true
-
-volumes:
-  mysql_data_primary:
-  mysql_data_replica:

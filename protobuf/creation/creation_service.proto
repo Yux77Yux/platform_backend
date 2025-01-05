@@ -22,7 +22,25 @@ service CreationService {
 
   rpc GetCreation(creation.methods.GetCreationRequest) returns (creation.methods.GetCreationResponse) {
     option (google.api.http) = {
-      get: "/api/creation/{creation_id}/{user_id}"
+      get: "/api/creation/{creation_id}/{access_token.value=*}"
+    };
+  }
+
+  rpc GetSpaceCreationList(creation.methods.GetSpaceCreationListRequest) returns (creation.methods.GetCreationListResponse) {
+    option (google.api.http) = {
+      get: "/api/creation/space/{user_id}/{access_token.value=*}"
+    };
+  }
+
+  rpc GetCollectionCreationList(creation.methods.GetSpaceCreationListRequest) returns (creation.methods.GetCreationListResponse) {
+    option (google.api.http) = {
+      get: "/api/creation/collection/{user_id}/{access_token.value=*}"
+    };
+  }
+
+  rpc GetHomeCreationList(creation.methods.GetSpaceCreationListRequest) returns (creation.methods.GetCreationListResponse) {
+    option (google.api.http) = {
+      get: "/api/creation/home/{user_id}/{access_token.value=*}"
     };
   }
 
