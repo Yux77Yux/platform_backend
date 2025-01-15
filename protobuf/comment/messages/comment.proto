@@ -7,7 +7,7 @@ option go_package = "github.com/Yux77Yux/platform_backend/generated/comment";
 import "google/protobuf/timestamp.proto";
 
 message Comment {
-  int64 comment_id = 1;
+  int32 comment_id = 1;
   int32 root = 2;
   int32 parent = 3;
   int32 dialog = 4;
@@ -16,11 +16,16 @@ message Comment {
   google.protobuf.Timestamp created_at = 7;
 
   string content = 8;
+  string media = 9;
 }
 
-message CommentArea{
+message CommentArea {
+  enum Status {
+    DEFAULT = 0;
+    HIDING = 1;
+    CLOSED = 3;
+  }
   int64 creation_id = 1;
-
   int32 total_comments = 2;
-  int32 area_status = 3;
+  Status area_status = 3;
 }

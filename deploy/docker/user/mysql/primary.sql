@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS User (
     name VARCHAR(100) NOT NULL,            -- 用户名，最大 100 个字符
     avatar TEXT,                   -- 用户头像，可以存储头像的 URL 或文件路径
     bio VARCHAR(1000),                     -- 用户简介，最大 1000 个字符
-    status ENUM('HIDING', 'INACTIVE', 'ACTIVE', 'LIMITED') NOT NULL DEFAULT 'INACTIVE',         -- 用户状态，使用枚举值，默认值为 INACTIVE（1）
+    status ENUM('INACTIVE', 'ACTIVE', 'HIDING', 'LIMITED', 'DELETE') NOT NULL DEFAULT 'INACTIVE',         -- 用户状态，使用枚举值，默认值为 INACTIVE（1）
     gender ENUM('UNDEFINED', 'MALE', 'FEMALE') NOT NULL DEFAULT 'UNDEFINED',         -- 用户性别，使用枚举值，默认值为 UNDEFINED（0）
     bday DATE,                             -- 用户生日，DATE 类型
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间，默认当前时间

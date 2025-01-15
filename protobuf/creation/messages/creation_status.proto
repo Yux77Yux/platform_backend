@@ -9,4 +9,5 @@ enum CreationStatus {
   PENDING = 1;
   PUBLISHED = 2;
   REJECTED = 3;
+  DELETE = 4;
 }

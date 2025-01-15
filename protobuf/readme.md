@@ -39,7 +39,7 @@ protoc -I protobuf `
           protobuf/comment/messages/*.proto `
           protobuf/comment/methods/*.proto 
 
-在根目录下执行
+<!-- 在根目录下执行
 
 protoc -I protobuf `
   --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts `
@@ -49,4 +49,4 @@ protoc -I protobuf `
   protobuf/auth/methods/*.proto `
   protobuf/user/*.proto `
   protobuf/user/messages/*.proto `
-  protobuf/user/methods/*.proto
+  protobuf/user/methods/*.proto -->

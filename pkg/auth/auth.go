@@ -12,20 +12,20 @@ var GUEST = []string{
 	"get:user:public",     // 查看公开的USER资料
 }
 
-func Auth(user_id int64, method, object string, token string) (bool, error) {
+func Auth(method, object string, token string) (bool, int64, error) {
 	accessToken := token
 	owner := "public"
 	scope := GUEST
+	var id int64
 
 	if accessToken != "" {
 		accessClaims, err := jwt.ParseJWT(accessToken)
 		if err != nil {
-			return false, fmt.Errorf("parseJWT err %w", err)
+			return false, -1, fmt.Errorf("parseJWT err %w", err)
 		}
 
-		if accessClaims.UserID == user_id {
-			owner = "own"
-		}
+		owner = "own"
+
 		if accessClaims.Role == "ADMIN" {
 			owner = "manage"
 		}
@@ -34,12 +34,13 @@ func Auth(user_id int64, method, object string, token string) (bool, error) {
 		}
 
 		scope = accessClaims.Scope
+		id = accessClaims.UserID
 	}
 
 	// 拼接权限
 	power := fmt.Sprintf("%s:%s:%s", method, object, owner)
 
-	return includes(scope, power), nil
+	return includes(scope, power), id, nil
 }
 
 func includes(slice []string, item string) bool {

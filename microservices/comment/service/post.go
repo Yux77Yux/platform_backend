@@ -5,12 +5,12 @@ import (
 	"log"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
-	"github.com/Yux77Yux/platform_backend/generated/common"
+	common "github.com/Yux77Yux/platform_backend/generated/common"
 	internal "github.com/Yux77Yux/platform_backend/microservices/comment/internal"
 )
 
-func (s *Server) UploadComment(ctx context.Context, req *generated.PublishCommentRequest) (*generated.PublishCommentResponse, error) {
-	log.Println("info: upload comment service start")
+func (s *Server) PublishComment(ctx context.Context, req *generated.PublishCommentRequest) (*generated.PublishCommentResponse, error) {
+	log.Println("info: publish comment service start")
 
 	select {
 	case <-ctx.Done():

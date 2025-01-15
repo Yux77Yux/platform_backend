@@ -9,4 +9,5 @@ enum UserStatus {
   INACTIVE = 1;
   ACTIVE = 2;
   LIMITED = 3;
+  DELETE = 4;
 }

@@ -18,7 +18,7 @@ FLUSH PRIVILEGES;
 USE db_comment_areas_1;
 
 CREATE TABLE IF NOT EXISTS CommentAreas (
-    creation_id BIGINT PRIMARY KEY,
+    creation_id INT PRIMARY KEY,
     total_comments INT DEFAULT 0,
     areas_status ENUM('ACTIVE','INACTIVE','HIDE') DEFAULT 'ACTIVE'
 );
@@ -26,23 +26,28 @@ CREATE TABLE IF NOT EXISTS CommentAreas (
 -- 使用 db_comments_1 数据库
 USE db_comments_1;
 
+-- 评论表
 CREATE TABLE IF NOT EXISTS Comments (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,      -- 评论ID
-    root BIGINT DEFAULT 0,                     -- 一级评论ID
-    parent BIGINT DEFAULT 0,                   -- 回复对象所在ID
-    dialog BIGINT DEFAULT 0,                   -- 二级评论ID
-    user_id BIGINT NOT NULL,                   -- 发言的用户ID
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
-    creation_id BIGINT NOT NULL,                -- 作品ID
+    id INT AUTO_INCREMENT PRIMARY KEY,            -- 评论ID
+    root INT DEFAULT 0,                           -- 一级评论ID
+    parent INT DEFAULT 0,                         -- 回复对象所在ID
+    dialog INT DEFAULT 0,                         -- 二级评论ID
+    user_id BIGINT NOT NULL,                         -- 发言的用户ID
+    creation_id BIGINT NOT NULL,                     -- 作品ID
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
+    status ENUM('PUBLISHED','DELETE') NOT NULL DEFAULT 'PUBLISHED',  -- 公告状态，默认是草稿
 
-    INDEX idx_root_parent_dialog(creation_id, root, parent)
+    INDEX idx_creation_root(creation_id, root),  -- 评论索引
+    INDEX idx_status(status, created_at),        -- 主要用于清除DELETE状态行
+    INDEX idx_user(user_id, created_at),  -- 与下配合
+    INDEX idx_parent(parent, created_at)  -- 回复索引
 );
 
--- 使用 db_comment_content_1 数据库
-USE db_comment_content_1;
-
+-- 评论内容表
 CREATE TABLE IF NOT EXISTS CommentContent (
-    comment_id BIGINT PRIMARY KEY,                      -- 评论ID，外键关联评论表（假设 `comment_id` 是评论表的主键）
-    content TEXT,                            -- 评论内容，TEXT类型
-    media VARCHAR(255),                      -- 评论附件媒体文件，URL或文件路径（如果有）
+    comment_id INT PRIMARY KEY,                   -- 评论ID，外键关联评论表
+    content TEXT,                                    -- 评论内容，TEXT类型
+    media TEXT,                                      -- 评论附件媒体文件，URL或文件路径（如果有）
+    
+    CONSTRAINT fk_comment FOREIGN KEY (comment_id) REFERENCES Comments(id)  -- 外键约束
 );

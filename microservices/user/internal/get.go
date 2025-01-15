@@ -8,7 +8,7 @@ import (
 	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
-	"github.com/Yux77Yux/platform_backend/microservices/user/tools"
+	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
 func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) {

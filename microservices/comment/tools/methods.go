@@ -8,7 +8,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 	// common "github.com/Yux77Yux/platform_backend/generated/common"
-	// generated "github.com/Yux77Yux/platform_backend/generated/creation"
+	// generated "github.com/Yux77Yux/platform_backend/generated/comment"
 )
 
 func SaveImage(fileBytes []byte, fileName string) error {

@@ -8,7 +8,7 @@ import (
 )
 
 func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCreationResponse, error) {
-	pass, err := auth.Auth(req.GetBaseInfo().GetAuthorId(), "post", "creation", req.GetAccessToken().GetValue())
+	pass, author_id, err := auth.Auth("post", "creation", req.GetAccessToken().GetValue())
 	if err != nil {
 		return &generated.UploadCreationResponse{
 			Msg: &common.ApiResponse{
@@ -26,6 +26,7 @@ func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCrea
 		}, nil
 	}
 	// 以上为鉴权
+	req.BaseInfo.AuthorId = author_id
 
 	// 异步处理
 	if req.GetBaseInfo().GetStatus() == generated.CreationStatus_DRAFT {

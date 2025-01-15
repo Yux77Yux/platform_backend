@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS Creation (
     thumbnail TEXT NOT NULL,                   -- 封面
     title VARCHAR(255),                -- 作品标题，最大 255 个字符
     bio VARCHAR(1000),     -- 作品简介，最大 1000 个字符
-    status ENUM('DRAFT', 'PENDING', 'PUBLISHED', 'REJECTED') NOT NULL DEFAULT 'DRAFT', -- 作品状态，草稿、审核中、已发布、已拒绝
+    status ENUM('DRAFT', 'PENDING', 'PUBLISHED', 'REJECTED','DELETE') NOT NULL DEFAULT 'DRAFT', -- 作品状态，草稿、审核中、已发布、已拒绝
     duration INT DEFAULT 0,        -- 视频时长，单位秒
     category_id INT NOT NULL,    -- 作品ID
     upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 默认当前时间

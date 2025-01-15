@@ -39,7 +39,7 @@ func draftCreationProcessor(msg amqp.Delivery) error {
 	}
 
 	// 写入缓存
-	err = cache.CreationAddInCache(creation)
+	err = cache.CreationAddInCache(&generated.CreationInfo{Creation: creation})
 	if err != nil {
 		log.Printf("cache CreationAddInCache occur error: %v", err)
 	}
@@ -70,7 +70,7 @@ func pendingCreationProcessor(msg amqp.Delivery) error {
 	}
 
 	// 写入缓存
-	err = cache.CreationAddInCache(creation)
+	err = cache.CreationAddInCache(&generated.CreationInfo{Creation: creation})
 	if err != nil {
 		log.Printf("cache CreationAddInCache occur error: %v", err)
 	}

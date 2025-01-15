@@ -8,11 +8,10 @@ import (
 )
 
 var (
+	chain           *ListenerChain
 	connStr         string
 	ExchangesConfig = map[string]string{
-		"draftCreation":   "direct",
-		"pendingCreation": "direct",
-		// "updateCreation":  "direct",
+		"Comment": "direct",
 		// Add more exchanges here
 	}
 )
@@ -34,6 +33,10 @@ func GetRabbitMQ() MessageQueueInterface {
 
 // 非RPC类型的消息队列的交换机声明
 func Init() {
+	// 初始化责任链
+	chain = InitialListenerChain()
+
+	// 初始化 消息队列 交换机
 	rabbitMQ := GetRabbitMQ()
 	defer rabbitMQ.Close()
 
@@ -49,19 +52,8 @@ func Init() {
 
 		switch exchange {
 		// 不同的exchange使用不同函数
-		case "pendingCreation":
-			go ListenToQueue(exchange, "pendingCreation", "pendingCreation", pendingCreationProcessor)
-		// case "updateCreation":
-		// 	go ListenToQueue(exchange, "updateCreation", "updateCreation", updateCreationProcessor)
-		case "draftCreation":
-			go ListenToQueue(exchange, "draftCreation", "draftCreation", draftCreationProcessor)
+		case "Comment":
+			go ListenToQueue(exchange, "Comment", "Comment", JoinCommentProcessor)
 		}
 	}
-
-	// for _, exchange := range ListenRPCs {
-	// 	switch exchange {
-	// 	// 不同的exchange使用不同函数
-	// 	case "agg_user":
-	// 		go ListenRPC(exchange, "getUser", "getUser", getUserProcessor)
-	// 	}
 }

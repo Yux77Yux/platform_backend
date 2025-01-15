@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS Announcement (
     title VARCHAR(255) NOT NULL,          -- 公告标题
     content TEXT NOT NULL,                -- 使用 TEXT 类型来存储公告内容
     publisher_id BIGINT NOT NULL,         -- 发布者 ID
-    status ENUM('DRAFT', 'PUBLISHED') NOT NULL DEFAULT 'DRAFT',  -- 公告状态，默认是草稿
+    status ENUM('DRAFT', 'PUBLISHED','DELETE') NOT NULL DEFAULT 'DRAFT',  -- 公告状态，默认是草稿
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 公告创建时间，默认当前时间
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP  -- 公告更新时间，自动更新
 );

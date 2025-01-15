@@ -26,21 +26,31 @@ service CreationService {
     };
   }
 
-  rpc GetSpaceCreationList(creation.methods.GetSpaceCreationListRequest) returns (creation.methods.GetCreationListResponse) {
+  // 作者的作品
+  rpc GetSpaceCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) {
     option (google.api.http) = {
-      get: "/api/creation/space/{user_id}/{access_token.value=*}"
+      get: "/api/creation/space/{user_id}"
     };
   }
 
-  rpc GetCollectionCreationList(creation.methods.GetSpaceCreationListRequest) returns (creation.methods.GetCreationListResponse) {
+  // 收藏夹
+  rpc GetCollectionCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) {
     option (google.api.http) = {
-      get: "/api/creation/collection/{user_id}/{access_token.value=*}"
+      get: "/api/creation/collection/{user_id}"
     };
   }
 
-  rpc GetHomeCreationList(creation.methods.GetSpaceCreationListRequest) returns (creation.methods.GetCreationListResponse) {
+  // 主页
+  rpc GetHomeCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) {
     option (google.api.http) = {
-      get: "/api/creation/home/{user_id}/{access_token.value=*}"
+      get: "/api/creation/home/{user_id}"
+    };
+  }
+
+  // 作品的相似作品列表
+  rpc GetSimilarCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) {
+    option (google.api.http) = {
+      get: "/api/creation/similar/{creation_id}"
     };
   }
 

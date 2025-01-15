@@ -11,7 +11,7 @@ import "creation/messages/creation_upload.proto";
 message CreationInfo {
   Creation creation = 1;
   CreationEngagement creation_engagement = 2;
-  Category category =3;
+  Category category = 3;
 }
 
 message Creation {

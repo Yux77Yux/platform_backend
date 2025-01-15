@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS Review (
     target_type ENUM('USER','COMMENT','CREATION') NOT NULL,          -- 审核类型
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    
-    status ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING', -- 审核状态，
+    status ENUM('PENDING', 'APPROVED', 'REJECTED','DELETE') NOT NULL DEFAULT 'PENDING', -- 审核状态，
     remark varchar(255),       -- 审核备注，最大255字符
     reviewer_id BIGINT, -- 审核人ID
 

@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/creation"
+	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -37,7 +37,7 @@ func ServerRun(done chan struct{}) func() {
 }
 
 type Server struct {
-	generated.UnimplementedCreationServiceServer
+	generated.UnimplementedCommentServiceServer
 }
 
 func InitServer(grpcServer *grpc.Server) {
@@ -53,9 +53,9 @@ func InitServer(grpcServer *grpc.Server) {
 	}
 
 	go func() {
-		generated.RegisterCreationServiceServer(grpcServer, &Server{}) // 注册 User 服务
+		generated.RegisterCommentServiceServer(grpcServer, &Server{}) // 注册 User 服务
 
-		log.Println("info: creation server is running on port ", addr)
+		log.Println("info: comment server is running on port ", addr)
 		if err = grpcServer.Serve(lis); err != nil {
 			err = fmt.Errorf("error: failed to serve: %w", err)
 			log.Fatalf("%v", err)
