@@ -181,7 +181,7 @@ func UpdateUser(user *generated.UserUpdateSpace) error {
 
 	resultCh := make(chan error, 1)
 
-	id := strconv.FormatInt(user.GetUserDefault().GetUserId(), 10)
+	id := strconv.FormatInt(user.GetUserDefault().GetUserId(), 20)
 
 	var userBday interface{}
 	// 判断是否为空

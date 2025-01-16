@@ -11,7 +11,8 @@ var (
 	chain           *ListenerChain
 	connStr         string
 	ExchangesConfig = map[string]string{
-		"Comment": "direct",
+		"PublishComment": "direct",
+		"DeleteComment":  "direct",
 		// Add more exchanges here
 	}
 )
@@ -52,8 +53,10 @@ func Init() {
 
 		switch exchange {
 		// 不同的exchange使用不同函数
-		case "Comment":
-			go ListenToQueue(exchange, "Comment", "Comment", JoinCommentProcessor)
+		case "PublishComment":
+			go ListenToQueue(exchange, "PublishComment", "PublishComment", JoinCommentProcessor)
+		case "DeleteComment":
+			go ListenToQueue(exchange, "PublishComment", "PublishComment", DeleteCommentProcessor)
 		}
 	}
 }

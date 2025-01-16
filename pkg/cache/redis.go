@@ -167,6 +167,17 @@ func (r *RedisClient) ModifyFieldHash(ctx context.Context, kind string, unique s
 	return r.redisClient.HSet(ctx, key, field, value).Err()
 }
 
+func (r *RedisClient) IncrHash(ctx context.Context, kind string, unique string, field string, incr int64) error {
+	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
+
+	err := r.redisClient.HIncrBy(ctx, key, field, incr).Err()
+	if err != nil {
+		return fmt.Errorf("failed to increment %s: %w", field, err)
+	}
+
+	return nil
+}
+
 // 仅获取一个字段值
 func (r *RedisClient) GetHash(ctx context.Context, kind string, unique string, field string) (string, error) {
 	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
@@ -250,13 +261,13 @@ func (r *RedisClient) DelHash(ctx context.Context, kind string, unique string, f
 // List
 
 // 向 List 头部推送元素
-func (r *RedisClient) LPushList(ctx context.Context, direction string, kind string, unique string, value ...interface{}) error {
+func (r *RedisClient) LPushList(ctx context.Context, kind string, unique string, value ...interface{}) error {
 	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	return r.redisClient.LPush(ctx, key, value...).Err()
 }
 
 // 向 List 尾部推送元素
-func (r *RedisClient) RPushList(ctx context.Context, direction string, kind string, unique string, value ...interface{}) error {
+func (r *RedisClient) RPushList(ctx context.Context, kind string, unique string, value ...interface{}) error {
 	key := fmt.Sprintf("List_%s_%s", kind, unique)
 	return r.redisClient.RPush(ctx, key, value...).Err()
 }
@@ -277,6 +288,16 @@ func (r *RedisClient) RPopList(ctx context.Context, kind string, unique string) 
 	value, err := r.redisClient.RPop(ctx, key).Result()
 	if err != nil {
 		return "", err
+	}
+	return value, nil
+}
+
+// 从 List 头部获取元素
+func (r *RedisClient) LRangeList(ctx context.Context, kind string, unique string, start, stop int64) ([]string, error) {
+	key := fmt.Sprintf("List_%s_%s", kind, unique)
+	value, err := r.redisClient.LRange(ctx, key, start, stop).Result()
+	if err != nil {
+		return []string{}, err
 	}
 	return value, nil
 }
@@ -332,7 +353,7 @@ func (r *RedisClient) FindElementsList(ctx context.Context, kind string, unique 
 }
 
 // 从 List 截取列表的一部分 并删除不在该范围内的元素
-func (r *RedisClient) TrimList(ctx context.Context, kind string, unique string, start, stop int64) error {
+func (r *RedisClient) LTrimList(ctx context.Context, kind string, unique string, start, stop int64) error {
 	if start == 0 && stop == 0 {
 		stop = -1
 	}

@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
@@ -11,13 +10,51 @@ import (
 )
 
 // POST
-func BatchInsert(values map[string]string) error {
+func BatchInsert(comments []*generated.Comment) error {
 	ctx := context.Background()
 	var (
-		queryComment        = values["queryComment"]
-		queryCommentContent = values["queryCommentContent"]
-		count               = values["count"]
+		queryComment = `
+				INSERT INTO db_comment_1.comment (
+					root,
+					parent,
+					dialog,
+					creation_id,
+					user_id,
+					created_at)
+				VALUES(?,?,?,?,?,?)`
+		queryCommentContent = `
+				INSERT INTO db_comment_1.comment (
+					comment_id,
+					content,
+					media)
+				VALUES(?,?,?)`
+		queryArea = `
+				UPDATE db_comment_areas_1.CommentAreas 
+				SET
+					total_comments = total_comments + ?,
+				WHERE creation_id = ?`
+		count         = len(comments)
+		CommentValues = make([]interface{}, 0, count*6)
+		ContentValues = make([]interface{}, 0, count*3)
+		creationId    = comments[0].GetCreationId()
 	)
+
+	for i := 0; i < count-1; i++ {
+		queryComment = queryComment + "," + "(?,?,?,?,?,?)"
+		queryCommentContent = queryCommentContent + "," + "(?,?,?)"
+	}
+
+	// 格式化输入
+	for _, comment := range comments {
+		CommentValues = append(CommentValues,
+			comment.GetRoot(),
+			comment.GetParent(),
+			comment.GetDialog(),
+			comment.GetCreationId(),
+			comment.GetUserId(),
+			comment.GetCreatedAt().AsTime())
+	}
+
 	tx, err := db.BeginTransaction()
 	if err != nil {
 		return err
@@ -45,9 +82,10 @@ func BatchInsert(values map[string]string) error {
 		// 执行拿到id
 		ids, err := tx.Exec(
 			queryComment,
+			CommentValues...,
 		)
 		if err != nil {
-			err = fmt.Errorf("batchInsert transaction exec failed because %v", err)
+			err = fmt.Errorf("batchInsert transaction exec failed during queryComment because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
@@ -75,27 +113,41 @@ func BatchInsert(values map[string]string) error {
 			return err
 		}
 
-		countInt64, err := strconv.ParseInt(count, 10, 64)
+		countInt64 := int64(count)
 		if err != nil {
 			return fmt.Errorf("count is not a number")
 		}
 		if countInt64 != rowsAffected {
 			return fmt.Errorf("count not match the rowsAffected")
 		}
-		idsSlice := make([]int64, 0, countInt64)
 
 		// 映射 comment_id
 		for i := int64(0); i < rowsAffected; i++ {
 			commentID := lastInsertID + i
-			idsSlice = append(idsSlice, commentID)
+			ContentValues = append(ContentValues,
+				commentID, comments[i].GetContent(), comments[i].GetMedia())
 		}
 
 		_, err = tx.Exec(
 			queryCommentContent,
-			idsSlice,
+			ContentValues...,
 		)
 		if err != nil {
-			err = fmt.Errorf("batchInsert transaction exec failed because %v", err)
+			err = fmt.Errorf("batchInsert transaction exec failed during queryCommentContent because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return err
+		}
+
+		_, err = tx.Exec(
+			queryArea,
+			count,
+			creationId,
+		)
+		if err != nil {
+			err = fmt.Errorf("batchInsert transaction exec failed during queryArea because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
@@ -529,4 +581,10 @@ func GetSecondCommentInTransaction(creation_id int64, root, pageNumber int32) ([
 	}
 
 	return comments, nil
+}
+
+// UPDATE
+func BatchUpdate(values map[string]string) error {
+
+	return nil
 }

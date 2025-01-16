@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"fmt"
-
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"

@@ -18,6 +18,7 @@ type RedisMethods interface {
 
 	ScanHash(ctx context.Context, kind string, unique string, fliter string, cursor uint64, count int64) ([]string, uint64, error)
 	ExistsHash(ctx context.Context, kind string, unique string) (bool, error)
+	IncrHash(ctx context.Context, kind string, unique string, field string, incr int64) error
 	SetFieldsHash(ctx context.Context, kind string, unique string, fieldValues ...interface{}) error
 	SetFieldHash(ctx context.Context, kind string, unique string, field string, value interface{}) error
 	ModifyFieldHash(ctx context.Context, kind string, unique string, field string, value interface{}) error
@@ -30,16 +31,17 @@ type RedisMethods interface {
 	GetLenHash(ctx context.Context, kind string, unique string, field string) (int64, error)
 	DelHash(ctx context.Context, kind string, unique string, fields ...string) (int64, error)
 
-	LPushList(ctx context.Context, direction string, kind string, unique string, value ...interface{}) error
-	RPushList(ctx context.Context, direction string, kind string, unique string, value ...interface{}) error
+	LPushList(ctx context.Context, kind string, unique string, value ...interface{}) error
+	RPushList(ctx context.Context, kind string, unique string, value ...interface{}) error
 	LPopList(ctx context.Context, kind string, unique string) (string, error)
 	RPopList(ctx context.Context, kind string, unique string) (string, error)
+	LRangeList(ctx context.Context, kind string, unique string, start, stop int64) ([]string, error)
 	InsertBeforeList(ctx context.Context, kind string, unique string, pivot, value interface{}) error
 	InsertAfterList(ctx context.Context, kind string, unique string, pivot, value interface{}) error
 	IndexList(ctx context.Context, kind string, unique string, index int64) (string, error)
 	FindElementList(ctx context.Context, kind string, unique string, value string) (int64, error)
 	FindElementsList(ctx context.Context, kind string, unique string, value string, count int64) ([]int64, error)
-	TrimList(ctx context.Context, kind string, unique string, start, stop int64) error
+	LTrimList(ctx context.Context, kind string, unique string, start, stop int64) error
 	GetLenList(ctx context.Context, kind string, unique string) (int64, error)
 	GetElementsList(ctx context.Context, kind string, unique string, start, stop int64) ([]string, error)
 

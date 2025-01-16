@@ -45,7 +45,7 @@ func (chain *ListenerChain) CreateListenerForCreation(comment *generated.Comment
 	newListener := &CommentListener{
 		creationID:      comment.GetCreationId(),
 		commentChannel:  make(chan *generated.Comment, 100),
-		timeoutDuration: 10 * time.Second,
+		timeoutDuration: 8 * time.Second,
 		updateInterval:  5 * time.Second,
 	}
 

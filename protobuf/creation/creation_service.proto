@@ -27,7 +27,7 @@ service CreationService {
   }
 
   // 作者的作品
-  rpc GetSpaceCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) {
+  rpc GetSpaceCreationList(creation.methods.GetPublicCreationListRequest) returns (creation.methods.GetCreationListResponse) {
     option (google.api.http) = {
       get: "/api/creation/space/{user_id}"
     };
@@ -48,7 +48,7 @@ service CreationService {
   }
 
   // 作品的相似作品列表
-  rpc GetSimilarCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) {
+  rpc GetSimilarCreationList(creation.methods.GetPublicCreationListRequest) returns (creation.methods.GetCreationListResponse) {
     option (google.api.http) = {
       get: "/api/creation/similar/{creation_id}"
     };

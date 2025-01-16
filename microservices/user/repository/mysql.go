@@ -26,7 +26,7 @@ func UserAddInfoInTransaction(user_info *generated.User) error {
 	)
 	values(?,?,?,?,?,?,?,?,?)`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	tx, err := db.BeginTransaction()
@@ -110,7 +110,7 @@ func UserRegisterInTransaction(user_credential *generated.UserCredentials, id in
 	(?,?,?,?,?) 
 	`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	tx, err := db.BeginTransaction()
@@ -479,7 +479,7 @@ func UserUpdateInTransaction(user_info *generated.UserUpdateSpace) error {
     		updated_at = ?
 		WHERE id = ? `
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	tx, err := db.BeginTransaction()

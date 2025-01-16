@@ -4,20 +4,34 @@ import (
 	"log"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	cache "github.com/Yux77Yux/platform_backend/microservices/comment/cache"
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
 )
 
+type CommentInterface interface {
+	StartListening()
+	DispatchComment(comment *generated.Comment)
+	handleComment(comment *generated.Comment)
+	executeBatchInsert()
+	startProcessing()
+	startUpdateIntervalTimer()
+	startTimeoutTimer()
+	cleanup()
+}
+
 // 监听者结构体
 type CommentListener struct {
 	creationID          int64
 	commentChannel      chan *generated.Comment // 用于接收评论的通道
-	timeoutDuration     time.Duration           // 超时持续时间（触发销毁）
-	timeoutTimer        *time.Timer             // 用于刷新存活时间
-	updateInterval      time.Duration           // 批量插入的间隔时间
-	updateIntervalTimer *time.Timer             // 用于周期性执行批量更新
-	next                *CommentListener        // 下一个监听者
+	count               int
+	timeoutDuration     time.Duration    // 超时持续时间（触发销毁）
+	timeoutTimer        *time.Timer      // 用于刷新存活时间
+	updateInterval      time.Duration    // 批量插入的间隔时间
+	updateIntervalTimer *time.Timer      // 用于周期性执行批量更新
+	next                *CommentListener // 下一个监听者
 }
 
 // 启动监听者
@@ -31,30 +45,58 @@ func (listener *CommentListener) StartListening() {
 func (listener *CommentListener) DispatchComment(comment *generated.Comment) {
 	// 处理评论的逻辑
 	listener.commentChannel <- comment
-	listener.refreshTimeoutTimer() // 刷新存活时间
 }
 
 // 抽取处理逻辑
 func (listener *CommentListener) handleComment(comment *generated.Comment) {
-	err := cache.SetTemporaryComments(comment)
+	err := cache.PushTemporaryComments(comment)
 	if err != nil {
 		log.Printf("handleComment error %v", err)
 	}
+	// 长度加1
+	listener.count = listener.count + 1
 }
 
-// 执行批量更新
+// 执行批量插入
 func (listener *CommentListener) executeBatchInsert() {
 	values, err := cache.GetTemporaryComments(listener.creationID)
 	if err != nil {
-		log.Printf("executeBatchInsert error :%v", err)
-	}
-	err = db.BatchInsert(values)
-	if err != nil {
-		log.Printf("batchInsert error :%v", err)
+		log.Printf("executeBatchInsert GetTemporaryComments error :%v", err)
 	}
 
-	// 重置相关redis字段
-	cache.RefreshTemporaryComment(listener.creationID)
+	// 存进最后一次交互部分
+	err = cache.ChangingTemporaryComments(listener.creationID, values)
+	if err != nil {
+		log.Printf("executeBatchInsert ChangingTemporaryComments error :%v", err)
+	}
+
+	count := len(values)
+	comments := make([]*generated.Comment, 0, count)
+
+	for _, commentStr := range values {
+		comment := &generated.Comment{}
+		err = proto.Unmarshal([]byte(commentStr), comment)
+		if err != nil {
+			log.Printf("error: comment proto.Unmarshal error %v", err)
+		}
+
+		comments = append(comments, comment)
+	}
+
+	err = db.BatchInsert(comments)
+	if err != nil {
+		log.Printf("error: batchInsert error :%v", err)
+	}
+
+	err = cache.RefreshTemporaryComment(listener.creationID, int64(count))
+	if err != nil {
+		log.Printf("executeBatchInsert RefreshTemporaryComment error %v", err)
+	}
+
+	err = cache.DelChangingTemporaryComments(listener.creationID)
+	if err != nil {
+		log.Printf("executeBatchInsert DelChangingTemporaryComments error %v", err)
+	}
 
 	// 结束重置更新时间
 	listener.updateIntervalTimer.Reset(listener.updateInterval)
@@ -80,15 +122,13 @@ func (listener *CommentListener) startUpdateIntervalTimer() {
 // 启动存活时间的定时器
 func (listener *CommentListener) startTimeoutTimer() {
 	listener.timeoutTimer = time.AfterFunc(listener.timeoutDuration, func() {
-
-		// 超时后销毁监听者
-		chain.DestroyListener(listener)
+		if listener.count <= 0 {
+			// 超时后销毁监听者
+			chain.DestroyListener(listener)
+		} else {
+			listener.timeoutTimer.Reset(listener.timeoutDuration)
+		}
 	})
-}
-
-// 刷新存活时间的定时器
-func (listener *CommentListener) refreshTimeoutTimer() {
-	listener.timeoutTimer.Reset(listener.timeoutDuration)
 }
 
 // 清理监听者资源
@@ -103,11 +143,5 @@ func (listener *CommentListener) cleanup() {
 
 	if listener.updateIntervalTimer != nil {
 		listener.updateIntervalTimer.Stop() // 停止定时器
-	}
-
-	// 清空redis相关监听键
-	err := cache.DelTemporaryComments(listener.creationID)
-	if err != nil {
-		log.Printf("delTemporaryComments error :%v", err)
 	}
 }
