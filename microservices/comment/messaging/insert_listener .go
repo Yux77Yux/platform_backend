@@ -11,45 +11,49 @@ import (
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
 )
 
-type CommentInterface interface {
-	StartListening()
-	DispatchComment(comment *generated.Comment)
-	handleComment(comment *generated.Comment)
-	executeBatchInsert()
-	startProcessing()
-	startUpdateIntervalTimer()
-	startTimeoutTimer()
-	cleanup()
-}
-
 // 监听者结构体
-type CommentListener struct {
+type InsertListener struct {
 	creationID          int64
 	commentChannel      chan *generated.Comment // 用于接收评论的通道
 	count               int
-	timeoutDuration     time.Duration    // 超时持续时间（触发销毁）
-	timeoutTimer        *time.Timer      // 用于刷新存活时间
-	updateInterval      time.Duration    // 批量插入的间隔时间
-	updateIntervalTimer *time.Timer      // 用于周期性执行批量更新
-	next                *CommentListener // 下一个监听者
+	timeoutDuration     time.Duration   // 超时持续时间（触发销毁）
+	timeoutTimer        *time.Timer     // 用于刷新存活时间
+	updateInterval      time.Duration   // 批量插入的间隔时间
+	updateIntervalTimer *time.Timer     // 用于周期性执行批量更新
+	next                *InsertListener // 下一个监听者
 }
 
 // 启动监听者
-func (listener *CommentListener) StartListening() {
+func (listener *InsertListener) StartListening() {
 	listener.startProcessing()
 	listener.startUpdateIntervalTimer()
 	listener.startTimeoutTimer()
 }
 
+func (listener *InsertListener) Next() ListenerInterface {
+	return listener.next
+}
+
 // 分发评论至通道
-func (listener *CommentListener) DispatchComment(comment *generated.Comment) {
+func (listener *InsertListener) Dispatch(data []byte) {
+	comment := new(generated.Comment)
+	err := proto.Unmarshal(data, comment)
+	if err != nil {
+		log.Printf("error: DispatchComment Unmarshal :%v", err)
+	}
 	// 处理评论的逻辑
 	listener.commentChannel <- comment
 }
 
 // 抽取处理逻辑
-func (listener *CommentListener) handleComment(comment *generated.Comment) {
-	err := cache.PushTemporaryComments(comment)
+func (listener *InsertListener) handle(data []byte) {
+	comment := new(generated.Comment)
+	err := proto.Unmarshal(data, comment)
+	if err != nil {
+		log.Printf("error: handle Unmarshal :%v", err)
+	}
+
+	err = cache.PushTemporaryComment(comment)
 	if err != nil {
 		log.Printf("handleComment error %v", err)
 	}
@@ -58,7 +62,7 @@ func (listener *CommentListener) handleComment(comment *generated.Comment) {
 }
 
 // 执行批量插入
-func (listener *CommentListener) executeBatchInsert() {
+func (listener *InsertListener) executeBatch() {
 	values, err := cache.GetTemporaryComments(listener.creationID)
 	if err != nil {
 		log.Printf("executeBatchInsert GetTemporaryComments error :%v", err)
@@ -88,9 +92,9 @@ func (listener *CommentListener) executeBatchInsert() {
 		log.Printf("error: batchInsert error :%v", err)
 	}
 
-	err = cache.RefreshTemporaryComment(listener.creationID, int64(count))
+	err = cache.RefreshTemporaryComments(listener.creationID, int64(count))
 	if err != nil {
-		log.Printf("executeBatchInsert RefreshTemporaryComment error %v", err)
+		log.Printf("executeBatchInsert RefreshTemporaryComments error %v", err)
 	}
 
 	err = cache.DelChangingTemporaryComments(listener.creationID)
@@ -98,29 +102,36 @@ func (listener *CommentListener) executeBatchInsert() {
 		log.Printf("executeBatchInsert DelChangingTemporaryComments error %v", err)
 	}
 
-	// 结束重置更新时间
+	// 重置时间
 	listener.updateIntervalTimer.Reset(listener.updateInterval)
+
+	// 去掉已完成部分
+	listener.count = listener.count - count
 }
 
 // 具体处理逻辑
-func (listener *CommentListener) startProcessing() {
+func (listener *InsertListener) startProcessing() {
 	go func() {
 		for comment := range listener.commentChannel {
-			listener.handleComment(comment)
+			msg, err := proto.Marshal(comment)
+			if err != nil {
+				log.Printf("error: comment proto.Marshal error %v", err)
+			}
+			listener.handle(msg)
 		}
 	}()
 }
 
 // 启动周期执行批量更新的定时器
-func (listener *CommentListener) startUpdateIntervalTimer() {
+func (listener *InsertListener) startUpdateIntervalTimer() {
 	listener.updateIntervalTimer = time.AfterFunc(listener.updateInterval, func() {
-		listener.executeBatchInsert()       // 执行批量更新
+		listener.executeBatch()             // 执行批量更新
 		listener.startUpdateIntervalTimer() // 重启定时器
 	})
 }
 
 // 启动存活时间的定时器
-func (listener *CommentListener) startTimeoutTimer() {
+func (listener *InsertListener) startTimeoutTimer() {
 	listener.timeoutTimer = time.AfterFunc(listener.timeoutDuration, func() {
 		if listener.count <= 0 {
 			// 超时后销毁监听者
@@ -132,7 +143,7 @@ func (listener *CommentListener) startTimeoutTimer() {
 }
 
 // 清理监听者资源
-func (listener *CommentListener) cleanup() {
+func (listener *InsertListener) cleanup() {
 	// 关闭评论通道
 	close(listener.commentChannel)
 

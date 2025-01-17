@@ -5,12 +5,25 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/comment/messaging"
+	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
 func DeleteComment(req *generated.DeleteCommentRequest) error {
-	// 开始异步删除
-	// 异步处理
-	err := messaging.SendMessage("DeleteComment", "DeleteComment", req)
+	accessToken := req.GetAccessToken().GetValue()
+	pass, user_id, err := auth.Auth("delete", "creation", accessToken)
+	if err != nil {
+		return fmt.Errorf("error: %w", err)
+	}
+	if !pass || err != nil {
+		return fmt.Errorf("error no pass")
+	}
+
+	// 第一次过滤，发到消息队列
+	afterAuth := &generated.AfterAuth{
+		UserId:    user_id,
+		CommentId: req.GetCommentId(),
+	}
+	err = messaging.SendMessage("DeleteComment", "DeleteComment", afterAuth)
 	if err != nil {
 		err = fmt.Errorf("error: SendMessage DeleteComment error %w", err)
 		return err

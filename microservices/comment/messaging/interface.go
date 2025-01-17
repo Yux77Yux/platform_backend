@@ -22,3 +22,23 @@ type DispatcherInterface interface {
 	GetChannel() chan RequestHandlerFunc
 	Shutdown()
 }
+
+type ChainInterface interface {
+	[]byte
+	FindListenerForUnique([]byte) ListenerInterface
+	DestroyListener(ListenerInterface)
+	CreateListenerForUnique([]byte) ListenerInterface
+	HandleRequest([]byte)
+}
+
+type ListenerInterface interface {
+	Next() ListenerInterface
+	StartListening()
+	Dispatch([]byte)
+	handle([]byte)
+	executeBatch()
+	startProcessing()
+	startUpdateIntervalTimer()
+	startTimeoutTimer()
+	cleanup()
+}

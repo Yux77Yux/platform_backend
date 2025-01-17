@@ -11,56 +11,29 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
-	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
 func JoinCommentProcessor(msg amqp.Delivery) error {
-	comment := new(generated.Comment)
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, comment)
-	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("joinCommentProcessor processor error: %w", err)
-	}
-
 	// 传递至责任链
-	chain.HandleCommentRequest(comment)
-
+	insertChain.HandleRequest(msg.Body)
 	return nil
 }
 
 func DeleteCommentProcessor(msg amqp.Delivery) error {
-	req := new(generated.DeleteCommentRequest)
+	req := new(generated.AfterAuth)
 	// 反序列化
 	err := proto.Unmarshal(msg.Body, req)
 	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("DeleteCommentProcessor processor error: %w", err)
+		log.Printf("error: DeleteCommentProcessor unmarshaling message: %v", err)
+		return fmt.Errorf("deleteCommentProcessor processor error: %w", err)
 	}
 
-	accessToken := req.GetAccessToken().GetValue()
-	// 取作品信息，鉴权
-	pass, user_id, err := auth.Auth("delete", "creation", accessToken)
-	if err != nil {
-		return err
-	}
-	if !pass {
-		return fmt.Errorf("no pass")
-	}
-	// 以上为鉴权
+	// 开始第二次过滤，验证评论发布者与token的是否匹配
+	// 这里做一个监听者，将收到的请求拉出来发到redis，
+	// 一段时间从redis取出，然后批量查询返回信息
 
-	comment_id := req.GetCommentId()
-
-	// 取发布者id
-	var author_id int64 = -1
-	author_id, err = db.GetPublisherIdInTransaction(comment_id)
-	if err != nil {
-		return err
-	}
-	if author_id != user_id {
-		// 评论发布者与token中ID不一致
-		return fmt.Errorf("error: author %v not match the token", author_id)
-	}
+	// 发送集中处理
+	deleteChain.HandleRequest(msg.Body)
 
 	return nil
 }

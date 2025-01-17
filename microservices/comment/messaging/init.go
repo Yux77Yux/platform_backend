@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	chain           *ListenerChain
+	insertChain     *InsertChain
+	deleteChain     *DeleteChain
 	connStr         string
 	ExchangesConfig = map[string]string{
 		"PublishComment": "direct",
@@ -35,7 +36,8 @@ func GetRabbitMQ() MessageQueueInterface {
 // 非RPC类型的消息队列的交换机声明
 func Init() {
 	// 初始化责任链
-	chain = InitialListenerChain()
+	insertChain = InitialInsertChain()
+	deleteChain = InitialDeleteChain()
 
 	// 初始化 消息队列 交换机
 	rabbitMQ := GetRabbitMQ()
@@ -56,7 +58,7 @@ func Init() {
 		case "PublishComment":
 			go ListenToQueue(exchange, "PublishComment", "PublishComment", JoinCommentProcessor)
 		case "DeleteComment":
-			go ListenToQueue(exchange, "PublishComment", "PublishComment", DeleteCommentProcessor)
+			go ListenToQueue(exchange, "DeleteComment", "DeleteComment", DeleteCommentProcessor)
 		}
 	}
 }

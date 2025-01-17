@@ -3,17 +3,29 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 )
 
 // POST
 func BatchInsert(comments []*generated.Comment) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	count := len(comments)
+	// 构建用于构建 IN 子句的占位符部分
+	queryCommentCount := make([]string, count) // 使用切片存储占位符
+	queryContentCount := make([]string, count) // 使用切片存储占位符
+	for i := 0; i < count; i++ {
+		queryCommentCount[i] = "(?,?,?,?,?,?)" // 每对 id 和 user_id 用 (?,?,...) 来占位
+		queryContentCount[i] = "(?,?,?)"       // 每对 id 和 user_id 用 (?,?,...) 来占位
+	}
 	var (
-		queryComment = `
+		queryComment = fmt.Sprintf(`
 				INSERT INTO db_comment_1.comment (
 					root,
 					parent,
@@ -21,28 +33,22 @@ func BatchInsert(comments []*generated.Comment) error {
 					creation_id,
 					user_id,
 					created_at)
-				VALUES(?,?,?,?,?,?)`
-		queryCommentContent = `
+				VALUES%s`, strings.Join(queryCommentCount, ","))
+		queryContent = fmt.Sprintf(`
 				INSERT INTO db_comment_1.comment (
 					comment_id,
 					content,
 					media)
-				VALUES(?,?,?)`
+				VALUES%s`, strings.Join(queryContentCount, ","))
 		queryArea = `
 				UPDATE db_comment_areas_1.CommentAreas 
 				SET
 					total_comments = total_comments + ?,
 				WHERE creation_id = ?`
-		count         = len(comments)
 		CommentValues = make([]interface{}, 0, count*6)
 		ContentValues = make([]interface{}, 0, count*3)
 		creationId    = comments[0].GetCreationId()
 	)
-
-	for i := 0; i < count-1; i++ {
-		queryComment = queryComment + "," + "(?,?,?,?,?,?)"
-		queryCommentContent = queryCommentContent + "," + "(?,?,?)"
-	}
 
 	// 格式化输入
 	for _, comment := range comments {
@@ -80,7 +86,8 @@ func BatchInsert(comments []*generated.Comment) error {
 		return err
 	default:
 		// 执行拿到id
-		ids, err := tx.Exec(
+		ids, err := tx.ExecContext(
+			ctx,
 			queryComment,
 			CommentValues...,
 		)
@@ -114,9 +121,6 @@ func BatchInsert(comments []*generated.Comment) error {
 		}
 
 		countInt64 := int64(count)
-		if err != nil {
-			return fmt.Errorf("count is not a number")
-		}
 		if countInt64 != rowsAffected {
 			return fmt.Errorf("count not match the rowsAffected")
 		}
@@ -128,12 +132,13 @@ func BatchInsert(comments []*generated.Comment) error {
 				commentID, comments[i].GetContent(), comments[i].GetMedia())
 		}
 
-		_, err = tx.Exec(
-			queryCommentContent,
+		_, err = tx.ExecContext(
+			ctx,
+			queryContent,
 			ContentValues...,
 		)
 		if err != nil {
-			err = fmt.Errorf("batchInsert transaction exec failed during queryCommentContent because %v", err)
+			err = fmt.Errorf("batchInsert transaction exec failed during queryContent because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
@@ -141,7 +146,8 @@ func BatchInsert(comments []*generated.Comment) error {
 			return err
 		}
 
-		_, err = tx.Exec(
+		_, err = tx.ExecContext(
+			ctx,
 			queryArea,
 			count,
 			creationId,
@@ -583,8 +589,183 @@ func GetSecondCommentInTransaction(creation_id int64, root, pageNumber int32) ([
 	return comments, nil
 }
 
-// UPDATE
-func BatchUpdate(values map[string]string) error {
+func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+	defer cancel()
 
+	count := len(comments)
+	// 构建用于构建 IN 子句的占位符部分
+	queryCount := make([]string, count) // 使用切片存储占位符
+	for i := 0; i < count; i++ {
+		queryCount[i] = "(?,?)"
+	}
+
+	var (
+		queryComment = fmt.Sprintf(`
+				SELECT 
+					id,
+					creation_id,
+					user_id
+				FROM db_comment_1.comment
+				WHERE (id,user_id) 
+				IN (%s)`, strings.Join(queryCount, ","))
+		values = make([]interface{}, 0, count*2)
+		result = make([]*generated.AfterAuth, 0, count)
+	)
+
+	for _, comment := range comments {
+		values = append(values, comment.GetCommentId(), comment.GetUserId())
+	}
+
+	tx, err := db.BeginTransaction()
+	if err != nil {
+		return []*generated.AfterAuth{}, err
+	}
+
+	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("transaction failed because %v", r)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		err = fmt.Errorf("exec timeout :%w", ctx.Err())
+		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			err = fmt.Errorf("%w and %w", err, errSecond)
+		}
+
+		return []*generated.AfterAuth{}, err
+	default:
+		// 查评论
+		rows, err := tx.QueryContext(
+			ctx,
+			queryComment,
+			values...,
+		)
+		if err != nil {
+			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return []*generated.AfterAuth{}, err
+		}
+
+		for rows.Next() {
+			var (
+				id         int32
+				creationId int64
+				userId     int64
+			)
+
+			rows.Scan(&id, &creationId, &userId)
+			result = append(result, &generated.AfterAuth{
+				CommentId:  id,
+				CreationId: creationId,
+				UserId:     userId,
+			})
+		}
+
+		if err = db.CommitTransaction(tx); err != nil {
+			return []*generated.AfterAuth{}, err
+		}
+	}
+
+	return result, nil
+}
+
+// UPDATE
+func BatchUpdate(comments []*generated.AfterAuth) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
+	defer cancel()
+
+	count := len(comments)
+	// 构建用于构建 IN 子句的占位符部分
+	queryCount := make([]string, count) // 使用切片存储占位符
+	for i := 0; i < count; i++ {
+		queryCount[i] = "?"
+	}
+
+	var (
+		queryComment = fmt.Sprintf(`
+				UPDATE db_comment_1.comment 
+				SET status = "DELETE"
+				WHERE id 
+				IN (%s)`, strings.Join(queryCount, ","))
+		queryArea = `
+				UPDATE db_comment_areas_1.CommentAreas 
+				SET
+					total_comments = total_comments - ?,
+				WHERE creation_id = ?`
+		values     = make([]interface{}, 0, count)
+		creationId = comments[0].GetCreationId()
+	)
+
+	// 格式化输入
+	for _, comment := range comments {
+		values = append(values, comment.GetCommentId())
+	}
+
+	tx, err := db.BeginTransaction()
+	if err != nil {
+		return err
+	}
+
+	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("transaction failed because %v", r)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		err = fmt.Errorf("exec timeout :%w", ctx.Err())
+		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			err = fmt.Errorf("%w and %w", err, errSecond)
+		}
+
+		return err
+	default:
+		_, err := tx.ExecContext(
+			ctx,
+			queryComment,
+			values...,
+		)
+		if err != nil {
+			err = fmt.Errorf("batchInsert transaction exec failed during queryComment because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return err
+		}
+		_, err = tx.ExecContext(
+			ctx,
+			queryArea,
+			count,
+			creationId,
+		)
+		if err != nil {
+			err = fmt.Errorf("batchInsert transaction exec failed during queryArea because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return err
+		}
+
+		if err = db.CommitTransaction(tx); err != nil {
+			return err
+		}
+	}
 	return nil
 }
