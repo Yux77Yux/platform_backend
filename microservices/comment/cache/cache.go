@@ -83,7 +83,7 @@ func RefreshTemporaryComments(creationId int64, count int64) error {
 	return CacheClient.LTrimList(ctx, "TemporaryComments", idStr, 0, count-1)
 }
 
-func ChangingTemporaryComments(creationId int64, comments []string) error {
+func PushChangingTemporaryComments(creationId int64, comments []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
 	defer cancel()
 
@@ -114,12 +114,12 @@ func ChangingTemporaryComments(creationId int64, comments []string) error {
 	}
 }
 
-func DelChangingTemporaryComments(creationId int64) error {
+func RefreshChangingTemporaryComments(creationId int64, count int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
 	idStr := strconv.FormatInt(creationId, 10)
-	return CacheClient.DelKey(ctx, "List_ChangingTemporaryComments", idStr)
+	return CacheClient.LTrimList(ctx, "ChangingTemporaryComments", idStr, 0, count-1)
 }
 
 // 将评论改成待删除状态
@@ -137,7 +137,7 @@ func PushDeleteStatusComment(comment *generated.AfterAuth) error {
 	resultCh := make(chan error, 1)
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		// List尾部 推入
-		err := CacheClient.RPushList(ctx, "DeleteStatusComment", idStr, data)
+		err := CacheClient.RPushList(ctx, "DeleteStatusComments", idStr, data)
 		if err != nil {
 			err = fmt.Errorf("error RPushList error %w", err)
 		}
@@ -162,7 +162,7 @@ func GetDeleteStatusComments(creationId int64) ([]string, error) {
 
 	idStr := strconv.FormatInt(creationId, 10)
 
-	result, err := CacheClient.LRangeList(ctx, "DeleteStatusComment", idStr, 0, 49)
+	result, err := CacheClient.LRangeList(ctx, "DeleteStatusComments", idStr, 0, 49)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func RefreshDeleteStatusComments(creationId int64, count int64) error {
 	defer cancel()
 
 	idStr := strconv.FormatInt(creationId, 10)
-	return CacheClient.LTrimList(ctx, "DeleteStatusComment", idStr, 0, count-1)
+	return CacheClient.LTrimList(ctx, "DeleteStatusComments", idStr, 0, count-1)
 }
 
 // 永久删除评论
@@ -225,4 +225,90 @@ func ClearDeleteComments(count int64) error {
 	defer cancel()
 
 	return CacheClient.LTrimList(ctx, "PreDeleteComments", "Clear", 0, count-1)
+}
+
+// 查询评论
+func PushSelectComment(comment *generated.AfterAuth) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	data, err := proto.Marshal(comment)
+	if err != nil {
+		return fmt.Errorf("proto Marshal error%w", err)
+	}
+
+	resultCh := make(chan error, 1)
+	cacheRequestChannel <- func(CacheClient CacheInterface) {
+		// List尾部 推入
+		err := CacheClient.RPushList(ctx, "SelectComments", "", data)
+		if err != nil {
+			err = fmt.Errorf("error RPushList error %w", err)
+		}
+		resultCh <- err
+	}
+
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result != nil {
+			return result
+		}
+		return nil
+	}
+}
+
+func GetSelectComments() ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
+	defer cancel()
+
+	result, err := CacheClient.LRangeList(ctx, "SelectComments", "", 0, 99)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func RefreshSelectComments(count int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	return CacheClient.LTrimList(ctx, "SelectComments", "", 0, count-1)
+}
+
+func PushChangingSelectComments(comments []string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
+	defer cancel()
+
+	count := len(comments)
+	values := make([]interface{}, 0, count)
+	for _, value := range comments {
+		values = append(values, value)
+	}
+
+	resultCh := make(chan error, 1)
+	cacheRequestChannel <- func(CacheClient CacheInterface) {
+		// List尾部 推入
+		err := CacheClient.RPushList(ctx, "ChangingSelectComments", "", values...)
+		resultCh <- err
+	}
+
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result != nil {
+			return result
+		}
+		return nil
+	}
+}
+
+func RefreshChangingSelectComments(count int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	return CacheClient.LTrimList(ctx, "SelectComments", "", 0, count-1)
 }

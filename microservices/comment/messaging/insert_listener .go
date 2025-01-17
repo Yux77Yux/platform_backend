@@ -69,7 +69,7 @@ func (listener *InsertListener) executeBatch() {
 	}
 
 	// 存进最后一次交互部分
-	err = cache.ChangingTemporaryComments(listener.creationID, values)
+	err = cache.PushChangingTemporaryComments(listener.creationID, values)
 	if err != nil {
 		log.Printf("executeBatchInsert ChangingTemporaryComments error :%v", err)
 	}
@@ -97,7 +97,7 @@ func (listener *InsertListener) executeBatch() {
 		log.Printf("executeBatchInsert RefreshTemporaryComments error %v", err)
 	}
 
-	err = cache.DelChangingTemporaryComments(listener.creationID)
+	err = cache.RefreshDeleteStatusComments(listener.creationID, int64(count))
 	if err != nil {
 		log.Printf("executeBatchInsert DelChangingTemporaryComments error %v", err)
 	}
@@ -125,7 +125,9 @@ func (listener *InsertListener) startProcessing() {
 // 启动周期执行批量更新的定时器
 func (listener *InsertListener) startUpdateIntervalTimer() {
 	listener.updateIntervalTimer = time.AfterFunc(listener.updateInterval, func() {
-		listener.executeBatch()             // 执行批量更新
+		if listener.count > 0 {
+			listener.executeBatch() // 执行批量更新
+		}
 		listener.startUpdateIntervalTimer() // 重启定时器
 	})
 }
@@ -133,9 +135,9 @@ func (listener *InsertListener) startUpdateIntervalTimer() {
 // 启动存活时间的定时器
 func (listener *InsertListener) startTimeoutTimer() {
 	listener.timeoutTimer = time.AfterFunc(listener.timeoutDuration, func() {
-		if listener.count <= 0 {
+		if listener.count <= 0 && len(listener.commentChannel) <= 0 {
 			// 超时后销毁监听者
-			chain.DestroyListener(listener)
+			insertChain.DestroyListener(listener)
 		} else {
 			listener.timeoutTimer.Reset(listener.timeoutDuration)
 		}

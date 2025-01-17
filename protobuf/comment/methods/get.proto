@@ -10,21 +10,33 @@ import "common/access_token.proto";
 import "common/api_response.proto";
 
 // 作品的一级评论
-message GetTopCommentRequest {
+message InitalCommentsRequest {
   int64 creation_id = 1;
+}
+
+message InitalCommentsResponse {
+  repeated comment.messages.Comment comments = 1;
+  comment.messages.CommentArea comment_area = 2;
+  common.ApiResponse msg = 3;
+}
+
+// 作品的一级评论
+message GetTopCommentsRequest {
+  int64 creation_id = 1;
+  int32 page = 2;
 }
 
 // 一级评论内的评论
-message GetSecondCommentRequest {
+message GetSecondCommentsRequest {
   int64 creation_id = 1;
   int32 root = 2;// 一级评论所在
+  int32 page = 3;
 }
 
 // 回复我的评论，在页面的消息内显示,权限类
-message GetReplyCommentRequest {
-  // comments = from user_id = 自己的id select comment_id ;
-  // filterComments = from parent = comment_id select *;
+message GetReplyCommentsRequest {
   common.AccessToken access_token = 1;// 自己的id，
+  int32 page = 2;
 }
 
 message GetCommentsResponse {

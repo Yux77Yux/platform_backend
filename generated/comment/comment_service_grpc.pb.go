@@ -20,11 +20,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CommentService_PublishComment_FullMethodName   = "/comment.CommentService/PublishComment"
-	CommentService_GetTopComment_FullMethodName    = "/comment.CommentService/GetTopComment"
-	CommentService_GetSecondComment_FullMethodName = "/comment.CommentService/GetSecondComment"
-	CommentService_GetReplyComment_FullMethodName  = "/comment.CommentService/GetReplyComment"
-	CommentService_DeleteComment_FullMethodName    = "/comment.CommentService/DeleteComment"
+	CommentService_PublishComment_FullMethodName    = "/comment.CommentService/PublishComment"
+	CommentService_InitalComments_FullMethodName    = "/comment.CommentService/InitalComments"
+	CommentService_GetTopComments_FullMethodName    = "/comment.CommentService/GetTopComments"
+	CommentService_GetSecondComments_FullMethodName = "/comment.CommentService/GetSecondComments"
+	CommentService_GetReplyComments_FullMethodName  = "/comment.CommentService/GetReplyComments"
+	CommentService_DeleteComment_FullMethodName     = "/comment.CommentService/DeleteComment"
 )
 
 // CommentServiceClient is the client API for CommentService service.
@@ -32,9 +33,10 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CommentServiceClient interface {
 	PublishComment(ctx context.Context, in *PublishCommentRequest, opts ...grpc.CallOption) (*PublishCommentResponse, error)
-	GetTopComment(ctx context.Context, in *GetTopCommentRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
-	GetSecondComment(ctx context.Context, in *GetSecondCommentRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
-	GetReplyComment(ctx context.Context, in *GetReplyCommentRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
+	InitalComments(ctx context.Context, in *InitalCommentsRequest, opts ...grpc.CallOption) (*InitalCommentsResponse, error)
+	GetTopComments(ctx context.Context, in *GetTopCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
+	GetSecondComments(ctx context.Context, in *GetSecondCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
+	GetReplyComments(ctx context.Context, in *GetReplyCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
 	DeleteComment(ctx context.Context, in *DeleteCommentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -56,30 +58,40 @@ func (c *commentServiceClient) PublishComment(ctx context.Context, in *PublishCo
 	return out, nil
 }
 
-func (c *commentServiceClient) GetTopComment(ctx context.Context, in *GetTopCommentRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error) {
+func (c *commentServiceClient) InitalComments(ctx context.Context, in *InitalCommentsRequest, opts ...grpc.CallOption) (*InitalCommentsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetCommentsResponse)
-	err := c.cc.Invoke(ctx, CommentService_GetTopComment_FullMethodName, in, out, cOpts...)
+	out := new(InitalCommentsResponse)
+	err := c.cc.Invoke(ctx, CommentService_InitalComments_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *commentServiceClient) GetSecondComment(ctx context.Context, in *GetSecondCommentRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error) {
+func (c *commentServiceClient) GetTopComments(ctx context.Context, in *GetTopCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCommentsResponse)
-	err := c.cc.Invoke(ctx, CommentService_GetSecondComment_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, CommentService_GetTopComments_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *commentServiceClient) GetReplyComment(ctx context.Context, in *GetReplyCommentRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error) {
+func (c *commentServiceClient) GetSecondComments(ctx context.Context, in *GetSecondCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCommentsResponse)
-	err := c.cc.Invoke(ctx, CommentService_GetReplyComment_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, CommentService_GetSecondComments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *commentServiceClient) GetReplyComments(ctx context.Context, in *GetReplyCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCommentsResponse)
+	err := c.cc.Invoke(ctx, CommentService_GetReplyComments_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -101,9 +113,10 @@ func (c *commentServiceClient) DeleteComment(ctx context.Context, in *DeleteComm
 // for forward compatibility.
 type CommentServiceServer interface {
 	PublishComment(context.Context, *PublishCommentRequest) (*PublishCommentResponse, error)
-	GetTopComment(context.Context, *GetTopCommentRequest) (*GetCommentsResponse, error)
-	GetSecondComment(context.Context, *GetSecondCommentRequest) (*GetCommentsResponse, error)
-	GetReplyComment(context.Context, *GetReplyCommentRequest) (*GetCommentsResponse, error)
+	InitalComments(context.Context, *InitalCommentsRequest) (*InitalCommentsResponse, error)
+	GetTopComments(context.Context, *GetTopCommentsRequest) (*GetCommentsResponse, error)
+	GetSecondComments(context.Context, *GetSecondCommentsRequest) (*GetCommentsResponse, error)
+	GetReplyComments(context.Context, *GetReplyCommentsRequest) (*GetCommentsResponse, error)
 	DeleteComment(context.Context, *DeleteCommentRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedCommentServiceServer()
 }
@@ -118,14 +131,17 @@ type UnimplementedCommentServiceServer struct{}
 func (UnimplementedCommentServiceServer) PublishComment(context.Context, *PublishCommentRequest) (*PublishCommentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PublishComment not implemented")
 }
-func (UnimplementedCommentServiceServer) GetTopComment(context.Context, *GetTopCommentRequest) (*GetCommentsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTopComment not implemented")
+func (UnimplementedCommentServiceServer) InitalComments(context.Context, *InitalCommentsRequest) (*InitalCommentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitalComments not implemented")
 }
-func (UnimplementedCommentServiceServer) GetSecondComment(context.Context, *GetSecondCommentRequest) (*GetCommentsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSecondComment not implemented")
+func (UnimplementedCommentServiceServer) GetTopComments(context.Context, *GetTopCommentsRequest) (*GetCommentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTopComments not implemented")
 }
-func (UnimplementedCommentServiceServer) GetReplyComment(context.Context, *GetReplyCommentRequest) (*GetCommentsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetReplyComment not implemented")
+func (UnimplementedCommentServiceServer) GetSecondComments(context.Context, *GetSecondCommentsRequest) (*GetCommentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSecondComments not implemented")
+}
+func (UnimplementedCommentServiceServer) GetReplyComments(context.Context, *GetReplyCommentsRequest) (*GetCommentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReplyComments not implemented")
 }
 func (UnimplementedCommentServiceServer) DeleteComment(context.Context, *DeleteCommentRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteComment not implemented")
@@ -169,56 +185,74 @@ func _CommentService_PublishComment_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CommentService_GetTopComment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetTopCommentRequest)
+func _CommentService_InitalComments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitalCommentsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CommentServiceServer).GetTopComment(ctx, in)
+		return srv.(CommentServiceServer).InitalComments(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CommentService_GetTopComment_FullMethodName,
+		FullMethod: CommentService_InitalComments_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CommentServiceServer).GetTopComment(ctx, req.(*GetTopCommentRequest))
+		return srv.(CommentServiceServer).InitalComments(ctx, req.(*InitalCommentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CommentService_GetSecondComment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSecondCommentRequest)
+func _CommentService_GetTopComments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTopCommentsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CommentServiceServer).GetSecondComment(ctx, in)
+		return srv.(CommentServiceServer).GetTopComments(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CommentService_GetSecondComment_FullMethodName,
+		FullMethod: CommentService_GetTopComments_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CommentServiceServer).GetSecondComment(ctx, req.(*GetSecondCommentRequest))
+		return srv.(CommentServiceServer).GetTopComments(ctx, req.(*GetTopCommentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CommentService_GetReplyComment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetReplyCommentRequest)
+func _CommentService_GetSecondComments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSecondCommentsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CommentServiceServer).GetReplyComment(ctx, in)
+		return srv.(CommentServiceServer).GetSecondComments(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CommentService_GetReplyComment_FullMethodName,
+		FullMethod: CommentService_GetSecondComments_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CommentServiceServer).GetReplyComment(ctx, req.(*GetReplyCommentRequest))
+		return srv.(CommentServiceServer).GetSecondComments(ctx, req.(*GetSecondCommentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CommentService_GetReplyComments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReplyCommentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentServiceServer).GetReplyComments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CommentService_GetReplyComments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentServiceServer).GetReplyComments(ctx, req.(*GetReplyCommentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -253,16 +287,20 @@ var CommentService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CommentService_PublishComment_Handler,
 		},
 		{
-			MethodName: "GetTopComment",
-			Handler:    _CommentService_GetTopComment_Handler,
+			MethodName: "InitalComments",
+			Handler:    _CommentService_InitalComments_Handler,
 		},
 		{
-			MethodName: "GetSecondComment",
-			Handler:    _CommentService_GetSecondComment_Handler,
+			MethodName: "GetTopComments",
+			Handler:    _CommentService_GetTopComments_Handler,
 		},
 		{
-			MethodName: "GetReplyComment",
-			Handler:    _CommentService_GetReplyComment_Handler,
+			MethodName: "GetSecondComments",
+			Handler:    _CommentService_GetSecondComments_Handler,
+		},
+		{
+			MethodName: "GetReplyComments",
+			Handler:    _CommentService_GetReplyComments_Handler,
 		},
 		{
 			MethodName: "DeleteComment",

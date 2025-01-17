@@ -45,7 +45,7 @@ func getCreations(ids []int64) ([]*generated.CreationInfo, error) {
 // 此处先使用分区进行相似推荐，
 // 拿到此作品的分区，然后到ms或es查相同标签个数的作品id，
 // 拿到id在redis取热度分值，然后排序，返回前十六个视频作品相似作品
-func GetSimilarCreationList(req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
+func GetSimilarCreationList(req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
 	response := &generated.GetCreationListResponse{}
 	id := req.GetId()
 
@@ -67,7 +67,7 @@ func GetSimilarCreationList(req *generated.GetSpecificCreationListRequest) (*gen
 }
 
 // 拿用户id，然后author_id = id 作为筛选条件
-func GetSpaceCreationList(req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
+func GetSpaceCreationList(req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
 	response := &generated.GetCreationListResponse{}
 	id := req.GetId()
 

@@ -19,22 +19,27 @@ service CommentService {
     };
   }
 
-  rpc GetTopComment(comment.methods.GetTopCommentRequest) returns (comment.methods.GetCommentsResponse) {
+  rpc InitalComments(comment.methods.InitalCommentsRequest) returns (comment.methods.InitalCommentsResponse) {
     option (google.api.http) = {
-      //get: "/api/comment/{creation_id}/pagination/{number}"
       get: "/api/comment/{creation_id}"
     };
   }
 
-  rpc GetSecondComment(comment.methods.GetSecondCommentRequest) returns (comment.methods.GetCommentsResponse) {
+  rpc GetTopComments(comment.methods.GetTopCommentsRequest) returns (comment.methods.GetCommentsResponse) {
     option (google.api.http) = {
-      get: "/api/comment/{creation_id}/{root_id}"
+      get: "/api/comment/top/{creation_id}/{page}"
     };
   }
 
-  rpc GetReplyComment(comment.methods.GetReplyCommentRequest) returns (comment.methods.GetCommentsResponse) {
+  rpc GetSecondComments(comment.methods.GetSecondCommentsRequest) returns (comment.methods.GetCommentsResponse) {
     option (google.api.http) = {
-      get: "/api/comment/user/{user_id}/{access_token.value=*}"
+      get: "/api/comment/second/{creation_id}/{root_id}/{page}"
+    };
+  }
+
+  rpc GetReplyComments(comment.methods.GetReplyCommentsRequest) returns (comment.methods.GetCommentsResponse) {
+    option (google.api.http) = {
+      get: "/api/comment/reply/{access_token.value=*}/{page}"
     };
   }
 

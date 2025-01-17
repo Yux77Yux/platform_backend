@@ -36,7 +36,7 @@ func (s *Server) GetCreation(ctx context.Context, req *generated.GetCreationRequ
 	}
 }
 
-func (s *Server) GetSimilarCreationList(ctx context.Context, req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
+func (s *Server) GetSimilarCreationList(ctx context.Context, req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
 	log.Println("info: GetSimilarCreationList service start")
 
 	select {
@@ -63,8 +63,8 @@ func (s *Server) GetSimilarCreationList(ctx context.Context, req *generated.GetS
 	}
 }
 
-func (s *Server) GetCollectionCreationList(ctx context.Context, req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
-	log.Println("info: GetCollectionCreationList service start")
+func (s *Server) GetSpaceCreationList(ctx context.Context, req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
+	log.Println("info: GetSpaceCreationList service start")
 
 	select {
 	case <-ctx.Done():
@@ -79,7 +79,7 @@ func (s *Server) GetCollectionCreationList(ctx context.Context, req *generated.G
 			},
 		}, nil
 	default:
-		response, err := internal.GetCollectionCreationList(req)
+		response, err := internal.GetSpaceCreationList(req)
 		if err != nil {
 			log.Println("error: get creation occur fail: ", err)
 			return response, nil
@@ -90,8 +90,8 @@ func (s *Server) GetCollectionCreationList(ctx context.Context, req *generated.G
 	}
 }
 
-func (s *Server) GetSpaceCreationList(ctx context.Context, req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
-	log.Println("info: GetSpaceCreationList service start")
+func (s *Server) GetCollectionCreationList(ctx context.Context, req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
+	log.Println("info: GetCollectionCreationList service start")
 
 	select {
 	case <-ctx.Done():

@@ -232,7 +232,7 @@ func GetPublisherIdInTransaction(comment_id int32) (int64, error) {
 	return userId, nil
 }
 
-func GetFirstCommentInTransaction(creation_id int64) (*generated.CommentArea, []*generated.Comment, error) {
+func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, []*generated.Comment, error) {
 	const (
 		query = `
 			SELECT 
@@ -374,7 +374,7 @@ func GetFirstCommentInTransaction(creation_id int64) (*generated.CommentArea, []
 	}, comments, nil
 }
 
-func GetTopCommentInTransaction(creation_id int64, pageNumber int32) ([]*generated.Comment, error) {
+func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*generated.Comment, error) {
 	offset := (pageNumber - 1) * 50
 	const (
 		query = `
@@ -481,7 +481,7 @@ func GetTopCommentInTransaction(creation_id int64, pageNumber int32) ([]*generat
 	return comments, nil
 }
 
-func GetSecondCommentInTransaction(creation_id int64, root, pageNumber int32) ([]*generated.Comment, error) {
+func GetSecondCommentsInTransaction(creation_id int64, root, pageNumber int32) ([]*generated.Comment, error) {
 	offset := (pageNumber - 1) * 50
 	const (
 		query = `
@@ -589,6 +589,113 @@ func GetSecondCommentInTransaction(creation_id int64, root, pageNumber int32) ([
 	return comments, nil
 }
 
+func GetReplyCommentsInTransaction(user_id int64, pageNumber int32) ([]*generated.Comment, error) {
+	offset := (pageNumber - 1) * 50
+	const (
+		query = `
+			SELECT 
+    			c.id,
+    			c.root,
+    			c.parent,
+    			c.dialog,
+    			c.user_id,
+    			c.created_at,
+    			cc.content,
+    			cc.media
+			FROM 
+    			db_comments_1.Comments c
+			LEFT JOIN 
+    			db_comments_1.CommentContent cc 
+			ON 
+				c.id = cc.comment_id
+			WHERE 
+    			c.creation_id = ?
+			AND 
+				c.root = 0
+			LIMIT 50 OFFSET ?
+		`
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	tx, err := db.BeginTransaction()
+	if err != nil {
+		return []*generated.Comment{}, err
+	}
+
+	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("transaction failed because %v", r)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+		}
+	}()
+
+	var (
+		comments []*generated.Comment
+	)
+
+	select {
+	case <-ctx.Done():
+		err = fmt.Errorf("exec timeout :%w", ctx.Err())
+		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			err = fmt.Errorf("%w and %w", err, errSecond)
+		}
+
+		return []*generated.Comment{}, err
+	default:
+		// 查评论
+		rows, err := tx.Query(
+			query,
+			creation_id,
+			offset,
+		)
+		if err != nil {
+			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return []*generated.Comment{}, err
+		}
+
+		for rows.Next() {
+			var (
+				id         int32
+				root       int32
+				parent     int32
+				dialog     int32
+				user_id    int64
+				created_at time.Time
+				content    string
+				media      string
+			)
+
+			rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
+			comments = append(comments, &generated.Comment{
+				CommentId:  id,
+				Root:       root,
+				Parent:     parent,
+				Dialog:     dialog,
+				UserId:     user_id,
+				CreationId: creation_id,
+				CreatedAt:  timestamppb.New(created_at),
+				Content:    content,
+				Media:      media,
+			})
+		}
+
+		if err = db.CommitTransaction(tx); err != nil {
+			return []*generated.Comment{}, err
+		}
+	}
+
+	return comments, nil
+}
+
 func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
 	defer cancel()
@@ -604,8 +711,7 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 		queryComment = fmt.Sprintf(`
 				SELECT 
 					id,
-					creation_id,
-					user_id
+					creation_id
 				FROM db_comment_1.comment
 				WHERE (id,user_id) 
 				IN (%s)`, strings.Join(queryCount, ","))
@@ -660,14 +766,12 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 			var (
 				id         int32
 				creationId int64
-				userId     int64
 			)
 
-			rows.Scan(&id, &creationId, &userId)
+			rows.Scan(&id, &creationId)
 			result = append(result, &generated.AfterAuth{
 				CommentId:  id,
 				CreationId: creationId,
-				UserId:     userId,
 			})
 		}
 
