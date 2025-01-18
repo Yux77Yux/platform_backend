@@ -21,8 +21,8 @@ func BatchInsert(comments []*generated.Comment) error {
 	queryCommentCount := make([]string, count) // 使用切片存储占位符
 	queryContentCount := make([]string, count) // 使用切片存储占位符
 	for i := 0; i < count; i++ {
-		queryCommentCount[i] = "(?,?,?,?,?,?)" // 每对 id 和 user_id 用 (?,?,...) 来占位
-		queryContentCount[i] = "(?,?,?)"       // 每对 id 和 user_id 用 (?,?,...) 来占位
+		queryCommentCount[i] = "(?,?,?,?,?)" // 每对 id 和 user_id 用 (?,?,...) 来占位
+		queryContentCount[i] = "(?,?,?)"     // 每对 id 和 user_id 用 (?,?,...) 来占位
 	}
 	var (
 		queryComment = fmt.Sprintf(`
@@ -31,8 +31,7 @@ func BatchInsert(comments []*generated.Comment) error {
 					parent,
 					dialog,
 					creation_id,
-					user_id,
-					created_at)
+					user_id)
 				VALUES%s`, strings.Join(queryCommentCount, ","))
 		queryContent = fmt.Sprintf(`
 				INSERT INTO db_comment_1.comment (
@@ -45,7 +44,7 @@ func BatchInsert(comments []*generated.Comment) error {
 				SET
 					total_comments = total_comments + ?,
 				WHERE creation_id = ?`
-		CommentValues = make([]interface{}, 0, count*6)
+		CommentValues = make([]interface{}, 0, count*5)
 		ContentValues = make([]interface{}, 0, count*3)
 		creationId    = comments[0].GetCreationId()
 	)
@@ -57,8 +56,7 @@ func BatchInsert(comments []*generated.Comment) error {
 			comment.GetParent(),
 			comment.GetDialog(),
 			comment.GetCreationId(),
-			comment.GetUserId(),
-			comment.GetCreatedAt().AsTime())
+			comment.GetUserId())
 	}
 
 	tx, err := db.BeginTransaction()
@@ -589,10 +587,10 @@ func GetSecondCommentsInTransaction(creation_id int64, root, pageNumber int32) (
 	return comments, nil
 }
 
-func GetReplyCommentsInTransaction(user_id int64, pageNumber int32) ([]*generated.Comment, error) {
-	offset := (pageNumber - 1) * 50
-	const (
-		query = `
+func GetReplyCommentsInTransaction(user_id int64, page int32) ([]*generated.Comment, error) {
+	var (
+		offset = (page - 1) * 50
+		query  = `
 			SELECT 
     			c.id,
     			c.root,
@@ -606,14 +604,13 @@ func GetReplyCommentsInTransaction(user_id int64, pageNumber int32) ([]*generate
     			db_comments_1.Comments c
 			LEFT JOIN 
     			db_comments_1.CommentContent cc 
-			ON 
+			ON
 				c.id = cc.comment_id
 			WHERE 
-    			c.creation_id = ?
-			AND 
-				c.root = 0
-			LIMIT 50 OFFSET ?
-		`
+				c.user_id = ?
+			ORDER BY c.created_at DESC
+			LIMIT 50 
+			OFFSET ?`
 	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -650,7 +647,7 @@ func GetReplyCommentsInTransaction(user_id int64, pageNumber int32) ([]*generate
 		// 查评论
 		rows, err := tx.Query(
 			query,
-			creation_id,
+			user_id,
 			offset,
 		)
 		if err != nil {
@@ -664,14 +661,15 @@ func GetReplyCommentsInTransaction(user_id int64, pageNumber int32) ([]*generate
 
 		for rows.Next() {
 			var (
-				id         int32
-				root       int32
-				parent     int32
-				dialog     int32
-				user_id    int64
-				created_at time.Time
-				content    string
-				media      string
+				id          int32
+				root        int32
+				parent      int32
+				dialog      int32
+				user_id     int64
+				creation_id int64
+				created_at  time.Time
+				content     string
+				media       string
 			)
 
 			rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)

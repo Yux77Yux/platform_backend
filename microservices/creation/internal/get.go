@@ -7,7 +7,6 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 
 	// cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
-	// messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 )
 
@@ -34,7 +33,7 @@ func GetCreation(req *generated.GetCreationRequest) (*generated.GetCreationRespo
 	}, nil
 }
 
-func getCreations(ids []int64) ([]*generated.CreationInfo, error) {
+func GetCreations(ids []int64) ([]*generated.CreationInfo, error) {
 	data, err := db.GetCardInTransaction(ids)
 	if err != nil {
 		return nil, fmt.Errorf("error: get creation in db error :%w", err)
@@ -47,8 +46,11 @@ func getCreations(ids []int64) ([]*generated.CreationInfo, error) {
 // 拿到id在redis取热度分值，然后排序，返回前十六个视频作品相似作品
 func GetSimilarCreationList(req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
 	response := &generated.GetCreationListResponse{}
-	id := req.GetId()
+	// id := req.GetId()
 
+	// 此处拿到id然后向redis或Meilisearch查相似列表
+
+	var err error
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -58,7 +60,6 @@ func GetSimilarCreationList(req *generated.GetPublicCreationListRequest) (*gener
 		return response, nil
 	}
 
-	response.CreationInfoGroup = result
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",
@@ -69,7 +70,11 @@ func GetSimilarCreationList(req *generated.GetPublicCreationListRequest) (*gener
 // 拿用户id，然后author_id = id 作为筛选条件
 func GetSpaceCreationList(req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
 	response := &generated.GetCreationListResponse{}
-	id := req.GetId()
+	// id := req.GetId()
+
+	// 此处拿到id然后向redis或Meilisearch查用户的作品
+
+	var err error = nil
 
 	if err != nil {
 		response.Msg = &common.ApiResponse{
@@ -80,7 +85,6 @@ func GetSpaceCreationList(req *generated.GetPublicCreationListRequest) (*generat
 		return response, nil
 	}
 
-	response.CreationInfoGroup = result
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",
@@ -91,8 +95,11 @@ func GetSpaceCreationList(req *generated.GetPublicCreationListRequest) (*generat
 // 收藏夹
 func GetCollectionCreationList(req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
 	response := &generated.GetCreationListResponse{}
-	id := req.GetId()
+	// token := req.GetAccessToken().GetValue()
 
+	// 此处拿到id然后向redis或Meilisearch查用户的作品
+
+	var err error = nil
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -102,7 +109,6 @@ func GetCollectionCreationList(req *generated.GetSpecificCreationListRequest) (*
 		return response, nil
 	}
 
-	response.CreationInfoGroup = result
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",
@@ -115,8 +121,9 @@ func GetCollectionCreationList(req *generated.GetSpecificCreationListRequest) (*
 func GetHomeCreationList(req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
 	response := &generated.GetCreationListResponse{}
 
-	id := req.GetId()
+	// token := req.GetAccessToken().GetValue()
 
+	var err error = nil
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -126,7 +133,6 @@ func GetHomeCreationList(req *generated.GetSpecificCreationListRequest) (*genera
 		return response, nil
 	}
 
-	response.CreationInfoGroup = result
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",

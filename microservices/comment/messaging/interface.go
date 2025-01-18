@@ -17,12 +17,6 @@ type MessageQueueInterface interface {
 	Consume(queue string, consumer string, autoAck bool, exclusive bool, noLocal bool, noWait bool, args amqp.Table) (<-chan amqp.Delivery, error)
 }
 
-type DispatcherInterface interface {
-	Start()
-	GetChannel() chan RequestHandlerFunc
-	Shutdown()
-}
-
 type ChainInterface interface {
 	[]byte
 	FindListenerForUnique([]byte) ListenerInterface

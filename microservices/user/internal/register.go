@@ -63,7 +63,7 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 	reqId := make(chan string, 1)
 	select {
 	// 闭包传递
-	case userRequestChannel <- func(reqID string) error {
+	case requestChannel <- func(reqID string) error {
 		reqId <- reqID
 		log.Printf("info: handling request with ID: %s\n", reqID)
 

@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS Comments (
     dialog INT DEFAULT 0,                         -- 二级评论ID
     user_id BIGINT NOT NULL,                         -- 发言的用户ID
     creation_id BIGINT NOT NULL,                     -- 作品ID
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
+    created_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
     status ENUM('PUBLISHED','DELETE') NOT NULL DEFAULT 'PUBLISHED',  -- 公告状态，默认是草稿
 
     INDEX idx_creation_root(creation_id, root),  -- 评论索引

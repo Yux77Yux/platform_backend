@@ -1,9 +1,9 @@
 package internal
 
-type DispatcherInterface interface {
-	GetChannel() chan func(string) error
-}
+type RequestHandlerFunc = func(string) error
 
-type ProcessorInterface interface {
-	GetChannel() chan func(string)
+type DispatcherInterface interface {
+	Start()
+	GetChannel() chan RequestHandlerFunc
+	Shutdown()
 }

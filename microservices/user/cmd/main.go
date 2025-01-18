@@ -11,7 +11,6 @@ import (
 	userCache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
 	_ "github.com/Yux77Yux/platform_backend/microservices/user/config"
 	internal "github.com/Yux77Yux/platform_backend/microservices/user/internal"
-	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	userDB "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	service "github.com/Yux77Yux/platform_backend/microservices/user/service"
 )
@@ -24,7 +23,7 @@ func main() {
 		closeServer = service.ServerRun(done)
 	}()
 	// 初始化internal dispatcher
-	mqMaster := userMQ.InitDispatch()
+	mqMaster := internal.InitDispatch()
 	mqMaster.Start()
 	internal.EmpowerDispatch(mqMaster)
 	// 初始化cache

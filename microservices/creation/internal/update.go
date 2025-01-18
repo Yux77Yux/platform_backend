@@ -46,7 +46,7 @@ package internal
 // 	reqId := make(chan string, 1)
 // 	select {
 // 	// 闭包传递
-// 	case userRequestChannel <- func(reqID string) error {
+// 	case requestChannel <- func(reqID string) error {
 // 		reqId <- reqID
 // 		log.Printf("info: handling updateUser request with ID: %s\n", reqID)
 

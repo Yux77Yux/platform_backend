@@ -11,7 +11,6 @@ import (
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 	_ "github.com/Yux77Yux/platform_backend/microservices/interaction/config"
 	internal "github.com/Yux77Yux/platform_backend/microservices/interaction/internal"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
 	service "github.com/Yux77Yux/platform_backend/microservices/interaction/service"
 )
@@ -24,7 +23,7 @@ func main() {
 		closeServer = service.ServerRun(done)
 	}()
 	// 初始化internal dispatcher
-	mqMaster := messaging.InitDispatch()
+	mqMaster := internal.InitDispatch()
 	mqMaster.Start()
 	internal.EmpowerDispatch(mqMaster)
 	// 初始化cache

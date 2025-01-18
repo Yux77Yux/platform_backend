@@ -105,9 +105,7 @@ func GetReplyComments(req *generated.GetReplyCommentsRequest) (*generated.GetCom
 		return response, nil
 	}
 
-	page := req.GetPage()
-
-	comments, err := db.GetReplyCommentsInTransaction(user_id, page)
+	comments, err := db.GetReplyCommentsInTransaction(user_id, req.GetPage())
 	if err != nil {
 		return &generated.GetCommentsResponse{
 			Msg: &common.ApiResponse{

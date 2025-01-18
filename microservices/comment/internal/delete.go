@@ -14,8 +14,8 @@ func DeleteComment(req *generated.DeleteCommentRequest) error {
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}
-	if !pass || err != nil {
-		return fmt.Errorf("error no pass")
+	if !pass {
+		return fmt.Errorf("error: no pass")
 	}
 
 	// 第一次过滤，发到消息队列

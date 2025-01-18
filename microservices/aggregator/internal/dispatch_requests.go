@@ -1,4 +1,4 @@
-package messaging
+package internal
 
 import (
 	"log"
@@ -6,8 +6,6 @@ import (
 
 	"github.com/google/uuid"
 )
-
-type RequestHandlerFunc = func(string) error
 
 type RequestDispatcher struct {
 	requestChan chan RequestHandlerFunc
