@@ -61,7 +61,8 @@ func registerProcessor(msg amqp.Delivery) error {
 	log.Println("db cache start")
 	// 使用反序列化后的 credentials
 	// 写入数据库注册表
-	err = db.UserRegisterInTransaction(credentials, id)
+	credentials.UserId = id
+	err = db.UserRegisterInTransaction(credentials)
 	if err != nil {
 		return fmt.Errorf("register in db error occur: %w", err)
 	}

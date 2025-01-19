@@ -7,7 +7,7 @@ import (
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
-// 一级评论
+// 第一次请求
 func InitalComments(req *generated.InitalCommentsRequest) (*generated.InitalCommentsResponse, error) {
 	creationId := req.GetCreationId()
 

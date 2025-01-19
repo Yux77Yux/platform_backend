@@ -18,7 +18,7 @@ FLUSH PRIVILEGES;
 USE db_comment_areas_1;
 
 CREATE TABLE IF NOT EXISTS CommentAreas (
-    creation_id INT PRIMARY KEY,
+    creation_id BIGINT PRIMARY KEY,
     total_comments INT DEFAULT 0,
     areas_status ENUM('ACTIVE','INACTIVE','HIDE') DEFAULT 'ACTIVE'
 );
@@ -48,6 +48,4 @@ CREATE TABLE IF NOT EXISTS CommentContent (
     comment_id INT PRIMARY KEY,                   -- 评论ID，外键关联评论表
     content TEXT,                                    -- 评论内容，TEXT类型
     media TEXT,                                      -- 评论附件媒体文件，URL或文件路径（如果有）
-    
-    CONSTRAINT fk_comment FOREIGN KEY (comment_id) REFERENCES Comments(id)  -- 外键约束
 );

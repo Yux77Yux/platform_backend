@@ -93,22 +93,21 @@ func UserAddInfoInTransaction(user_info *generated.User) error {
 	return nil
 }
 
-func UserRegisterInTransaction(user_credential *generated.UserCredentials, id int64) error {
-	pwd, err := hashPassword(user_credential.GetPassword())
-
+func UserRegisterInTransaction(user_credential *generated.UserCredentials) error {
 	// 进行复杂加密
+	pwd, err := hashPassword(user_credential.GetPassword())
 	if err != nil {
 		return fmt.Errorf("decrypt hash password failed because %w", err)
 	}
 
-	query := `insert into db_user_credentials_1.UserCredentials(
-	username,
-	password,
-	email,
-	user_id,
-	role)values
-	(?,?,?,?,?) 
-	`
+	query := `INSERT INTO db_user_credentials_1.UserCredentials(
+			user_id,
+			username,
+			password,
+			email,
+			role)
+		VALUES
+			(?,?,?,?,?)`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
@@ -142,7 +141,12 @@ func UserRegisterInTransaction(user_credential *generated.UserCredentials, id in
 			email = &user_credential.UserEmail
 		}
 
-		_, err = tx.Exec(query, user_credential.GetUsername(), pwd, email, id, user_credential.GetUserRole().String())
+		_, err = tx.Exec(query,
+			user_credential.GetUserId(),
+			user_credential.GetUsername(),
+			pwd,
+			email,
+			user_credential.GetUserRole().String())
 
 		if err != nil {
 			err = fmt.Errorf("transaction exec failed because %v", err)

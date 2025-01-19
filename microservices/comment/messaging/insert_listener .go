@@ -84,6 +84,13 @@ func (listener *InsertListener) executeBatch() {
 			log.Printf("error: comment proto.Unmarshal error %v", err)
 		}
 
+		parent := comment.GetParent()
+		if parent == 0 {
+			// 是层主则通知作者消息
+		} else {
+			// 按parent，统一数量，通知对象
+		}
+
 		comments = append(comments, comment)
 	}
 

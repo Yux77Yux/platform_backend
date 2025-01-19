@@ -15,7 +15,7 @@ USE db_announcement_1;
 
 CREATE TABLE IF NOT EXISTS Announcement (
     id INT AUTO_INCREMENT PRIMARY KEY,   -- 使用 AUTO_INCREMENT 来自动生成 id
-    title VARCHAR(255) NOT NULL,          -- 公告标题
+    title VARCHAR(100) NOT NULL,          -- 公告标题
     content TEXT NOT NULL,                -- 使用 TEXT 类型来存储公告内容
     publisher_id BIGINT NOT NULL,         -- 发布者 ID
     status ENUM('DRAFT', 'PUBLISHED','DELETE') NOT NULL DEFAULT 'DRAFT',  -- 公告状态，默认是草稿
