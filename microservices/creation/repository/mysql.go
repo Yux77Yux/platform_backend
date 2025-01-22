@@ -32,8 +32,7 @@ func CreationAddInTransaction(creation *generated.Creation) error {
 	// )
 	// values(?)`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -151,8 +150,7 @@ func GetDetailInTransaction(creationId int64) (*generated.CreationInfo, error) {
 	WHERE creation_id = ?
 	`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -309,8 +307,7 @@ func GetAuthorIdInTransaction(creationId int64) (int64, error) {
 		WHERE id = ?
 	`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -398,8 +395,7 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 		`
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -643,8 +639,7 @@ func DeleteCreationInTransaction(id int64) error {
 		WHERE id = ?
 	`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {

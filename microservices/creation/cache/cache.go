@@ -4,15 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"time"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 )
 
 func CreationAddInCache(creationInfo *generated.CreationInfo) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
+	ctx := context.Background()
 
 	creation := creationInfo.GetCreation()
 
@@ -62,8 +60,7 @@ func CreationAddInCache(creationInfo *generated.CreationInfo) error {
 }
 
 func GetCreationInfo(creation_id int64, fields []string) (map[string]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
+	ctx := context.Background()
 
 	resultCh := make(chan struct {
 		creationInfo map[string]string
@@ -120,8 +117,7 @@ func GetCreationInfo(creation_id int64, fields []string) (map[string]string, err
 
 func DeleteCreation(creation_id int64) error {
 	idStr := strconv.FormatInt(creation_id, 10)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
+	ctx := context.Background()
 
 	resultCh := make(chan struct {
 		err error

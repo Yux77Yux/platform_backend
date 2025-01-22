@@ -4,17 +4,14 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"time"
 
 	"google.golang.org/protobuf/proto"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 )
 
-// 插入评论
 func ExistTemporaryComments(creationId int64) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	ctx := context.Background()
 
 	idStr := strconv.FormatInt(creationId, 10)
 
@@ -26,9 +23,9 @@ func ExistTemporaryComments(creationId int64) (bool, error) {
 	return result, nil
 }
 
+// 插入评论
 func PushTemporaryComment(comment *generated.Comment) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	ctx := context.Background()
 
 	creationIdStr := strconv.FormatInt(comment.GetCreationId(), 10)
 
@@ -63,8 +60,7 @@ func PushTemporaryComment(comment *generated.Comment) error {
 }
 
 func GetTemporaryComments(creationId int64) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
-	defer cancel()
+	ctx := context.Background()
 
 	idStr := strconv.FormatInt(creationId, 10)
 
@@ -76,16 +72,14 @@ func GetTemporaryComments(creationId int64) ([]string, error) {
 }
 
 func RefreshTemporaryComments(creationId int64, count int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	ctx := context.Background()
 
 	idStr := strconv.FormatInt(creationId, 10)
 	return CacheClient.LTrimList(ctx, "TemporaryComments", idStr, 0, count-1)
 }
 
 func PushChangingTemporaryComments(creationId int64, comments []string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
-	defer cancel()
+	ctx := context.Background()
 
 	count := len(comments)
 	values := make([]interface{}, 0, count)
@@ -115,8 +109,7 @@ func PushChangingTemporaryComments(creationId int64, comments []string) error {
 }
 
 func RefreshChangingTemporaryComments(creationId int64, count int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	ctx := context.Background()
 
 	idStr := strconv.FormatInt(creationId, 10)
 	return CacheClient.LTrimList(ctx, "ChangingTemporaryComments", idStr, 0, count-1)
@@ -124,8 +117,7 @@ func RefreshChangingTemporaryComments(creationId int64, count int64) error {
 
 // 将评论改成待删除状态
 func PushDeleteStatusComment(comment *generated.AfterAuth) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	ctx := context.Background()
 
 	data, err := proto.Marshal(comment)
 	if err != nil {
@@ -157,8 +149,7 @@ func PushDeleteStatusComment(comment *generated.AfterAuth) error {
 }
 
 func GetDeleteStatusComments(creationId int64) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
-	defer cancel()
+	ctx := context.Background()
 
 	idStr := strconv.FormatInt(creationId, 10)
 
@@ -170,8 +161,7 @@ func GetDeleteStatusComments(creationId int64) ([]string, error) {
 }
 
 func RefreshDeleteStatusComments(creationId int64, count int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	ctx := context.Background()
 
 	idStr := strconv.FormatInt(creationId, 10)
 	return CacheClient.LTrimList(ctx, "DeleteStatusComments", idStr, 0, count-1)
@@ -180,8 +170,7 @@ func RefreshDeleteStatusComments(creationId int64, count int64) error {
 // 永久删除评论
 // 将永久删除评论待入
 func PushPreDeleteComments(comments []string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
-	defer cancel()
+	ctx := context.Background()
 
 	count := len(comments)
 	values := make([]interface{}, 0, count)
@@ -210,8 +199,7 @@ func PushPreDeleteComments(comments []string) error {
 
 // 取永久删除评论
 func GetPreDeleteComments() ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
-	defer cancel()
+	ctx := context.Background()
 
 	result, err := CacheClient.LRangeList(ctx, "PreDeleteComments", "Clear", 0, 49)
 	if err != nil {
@@ -221,26 +209,19 @@ func GetPreDeleteComments() ([]string, error) {
 }
 
 func ClearDeleteComments(count int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	ctx := context.Background()
 
 	return CacheClient.LTrimList(ctx, "PreDeleteComments", "Clear", 0, count-1)
 }
 
 // 查询评论
-func PushSelectComment(comment *generated.AfterAuth) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-
-	data, err := proto.Marshal(comment)
-	if err != nil {
-		return fmt.Errorf("proto Marshal error%w", err)
-	}
+func PushSelectComment(comment []byte) error {
+	ctx := context.Background()
 
 	resultCh := make(chan error, 1)
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		// List尾部 推入
-		err := CacheClient.RPushList(ctx, "SelectComments", "", data)
+		err := CacheClient.RPushList(ctx, "SelectComments", "", comment)
 		if err != nil {
 			err = fmt.Errorf("error RPushList error %w", err)
 		}
@@ -260,8 +241,7 @@ func PushSelectComment(comment *generated.AfterAuth) error {
 }
 
 func GetSelectComments() ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
-	defer cancel()
+	ctx := context.Background()
 
 	result, err := CacheClient.LRangeList(ctx, "SelectComments", "", 0, 99)
 	if err != nil {
@@ -271,15 +251,13 @@ func GetSelectComments() ([]string, error) {
 }
 
 func RefreshSelectComments(count int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	ctx := context.Background()
 
 	return CacheClient.LTrimList(ctx, "SelectComments", "", 0, count-1)
 }
 
 func PushChangingSelectComments(comments []string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
-	defer cancel()
+	ctx := context.Background()
 
 	count := len(comments)
 	values := make([]interface{}, 0, count)
@@ -307,8 +285,7 @@ func PushChangingSelectComments(comments []string) error {
 }
 
 func RefreshChangingSelectComments(count int64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	ctx := context.Background()
 
 	return CacheClient.LTrimList(ctx, "SelectComments", "", 0, count-1)
 }

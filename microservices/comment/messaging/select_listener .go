@@ -55,22 +55,16 @@ func (listener *SelectListener) Dispatch(data []byte) {
 	}
 	// 处理评论的逻辑
 	listener.commentChannel <- comment
+	// 长度加1
+	listener.count = listener.count + 1
 }
 
 // 抽取处理逻辑
 func (listener *SelectListener) handle(data []byte) {
-	comment := new(generated.AfterAuth)
-	err := proto.Unmarshal(data, comment)
-	if err != nil {
-		log.Printf("error: handle Unmarshal :%v", err)
-	}
-
-	err = cache.PushSelectComment(comment)
+	err := cache.PushSelectComment(data)
 	if err != nil {
 		log.Printf("handleComment error %v", err)
 	}
-	// 长度加1
-	listener.count = listener.count + 1
 }
 
 // 执行批量查询

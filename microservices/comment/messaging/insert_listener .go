@@ -2,20 +2,25 @@ package messaging
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	cache "github.com/Yux77Yux/platform_backend/microservices/comment/cache"
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
 )
 
+var insertChannel = make(chan []*generated.Comment, 3)
+
 // 监听者结构体
 type InsertListener struct {
 	creationID          int64
 	commentChannel      chan *generated.Comment // 用于接收评论的通道
 	count               int
+	mutex               sync.Mutex
 	timeoutDuration     time.Duration   // 超时持续时间（触发销毁）
 	timeoutTimer        *time.Timer     // 用于刷新存活时间
 	updateInterval      time.Duration   // 批量插入的间隔时间
@@ -30,33 +35,25 @@ func (listener *InsertListener) StartListening() {
 	listener.startTimeoutTimer()
 }
 
-func (listener *InsertListener) Next() ListenerInterface {
-	return listener.next
-}
-
 // 分发评论至通道
-func (listener *InsertListener) Dispatch(data []byte) {
-	comment := new(generated.Comment)
-	err := proto.Unmarshal(data, comment)
-	if err != nil {
-		log.Printf("error: DispatchComment Unmarshal :%v", err)
-	}
+func (listener *InsertListener) Dispatch(data protoreflect.ProtoMessage) {
+	comment := data.(*generated.Comment)
 	// 处理评论的逻辑
 	listener.commentChannel <- comment
+
+	// 获取锁
+	listener.mutex.Lock()
+	listener.count++
+	if listener.count == 50 {
+		go listener.executeBatch()
+	}
+	listener.mutex.Unlock()
 }
 
 // 抽取处理逻辑
-func (listener *InsertListener) handle(data []byte) {
-	comment := new(generated.Comment)
-	err := proto.Unmarshal(data, comment)
-	if err != nil {
-		log.Printf("error: handle Unmarshal :%v", err)
-	}
+func (listener *InsertListener) handle(data protoreflect.ProtoMessage) {
+	comment := data.(*generated.Comment)
 
-	err = cache.PushTemporaryComment(comment)
-	if err != nil {
-		log.Printf("handleComment error %v", err)
-	}
 	// 长度加1
 	listener.count = listener.count + 1
 }
@@ -79,7 +76,7 @@ func (listener *InsertListener) executeBatch() {
 
 	for _, commentStr := range values {
 		comment := &generated.Comment{}
-		err = proto.Unmarshal([]byte(commentStr), comment)
+		err = proto.Unmarshal(protoreflect.ProtoMessage(commentStr), comment)
 		if err != nil {
 			log.Printf("error: comment proto.Unmarshal error %v", err)
 		}

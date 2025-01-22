@@ -29,3 +29,11 @@ message CommentArea {
   int32 total_comments = 2;
   Status area_status = 3;
 }
+
+message AnyComment{
+  repeated Comment any_comment = 1;
+}
+
+message AnyCommentArea{
+  repeated CommentArea any_comment_area = 1;
+}

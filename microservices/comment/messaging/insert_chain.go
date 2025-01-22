@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 )
@@ -23,16 +24,12 @@ type InsertChain struct {
 }
 
 // 查找责任链中的合适监听者
-func (chain *InsertChain) FindListenerForUnique(data []byte) ListenerInterface {
-	comment := new(generated.Comment)
-	err := proto.Unmarshal(data, comment)
-	if err != nil {
-		log.Printf("error: FindListenerForUnique Unmarshal :%v", err)
-	}
+func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
+	comment := data.(*generated.Comment)
 
 	creationID := comment.GetCreationId()
 
-	current := chain.Head.Next().(*InsertListener)
+	current := chain.Head.next
 	for current != nil {
 		if current.creationID == creationID {
 			return current
@@ -57,16 +54,11 @@ func (chain *InsertChain) DestroyListener(listener ListenerInterface) {
 	}
 
 	listener.cleanup()
-	chain.Count = chain.Count - 1
 }
 
 // 创建一个新的监听者
-func (chain *InsertChain) CreateListenerForUnique(data []byte) ListenerInterface {
-	comment := new(generated.Comment)
-	err := proto.Unmarshal(data, comment)
-	if err != nil {
-		log.Printf("error: CreateListenerForUnique Unmarshal :%v", err)
-	}
+func (chain *InsertChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
+	comment := data.(*generated.Comment)
 
 	newListener := &InsertListener{
 		creationID:      comment.GetCreationId(),
@@ -85,11 +77,11 @@ func (chain *InsertChain) CreateListenerForUnique(data []byte) ListenerInterface
 }
 
 // 处理评论请求的函数
-func (chain *InsertChain) HandleRequest(data []byte) {
-	listener := chain.FindListenerForUnique(data)
+func (chain *InsertChain) HandleRequest(data protoreflect.ProtoMessage) {
+	listener := chain.FindListener(data)
 	if listener == nil {
 		// 如果没有找到合适的监听者，创建一个新的监听者
-		listener = chain.CreateListenerForUnique(data)
+		listener = chain.CreateListener(data)
 	}
 	listener.Dispatch(data)
 }

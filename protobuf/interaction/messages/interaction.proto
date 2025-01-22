@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package interaction.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/interaction";
+
+import "interaction/messages/base_interaction.proto";
+
+import "google/protobuf/timestamp.proto";
+
+message Interaction {
+  interaction.messages.BaseInteraction base = 1;
+  int32 action_tag = 2;
+  google.protobuf.Timestamp updated_at = 3;
+  google.protobuf.Timestamp save_at = 4;
+}
+
+message AnyInteraction {
+  repeated Interaction any_interction = 1;
+}

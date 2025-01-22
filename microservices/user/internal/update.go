@@ -10,7 +10,7 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	userCache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
+	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	oss "github.com/Yux77Yux/platform_backend/microservices/user/oss"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
@@ -135,7 +135,7 @@ func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.Update
 		db.UserUpdateAvatarInTransaction(updateAvatar)
 	}()
 	go func() {
-		userCache.UpdateUserAvatar(updateAvatar)
+		cache.UpdateUserAvatar(updateAvatar)
 	}()
 
 	return &generated.UpdateUserResponse{
@@ -177,7 +177,7 @@ func UpdateUserStatus(req *generated.UpdateUserStatusRequest) (*generated.Update
 		db.UserUpdateStatusInTransaction(updateStatus)
 	}()
 	go func() {
-		userCache.UpdateUserStatus(updateStatus)
+		cache.UpdateUserStatus(updateStatus)
 	}()
 
 	return &generated.UpdateUserResponse{

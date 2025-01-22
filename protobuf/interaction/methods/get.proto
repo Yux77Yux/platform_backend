@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package comment.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/comment";
+
+import "interaction/messages/interaction.proto";
+
+import "common/access_token.proto";
+import "common/api_response.proto";
+
+// 作品的一级评论
+message InitalCommentsRequest {
+  int64 creation_id = 1;
+}
+
+message InitalCommentsResponse {
+  repeated comment.messages.Comment comments = 1;
+  comment.messages.CommentArea comment_area = 2;
+  common.ApiResponse msg = 3;
+}

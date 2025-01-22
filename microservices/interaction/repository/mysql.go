@@ -32,8 +32,7 @@ func interactionAddInTransaction(interaction *generated.interaction) error {
 	// )
 	// values(?)`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -151,8 +150,7 @@ func GetDetailInTransaction(interactionId int64) (*generated.interactionInfo, er
 	WHERE interaction_id = ?
 	`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -335,8 +333,7 @@ func GetCardInTransaction(ids []int64) ([]*generated.interactionInfo, error) {
 		`
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {

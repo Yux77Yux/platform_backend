@@ -18,6 +18,7 @@ import (
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
+// 补缓存
 func storeUserProcessor(msg amqp.Delivery) error {
 	user_info := new(generated.User)
 	// 反序列化
@@ -36,6 +37,18 @@ func storeUserProcessor(msg amqp.Delivery) error {
 	return nil
 }
 
+// 补缓存
+func storeCredentialsProcessor(msg amqp.Delivery) error {
+	credentials := new(generated.UserCredentials)
+
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, credentials)
+	if err != nil {
+		log.Printf("Error unmarshaling message: %v", err)
+		return fmt.Errorf("register processor error: %w", err)
+	}
+}
+
 func registerProcessor(msg amqp.Delivery) error {
 	credentials := new(generated.UserCredentials)
 
@@ -50,6 +63,7 @@ func registerProcessor(msg amqp.Delivery) error {
 	node, err := snowflake.NewNode(1) // 传入机器ID，这里假设为1
 	if err != nil {
 		log.Printf("Failed to create snowflake node: %v", err)
+		return fmt.Errorf("failed to create snowflake node: %w", err)
 	}
 
 	id := node.Generate().Int64()
@@ -58,51 +72,26 @@ func registerProcessor(msg amqp.Delivery) error {
 		id = node.Generate().Int64()
 	}
 
-	log.Println("db cache start")
-	// 使用反序列化后的 credentials
-	// 写入数据库注册表
 	credentials.UserId = id
-	err = db.UserRegisterInTransaction(credentials)
-	if err != nil {
-		return fmt.Errorf("register in db error occur: %w", err)
-	}
+	func(credentials *generated.UserCredentials) {
+		dispatcher.Dispatch(credentials, "credentials")
+	}(credentials)
 
-	user_info := &generated.User{
-		UserDefault: &common.UserDefault{
-			UserId:   id,
-			UserName: "",
-		},
-		UserAvatar:    "",
-		UserBio:       "",
-		UserStatus:    generated.UserStatus_INACTIVE,
-		UserGender:    generated.UserGender_UNDEFINED,
-		UserRole:      credentials.GetUserRole(),
-		UserBday:      nil,
-		UserUpdatedAt: timestamppb.Now(),
-		UserCreatedAt: timestamppb.Now(),
-	}
+	func() {
+		user_info := &generated.User{
+			UserDefault: &common.UserDefault{
+				UserId: id,
+			},
+			UserStatus:    generated.UserStatus_INACTIVE,
+			UserGender:    generated.UserGender_UNDEFINED,
+			UserRole:      credentials.GetUserRole(),
+			UserUpdatedAt: timestamppb.Now(),
+			UserCreatedAt: timestamppb.Now(),
+		}
 
-	// 写入数据库用户表
-	err = db.UserAddInfoInTransaction(user_info)
-	if err != nil {
-		log.Printf("db methods UserAddInfoInTransaction occur error: %v", err)
-	}
+		dispatcher.Dispatch(user_info, "user_info")
+	}()
 
-	// 写入缓存
-	err = cache.StoreUserInfo(user_info)
-	if err != nil {
-		log.Printf("cache methods StoreUserInfo occur error: %v", err)
-	}
-
-	if err := cache.StoreUsername(credentials.GetUsername()); err != nil {
-		log.Printf("redis methods StoreUsername occur error: %v", err)
-	}
-
-	if err := cache.StoreEmail(credentials.GetUserEmail()); err != nil {
-		log.Printf("redis methods StoreUsername occur error: %v", err)
-	}
-
-	log.Println("RegisterProcessor success")
 	return nil
 }
 

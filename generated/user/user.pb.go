@@ -131,6 +131,51 @@ func (x *User) GetUserUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type AnyUser struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	AnyUser []*User `protobuf:"bytes,1,rep,name=any_user,json=anyUser,proto3" json:"any_user,omitempty"`
+}
+
+func (x *AnyUser) Reset() {
+	*x = AnyUser{}
+	mi := &file_user_messages_user_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnyUser) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnyUser) ProtoMessage() {}
+
+func (x *AnyUser) ProtoReflect() protoreflect.Message {
+	mi := &file_user_messages_user_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnyUser.ProtoReflect.Descriptor instead.
+func (*AnyUser) Descriptor() ([]byte, []int) {
+	return file_user_messages_user_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AnyUser) GetAnyUser() []*User {
+	if x != nil {
+		return x.AnyUser
+	}
+	return nil
+}
+
 var File_user_messages_user_proto protoreflect.FileDescriptor
 
 var file_user_messages_user_proto_rawDesc = []byte{
@@ -179,11 +224,14 @@ var file_user_messages_user_proto_rawDesc = []byte{
 	0x65, 0x64, 0x5f, 0x61, 0x74, 0x18, 0x09, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f,
 	0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69,
 	0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x0d, 0x75, 0x73, 0x65, 0x72, 0x55, 0x70, 0x64,
-	0x61, 0x74, 0x65, 0x64, 0x41, 0x74, 0x42, 0x35, 0x5a, 0x33, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
-	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x59, 0x75, 0x78, 0x37, 0x37, 0x59, 0x75, 0x78, 0x2f, 0x70, 0x6c,
-	0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x5f, 0x62, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x2f, 0x67,
-	0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x64, 0x2f, 0x75, 0x73, 0x65, 0x72, 0x62, 0x06, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x61, 0x74, 0x65, 0x64, 0x41, 0x74, 0x22, 0x39, 0x0a, 0x07, 0x41, 0x6e, 0x79, 0x55, 0x73, 0x65,
+	0x72, 0x12, 0x2e, 0x0a, 0x08, 0x61, 0x6e, 0x79, 0x5f, 0x75, 0x73, 0x65, 0x72, 0x18, 0x01, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x75, 0x73, 0x65, 0x72, 0x2e, 0x6d, 0x65, 0x73, 0x73, 0x61,
+	0x67, 0x65, 0x73, 0x2e, 0x55, 0x73, 0x65, 0x72, 0x52, 0x07, 0x61, 0x6e, 0x79, 0x55, 0x73, 0x65,
+	0x72, 0x42, 0x35, 0x5a, 0x33, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
+	0x59, 0x75, 0x78, 0x37, 0x37, 0x59, 0x75, 0x78, 0x2f, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72,
+	0x6d, 0x5f, 0x62, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x2f, 0x67, 0x65, 0x6e, 0x65, 0x72, 0x61,
+	0x74, 0x65, 0x64, 0x2f, 0x75, 0x73, 0x65, 0x72, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -198,28 +246,30 @@ func file_user_messages_user_proto_rawDescGZIP() []byte {
 	return file_user_messages_user_proto_rawDescData
 }
 
-var file_user_messages_user_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_user_messages_user_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_user_messages_user_proto_goTypes = []any{
 	(*User)(nil),                  // 0: user.messages.User
-	(*common.UserDefault)(nil),    // 1: common.UserDefault
-	(UserStatus)(0),               // 2: user.messages.UserStatus
-	(UserGender)(0),               // 3: user.messages.UserGender
-	(UserRole)(0),                 // 4: user.messages.UserRole
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*AnyUser)(nil),               // 1: user.messages.AnyUser
+	(*common.UserDefault)(nil),    // 2: common.UserDefault
+	(UserStatus)(0),               // 3: user.messages.UserStatus
+	(UserGender)(0),               // 4: user.messages.UserGender
+	(UserRole)(0),                 // 5: user.messages.UserRole
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
 var file_user_messages_user_proto_depIdxs = []int32{
-	1, // 0: user.messages.User.user_default:type_name -> common.UserDefault
-	2, // 1: user.messages.User.user_status:type_name -> user.messages.UserStatus
-	3, // 2: user.messages.User.user_gender:type_name -> user.messages.UserGender
-	4, // 3: user.messages.User.user_role:type_name -> user.messages.UserRole
-	5, // 4: user.messages.User.user_bday:type_name -> google.protobuf.Timestamp
-	5, // 5: user.messages.User.user_created_at:type_name -> google.protobuf.Timestamp
-	5, // 6: user.messages.User.user_updated_at:type_name -> google.protobuf.Timestamp
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	2, // 0: user.messages.User.user_default:type_name -> common.UserDefault
+	3, // 1: user.messages.User.user_status:type_name -> user.messages.UserStatus
+	4, // 2: user.messages.User.user_gender:type_name -> user.messages.UserGender
+	5, // 3: user.messages.User.user_role:type_name -> user.messages.UserRole
+	6, // 4: user.messages.User.user_bday:type_name -> google.protobuf.Timestamp
+	6, // 5: user.messages.User.user_created_at:type_name -> google.protobuf.Timestamp
+	6, // 6: user.messages.User.user_updated_at:type_name -> google.protobuf.Timestamp
+	0, // 7: user.messages.AnyUser.any_user:type_name -> user.messages.User
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_user_messages_user_proto_init() }
@@ -236,7 +286,7 @@ func file_user_messages_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_user_messages_user_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

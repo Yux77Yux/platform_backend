@@ -2,6 +2,8 @@ package cache
 
 import (
 	"context"
+
+	"github.com/go-redis/redis/v8"
 )
 
 type CacheInterface interface {
@@ -22,4 +24,6 @@ type CacheInterface interface {
 	GetValuesHash(ctx context.Context, kind string, unique string) ([]string, error)
 	ExistsHashField(ctx context.Context, kind string, unique string, field string) (bool, error)
 	DelHash(ctx context.Context, kind string, unique string, fields ...string) (int64, error)
+
+	Pipeline() redis.Pipeliner
 }

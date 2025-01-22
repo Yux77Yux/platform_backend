@@ -53,7 +53,7 @@ func SendMessage(exchange string, routeKey string, req proto.Message) error {
 	return fmt.Errorf("failed to publish request: %w", err)
 }
 
-func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Delivery) error) {
+func ListenToQueue(exchange, queueName, routeKey string, handler func(amqp.Delivery) error) {
 	log.Printf("info: start consume message on exchange %s queue %s with routeKey %s", exchange, queueName, routeKey)
 	var (
 		queue *amqp.Queue

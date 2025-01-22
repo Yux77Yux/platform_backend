@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/internal"
+	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

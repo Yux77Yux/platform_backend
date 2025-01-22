@@ -8,11 +8,11 @@ import (
 	"time"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
+	"google.golang.org/protobuf/proto"
 )
 
 func ExistsUsername(username string) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	ctx := context.Background()
 
 	resultCh := make(chan struct {
 		exist bool
@@ -21,7 +21,7 @@ func ExistsUsername(username string) (bool, error) {
 
 	// 将闭包发至通道
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		exist, err := CacheClient.ExistsInSet(ctx, "User", "Username", username)
+		exist, err := CacheClient.ExistsHashField(ctx, "User", "Credentials", username)
 
 		select {
 		case resultCh <- struct {
@@ -51,8 +51,7 @@ func ExistsUsername(username string) (bool, error) {
 }
 
 func ExistsEmail(email string) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
+	ctx := context.Background()
 
 	resultCh := make(chan struct {
 		exist bool
@@ -60,7 +59,7 @@ func ExistsEmail(email string) (bool, error) {
 	}, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		exist, err := CacheClient.ExistsInSet(ctx, "User", "Email", email)
+		exist, err := CacheClient.ExistsHashField(ctx, "User", "Credentials", email)
 
 		select {
 		case resultCh <- struct {
@@ -85,80 +84,59 @@ func ExistsEmail(email string) (bool, error) {
 	}
 }
 
-func StoreUsername(username string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
-
-	resultCh := make(chan error, 1)
+func ExistsUserInfo(user_id int64) (bool, error) {
+	ctx := context.Background()
+	resultCh := make(chan struct {
+		exist bool
+		err   error
+	}, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		err := CacheClient.AddToSet(ctx, "User", "Username", username)
-		resultCh <- err
+		exist, err := CacheClient.ExistsHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
+
+		select {
+		case resultCh <- struct {
+			exist bool
+			err   error
+		}{exist, err}:
+			log.Printf("info: completely execute for cache method: ExistsUserInfo")
+		case <-ctx.Done():
+			log.Printf("warning: context canceled for cache method: ExistsUserInfo")
+		}
 	}
 
 	// 使用 select 来监听超时和结果
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("timeout: %w", ctx.Err())
+		return false, fmt.Errorf("timeout: %w", ctx.Err())
 	case result := <-resultCh:
-		if result != nil {
-			return result
+		if result.err != nil {
+			return false, result.err
 		}
-		return nil
+		return result.exist, nil
 	}
 }
 
-func StoreEmail(email string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
+// POST
 
+// 触发的可能有，过期，登录返回，设置邮箱字段
+func StoreEmail(credentials []*generated.UserCredentials) error {
+	ctx := context.Background()
+
+	count := len(credentials)
+	fieldValues := make([]interface{}, 0, count*2)
+
+	for _, credential := range credentials {
+		username := credential.GetUsername()
+		email := credential.GetUserEmail()
+
+		fieldValues = append(fieldValues, email, username)
+	}
 	resultCh := make(chan error, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		err := CacheClient.AddToSet(ctx, "User", "Email", email)
-		resultCh <- err
-	}
-
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result != nil {
-			return result
-		}
-		return nil
-	}
-}
-
-func StoreUserInfo(user *generated.User) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
-
-	resultCh := make(chan error, 1)
-
-	id := strconv.FormatInt(user.GetUserDefault().GetUserId(), 10)
-
-	var userBday interface{}
-	// 判断是否为空
-	if user.GetUserBday() != nil {
-		// 将 Timestamp 转换为 time.Time 类型
-		userBday = user.GetUserBday().AsTime()
-	} else {
-		userBday = "none"
-	}
-
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
-			"user_name", user.GetUserDefault().GetUserName(),
-			"user_avatar", user.GetUserAvatar(),
-			"user_bio", user.GetUserBio(),
-			"user_status", user.GetUserStatus().String(),
-			"user_gender", user.GetUserGender().String(),
-			"user_bday", userBday,
-			"user_created_at", user.GetUserCreatedAt().AsTime(),
-			"user_updated_at", user.GetUserUpdatedAt().AsTime(),
-			"user_role", user.GetUserRole().String(),
+		err := CacheClient.SetFieldsHash(ctx, "User", "Credentials",
+			fieldValues...,
 		)
 		resultCh <- err
 	}
@@ -175,9 +153,107 @@ func StoreUserInfo(user *generated.User) error {
 	}
 }
 
+func StoreCredentials(credentials []*generated.UserCredentials) error {
+	ctx := context.Background()
+
+	count := len(credentials)
+	fieldValues := make([]interface{}, 0, count*4)
+
+	for _, credential := range credentials {
+		username := credential.GetUsername()
+		email := credential.GetUserEmail()
+		newCredential := &generated.UserCredentials{
+			Password:  credential.GetPassword(),
+			UserId:    credential.GetUserId(),
+			UserEmail: email,
+			UserRole:  credential.GetUserRole(),
+		}
+		field, err := proto.Marshal(newCredential)
+		if err != nil {
+			return fmt.Errorf("failed to marshal credentials: %w", err)
+		}
+
+		if email != "" {
+			fieldValues = append(fieldValues, email, username)
+		}
+		fieldValues = append(fieldValues, field, newCredential)
+	}
+	resultCh := make(chan error, 1)
+
+	cacheRequestChannel <- func(CacheClient CacheInterface) {
+		err := CacheClient.SetFieldsHash(ctx, "User", "Credentials",
+			fieldValues...,
+		)
+		resultCh <- err
+	}
+
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result != nil {
+			return result
+		}
+		return nil
+	}
+}
+
+func StoreUserInfo(users []*generated.User) error {
+	ctx := context.Background()
+
+	count := len(users)
+
+	resultCh := make(chan error, 1)
+
+	func(count int) {
+		cacheRequestChannel <- func(CacheClient CacheInterface) {
+			pipe := CacheClient.Pipeline()
+			for _, user := range users {
+
+				var userBday interface{}
+				// 判断是否为空
+				if user.GetUserBday() != nil {
+					// 将 Timestamp 转换为 time.Time 类型
+					userBday = user.GetUserBday().AsTime()
+				} else {
+					userBday = "none"
+				}
+
+				pipe.HSet(ctx, fmt.Sprintf("Hash_UserInfo_%d", user.GetUserDefault().GetUserId()),
+					"user_name", user.GetUserDefault().GetUserName(),
+					"user_avatar", user.GetUserAvatar(),
+					"user_bio", user.GetUserBio(),
+					"user_status", user.GetUserStatus().String(),
+					"user_gender", user.GetUserGender().String(),
+					"user_bday", userBday,
+					"user_created_at", user.GetUserCreatedAt().AsTime(),
+					"user_updated_at", user.GetUserUpdatedAt().AsTime(),
+					"user_role", user.GetUserRole().String(),
+				)
+			}
+			_, err := pipe.Exec(ctx)
+			if err != nil {
+				resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
+			}
+		}
+	}(count)
+
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result != nil {
+			return result
+		}
+		return nil
+	}
+}
+
+// UPDATE
 func UpdateUser(user *generated.UserUpdateSpace) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
+	ctx := context.Background()
 
 	resultCh := make(chan error, 1)
 
@@ -218,8 +294,7 @@ func UpdateUser(user *generated.UserUpdateSpace) error {
 }
 
 func UpdateUserAvatar(user *generated.UserUpdateAvatar) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
+	ctx := context.Background()
 
 	resultCh := make(chan error, 1)
 
@@ -246,8 +321,7 @@ func UpdateUserAvatar(user *generated.UserUpdateAvatar) error {
 }
 
 func UpdateUserStatus(user *generated.UserUpdateStatus) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
+	ctx := context.Background()
 
 	resultCh := make(chan error, 1)
 
@@ -273,43 +347,9 @@ func UpdateUserStatus(user *generated.UserUpdateStatus) error {
 	}
 }
 
-func ExistsUserInfo(user_id int64) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	resultCh := make(chan struct {
-		exist bool
-		err   error
-	}, 1)
-
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		exist, err := CacheClient.ExistsHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
-
-		select {
-		case resultCh <- struct {
-			exist bool
-			err   error
-		}{exist, err}:
-			log.Printf("info: completely execute for cache method: ExistsUserInfo")
-		case <-ctx.Done():
-			log.Printf("warning: context canceled for cache method: ExistsUserInfo")
-		}
-	}
-
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return false, fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result.err != nil {
-			return false, result.err
-		}
-		return result.exist, nil
-	}
-}
-
+// GET
 func GetUserInfo(user_id int64, fields []string) (map[string]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
+	ctx := context.Background()
 
 	resultCh := make(chan struct {
 		user map[string]string

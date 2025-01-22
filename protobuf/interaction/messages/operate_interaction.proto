@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package interaction.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/interaction";
+
+import "interaction/messages/base_interaction.proto";
+
+import "google/protobuf/timestamp.proto";
+
+message OperateInteraction {
+  enum Operate {
+    ONE = 1;
+    TWO = 2;
+    THREE = 3;
+    FOUR = 4;
+    FIVE = 5;
+    SIX = 6;
+    SEVEN = 7;
+  }
+
+  interaction.messages.BaseInteraction base = 1;
+  Operate operate = 2;
+}
+
+message AnyOperateInteraction {
+  repeated OperateInteraction any_operate_interaction = 1;
+}

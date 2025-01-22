@@ -1,21 +1,21 @@
 package messaging
 
 import (
-	"log"
+	"sync/atomic"
 	"time"
 
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
-	cache "github.com/Yux77Yux/platform_backend/microservices/comment/cache"
-	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
 )
 
 // 监听者结构体
 type DeleteListener struct {
-	creationId          int64
-	commentChannel      chan *generated.AfterAuth // 用于接收评论的通道
-	count               int
+	creationId     int64
+	exeChannel     chan []*generated.AfterAuth // 批量发送评论的通道
+	commentChannel chan *generated.AfterAuth   // 用于接收评论的通道
+	count          uint32
+
 	timeoutDuration     time.Duration   // 超时持续时间（触发销毁）
 	timeoutTimer        *time.Timer     // 用于刷新存活时间
 	updateInterval      time.Duration   // 批量插入的间隔时间
@@ -23,11 +23,14 @@ type DeleteListener struct {
 	next                *DeleteListener // 下一个监听者
 }
 
+func (listener *DeleteListener) GetId() int64 {
+	return listener.creationId
+}
+
 // 启动监听者
 func (listener *DeleteListener) StartListening() {
-	listener.startProcessing()
-	listener.startUpdateIntervalTimer()
-	listener.startTimeoutTimer()
+	listener.RestartUpdateIntervalTimer()
+	listener.RestartTimeoutTimer()
 }
 
 func (listener *DeleteListener) Next() ListenerInterface {
@@ -35,107 +38,72 @@ func (listener *DeleteListener) Next() ListenerInterface {
 }
 
 // 分发评论至通道
-func (listener *DeleteListener) Dispatch(data []byte) {
-	comment := new(generated.AfterAuth)
-	err := proto.Unmarshal(data, comment)
-	if err != nil {
-		log.Printf("error: DispatchComment Unmarshal :%v", err)
-	}
+func (listener *DeleteListener) Dispatch(data protoreflect.ProtoMessage) {
+	// 长度加1
+	count := atomic.AddUint32(&listener.count, 1)
+
+	comment := data.(*generated.AfterAuth)
 	// 处理评论的逻辑
 	listener.commentChannel <- comment
-}
 
-// 抽取处理逻辑
-func (listener *DeleteListener) handle(data []byte) {
-	comment := new(generated.AfterAuth)
-	err := proto.Unmarshal(data, comment)
-	if err != nil {
-		log.Printf("error: handle Unmarshal :%v", err)
+	if count%50 == 0 {
+		listener.RestartUpdateIntervalTimer()
+		go listener.sendBatch()
 	}
-
-	err = cache.PushDeleteStatusComment(comment)
-	if err != nil {
-		log.Printf("handleComment error %v", err)
-	}
-	// 长度加1
-	listener.count = listener.count + 1
 }
 
 // 执行批量更新
-func (listener *DeleteListener) executeBatch() {
-	values, err := cache.GetDeleteStatusComments(listener.creationId)
-	if err != nil {
-		log.Printf("executeBatchDelete GetDeleteStatusComments error :%v", err)
+func (listener *DeleteListener) sendBatch() {
+	const BatchSize = 50
+
+	count := atomic.LoadUint32(&listener.count)
+	count = calculateBatchSize(count, BatchSize)
+	if count == 0 {
+		return
 	}
 
-	// 存进待永久删除部分
-	err = cache.PushPreDeleteComments(values)
-	if err != nil {
-		log.Printf("executeBatchDelete PushPreDeleteComments error :%v", err)
+	delComments := delCommentsPool.Get().([]*generated.AfterAuth)
+	for i := 0; uint32(i) < count; i++ {
+		delComments = append(delComments, <-listener.commentChannel)
 	}
+	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
+	listener.RestartUpdateIntervalTimer()               // 重启定时器
 
-	count := len(values)
-	comments := make([]*generated.AfterAuth, 0, count)
-	for _, value := range values {
-		comment := new(generated.AfterAuth)
-		err := proto.Unmarshal([]byte(value), comment)
-		if err != nil {
-			log.Printf("error: executeBatchDelete Unmarshal :%v", err)
-		}
-		comments = append(comments, comment)
-	}
+	listener.exeChannel <- delComments // 送去批量执行,可能被阻塞
 
-	// 更新数据库
-	err = db.BatchUpdate(comments)
-	if err != nil {
-		log.Printf("error: BatchUpdate error :%v", err)
-	}
-
-	// 丢弃已更新部分
-	err = cache.RefreshDeleteStatusComments(listener.creationId, int64(count))
-	if err != nil {
-		log.Printf("executeBatchDelete RefreshTemporaryComment error %v", err)
-	}
-
-	// 重置时间
-	listener.updateIntervalTimer.Reset(listener.updateInterval)
-
-	// 去掉已完成部分
-	listener.count = listener.count - count
-}
-
-// 具体处理逻辑
-func (listener *DeleteListener) startProcessing() {
-	go func() {
-		for comment := range listener.commentChannel {
-			msg, err := proto.Marshal(comment)
-			if err != nil {
-				log.Printf("error: startProcessing comment proto.Marshal error %v", err)
-			}
-			listener.handle(msg)
-		}
-	}()
+	// 将回收点放到消费者那边
+	// delCommentsPool.Put(delComments)
 }
 
 // 启动周期执行批量更新的定时器
-func (listener *DeleteListener) startUpdateIntervalTimer() {
+func (listener *DeleteListener) RestartUpdateIntervalTimer() {
+	// 先重置
+	listener.updateIntervalTimer.Reset(listener.updateInterval)
+
+	// 再执行
 	listener.updateIntervalTimer = time.AfterFunc(listener.updateInterval, func() {
-		if listener.count > 0 && len(listener.commentChannel) <= 0 {
-			listener.executeBatch() // 执行批量更新
+		count := atomic.LoadUint32(&listener.count)
+
+		if count > 0 {
+			go listener.sendBatch() // 执行批量更新
 		}
-		listener.startUpdateIntervalTimer() // 重启定时器
+		listener.RestartUpdateIntervalTimer() // 重启定时器
+		listener.RestartTimeoutTimer()        // 重启定时器
 	})
 }
 
 // 启动存活时间的定时器
-func (listener *DeleteListener) startTimeoutTimer() {
+func (listener *DeleteListener) RestartTimeoutTimer() {
+	listener.timeoutTimer.Reset(listener.timeoutDuration)
+
 	listener.timeoutTimer = time.AfterFunc(listener.timeoutDuration, func() {
-		if listener.count <= 0 {
+		count := atomic.LoadUint32(&listener.count)
+
+		if count == 0 {
 			// 超时后销毁监听者
 			deleteChain.DestroyListener(listener)
-		} else {
-			listener.timeoutTimer.Reset(listener.timeoutDuration)
 		}
+		listener.RestartTimeoutTimer() // 重启定时器
 	})
 }
 

@@ -26,8 +26,7 @@ func UserAddInfoInTransaction(user_info *generated.User) error {
 	)
 	values(?,?,?,?,?,?,?,?,?)`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -109,8 +108,7 @@ func UserRegisterInTransaction(user_credential *generated.UserCredentials) error
 		VALUES
 			(?,?,?,?,?)`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -136,9 +134,9 @@ func UserRegisterInTransaction(user_credential *generated.UserCredentials) error
 
 		return err
 	default:
-		var email *string = nil
+		var email interface{} = nil
 		if user_credential.GetUserEmail() != "" {
-			email = &user_credential.UserEmail
+			email = user_credential.GetUserEmail()
 		}
 
 		_, err = tx.Exec(query,
@@ -179,8 +177,7 @@ func UserGetInfoInTransaction(user_id int64, fields []string) (map[string]interf
 		query = "SELECT * FROM db_user_1.User WHERE id = ?"
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -330,8 +327,7 @@ func UserVerifyInTranscation(user_credential *generated.UserCredentials) (*gener
 	from db_user_credentials_1.UserCredentials 
 	where username = ?`
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -416,8 +412,7 @@ func UserRegisterUpdateInTransaction(user_info *generated.UserCredentials) error
     		email = ?
 		WHERE user_id = ? `
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -483,8 +478,7 @@ func UserUpdateInTransaction(user_info *generated.UserUpdateSpace) error {
     		updated_at = ?
 		WHERE id = ? `
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -553,8 +547,7 @@ func UserUpdateAvatarInTransaction(user_info *generated.UserUpdateAvatar) error 
     		avatar = ?
 		WHERE id = ? `
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -613,8 +606,7 @@ func UserUpdateStatusInTransaction(user_info *generated.UserUpdateStatus) error 
     		status = ?
 		WHERE id = ? `
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {

@@ -35,7 +35,7 @@ func (dbs *MysqlClass) InitDb(readStr string, writeStr string) error {
 	// dbs.replicaDB.SetMaxOpenConns(20)    // 最大打开连接数
 	// dbs.replicaDB.SetMaxIdleConns(10)    // 最大空闲连接数
 	// dbs.replicaDB.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
-	dbs.mainDB.SetMaxOpenConns(20)    // 最大打开连接数
+	dbs.mainDB.SetMaxOpenConns(40)    // 最大打开连接数
 	dbs.mainDB.SetMaxIdleConns(10)    // 最大空闲连接数
 	dbs.mainDB.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
 

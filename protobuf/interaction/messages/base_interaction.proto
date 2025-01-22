@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package interaction.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/interaction";
+
+import "google/protobuf/timestamp.proto";
+
+message BaseInteraction {
+  int64 user_id = 1;
+  int64 creation_id = 2;
+}

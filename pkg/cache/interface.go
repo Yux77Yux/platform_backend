@@ -2,6 +2,8 @@ package cache
 
 import (
 	"context"
+
+	"github.com/go-redis/redis/v8"
 )
 
 type RedisMethods interface {
@@ -79,4 +81,6 @@ type RedisMethods interface {
 	CheckBloomFilter(ctx context.Context, kind string, unique string) (bool, error)
 
 	BitField(ctx context.Context, kind string, unique string, command ...interface{}) ([]int64, error)
+
+	Pipeline() redis.Pipeliner
 }

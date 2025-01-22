@@ -13,8 +13,7 @@ import (
 
 // POST
 func BatchInsert(comments []*generated.Comment) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	count := len(comments)
 	// 构建用于构建 IN 子句的占位符部分
@@ -180,8 +179,7 @@ func GetPublisherIdInTransaction(comment_id int32) (int64, error) {
 		`
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -266,8 +264,7 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 		`
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -399,8 +396,7 @@ func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*genera
 		`
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -506,8 +502,7 @@ func GetSecondCommentsInTransaction(creation_id int64, root, pageNumber int32) (
 		`
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -613,8 +608,7 @@ func GetReplyCommentsInTransaction(user_id int64, page int32) ([]*generated.Comm
 			OFFSET ?`
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -695,8 +689,7 @@ func GetReplyCommentsInTransaction(user_id int64, page int32) ([]*generated.Comm
 }
 
 func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
-	defer cancel()
+	ctx := context.Background()
 
 	count := len(comments)
 	// 构建用于构建 IN 子句的占位符部分
@@ -782,9 +775,8 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 }
 
 // UPDATE
-func BatchUpdate(comments []*generated.AfterAuth) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*15)
-	defer cancel()
+func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) error {
+	ctx := context.Background()
 
 	count := len(comments)
 	// 构建用于构建 IN 子句的占位符部分
