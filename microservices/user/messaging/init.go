@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"log"
 
-	chain "github.com/Yux77Yux/platform_backend/microservices/user/messaging/chain"
 	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue"
 )
 
 var (
-	dispatcher      *Dispatcher
 	connStr         string
 	ExchangesConfig = map[string]string{
 		"register":      "direct",
@@ -57,8 +55,6 @@ func Init() {
 		// 不同的exchange使用不同函数
 		case "register":
 			go ListenToQueue(exchange, "register", "register", registerProcessor)
-		case "storeRegister":
-			go ListenToQueue(exchange, "storeRegister", "storeRegister", storeRegisterProcessor)
 		case "storeUser":
 			go ListenToQueue(exchange, "storeUser", "storeUser", storeUserProcessor)
 		case "updateUser":
@@ -74,7 +70,4 @@ func Init() {
 		}
 	}
 
-	dispatcher = &Dispatcher{
-		chains: make([]chain.ChainInterface, 0, 9),
-	}
 }

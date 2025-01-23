@@ -10,25 +10,35 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
+	dispatch "github.com/Yux77Yux/platform_backend/microservices/comment/messaging/dispatch"
+)
+
+const (
+	insert = "insert"
+	delete = "delete"
 )
 
 func JoinCommentProcessor(msg amqp.Delivery) error {
+	data := new(generated.AfterAuth)
+	err := proto.Unmarshal(msg.Body, data)
+	if err != nil {
+		return err
+	}
 	// 传递至责任链
-	insertChain.HandleRequest(msg.Body)
+	dispatch.HandleRequest(data, insert)
 	return nil
 }
 
 func DeleteCommentProcessor(msg amqp.Delivery) error {
-	req := new(generated.AfterAuth)
+	data := new(generated.AfterAuth)
 	// 反序列化
-	err := proto.Unmarshal(msg.Body, req)
+	err := proto.Unmarshal(msg.Body, data)
 	if err != nil {
 		log.Printf("error: DeleteCommentProcessor unmarshaling message: %v", err)
 		return fmt.Errorf("deleteCommentProcessor processor error: %w", err)
 	}
 
 	// 发送集中处理
-	selectListener.Dispatch(msg.Body)
-
+	dispatch.HandleRequest(data, delete)
 	return nil
 }

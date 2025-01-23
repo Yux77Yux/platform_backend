@@ -3,8 +3,6 @@ package messaging
 import (
 	"context"
 
-	"google.golang.org/protobuf/reflect/protoreflect"
-
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -17,21 +15,4 @@ type MessageQueueInterface interface {
 	QueueBind(name string, key string, exchange string, noWait bool, args amqp.Table) error
 	Publish(ctx context.Context, exchange string, key string, mandatory bool, immediate bool, msg amqp.Publishing) error
 	Consume(queue string, consumer string, autoAck bool, exclusive bool, noLocal bool, noWait bool, args amqp.Table) (<-chan amqp.Delivery, error)
-}
-
-type ChainInterface interface {
-	FindListener(protoreflect.ProtoMessage) ListenerInterface
-	DestroyListener(ListenerInterface)
-	CreateListener(protoreflect.ProtoMessage) ListenerInterface
-	HandleRequest(protoreflect.ProtoMessage)
-}
-
-type ListenerInterface interface {
-	GetId() int64
-	StartListening()
-	Dispatch(protoreflect.ProtoMessage)
-	sendBatch()
-	RestartUpdateIntervalTimer()
-	RestartTimeoutTimer()
-	cleanup()
 }

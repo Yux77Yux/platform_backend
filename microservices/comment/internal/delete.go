@@ -20,8 +20,9 @@ func DeleteComment(req *generated.DeleteCommentRequest) error {
 
 	// 第一次过滤，发到消息队列
 	afterAuth := &generated.AfterAuth{
-		UserId:    user_id,
-		CommentId: req.GetCommentId(),
+		UserId:     user_id,
+		CommentId:  req.GetCommentId(),
+		CreationId: req.GetCreationId(),
 	}
 	err = messaging.SendMessage("DeleteComment", "DeleteComment", afterAuth)
 	if err != nil {

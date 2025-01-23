@@ -12,7 +12,7 @@ import (
 )
 
 // POST
-func BatchInsert(comments []*generated.Comment) error {
+func BatchInsert(comments []*generated.Comment) (int64, error) {
 	ctx := context.Background()
 
 	count := len(comments)
@@ -60,7 +60,7 @@ func BatchInsert(comments []*generated.Comment) error {
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
@@ -73,6 +73,7 @@ func BatchInsert(comments []*generated.Comment) error {
 		}
 	}()
 
+	var rowsAffected int64
 	select {
 	case <-ctx.Done():
 		err = fmt.Errorf("exec timeout :%w", ctx.Err())
@@ -80,7 +81,7 @@ func BatchInsert(comments []*generated.Comment) error {
 			err = fmt.Errorf("%w and %w", err, errSecond)
 		}
 
-		return err
+		return -1, err
 	default:
 		// 执行拿到id
 		ids, err := tx.ExecContext(
@@ -94,7 +95,7 @@ func BatchInsert(comments []*generated.Comment) error {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return err
+			return -1, err
 		}
 
 		// 获取最后插入 ID 和插入的总记录数
@@ -105,21 +106,21 @@ func BatchInsert(comments []*generated.Comment) error {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return err
+			return -1, err
 		}
-		rowsAffected, err := ids.RowsAffected()
+		rowsAffected, err = ids.RowsAffected()
 		if err != nil {
 			err = fmt.Errorf("batchInsert transaction exec failed during RowsAffected because  %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return err
+			return -1, err
 		}
 
 		countInt64 := int64(count)
 		if countInt64 != rowsAffected {
-			return fmt.Errorf("count not match the rowsAffected")
+			return -1, fmt.Errorf("count not match the rowsAffected")
 		}
 
 		// 映射 comment_id
@@ -140,7 +141,7 @@ func BatchInsert(comments []*generated.Comment) error {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return err
+			return -1, err
 		}
 
 		_, err = tx.ExecContext(
@@ -155,15 +156,15 @@ func BatchInsert(comments []*generated.Comment) error {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return err
+			return -1, err
 		}
 
 		if err = db.CommitTransaction(tx); err != nil {
-			return err
+			return -1, err
 		}
 	}
 
-	return nil
+	return rowsAffected, nil
 }
 
 // GET
@@ -775,7 +776,7 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 }
 
 // UPDATE
-func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) error {
+func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) (int64, error) {
 	ctx := context.Background()
 
 	count := len(comments)
@@ -784,6 +785,7 @@ func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) error {
 	for i := 0; i < count; i++ {
 		queryCount[i] = "?"
 	}
+	var rowsAffected int64
 
 	var (
 		queryComment = fmt.Sprintf(`
@@ -807,7 +809,7 @@ func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) error {
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
@@ -827,9 +829,9 @@ func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) error {
 			err = fmt.Errorf("%w and %w", err, errSecond)
 		}
 
-		return err
+		return -1, err
 	default:
-		_, err := tx.ExecContext(
+		result, err := tx.ExecContext(
 			ctx,
 			queryComment,
 			values...,
@@ -840,12 +842,22 @@ func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) error {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return err
+			return -1, err
+		}
+
+		rowsAffected, err = result.RowsAffected()
+		if err != nil {
+			err = fmt.Errorf("batchInsert transaction exec failed during queryComment because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return -1, err
 		}
 		_, err = tx.ExecContext(
 			ctx,
 			queryArea,
-			count,
+			rowsAffected,
 			creationId,
 		)
 		if err != nil {
@@ -854,12 +866,12 @@ func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) error {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return err
+			return -1, err
 		}
 
 		if err = db.CommitTransaction(tx); err != nil {
-			return err
+			return -1, err
 		}
 	}
-	return nil
+	return rowsAffected, nil
 }

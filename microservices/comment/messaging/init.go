@@ -3,45 +3,11 @@ package messaging
 import (
 	"fmt"
 	"log"
-	"sync"
-	"time"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue"
 )
 
 var (
-	deleteChain     *DeleteChain
-	delListenerPool = sync.Pool{
-		New: func() any {
-			return &DeleteListener{
-				commentChannel:  make(chan *generated.AfterAuth, 160),
-				timeoutDuration: 12 * time.Second,
-				updateInterval:  3 * time.Second,
-			}
-		},
-	}
-	delCommentsPool = sync.Pool{
-		New: func() any {
-			return make([]*generated.AfterAuth, 0, 50)
-		},
-	}
-	insertChain        *InsertChain
-	insertListenerPool = sync.Pool{
-		New: func() any {
-			return &InsertListener{
-				commentChannel:  make(chan *generated.Comment, 160),
-				timeoutDuration: 12 * time.Second,
-				updateInterval:  3 * time.Second,
-			}
-		},
-	}
-	commentsPool = sync.Pool{
-		New: func() any {
-			return make([]*generated.Comment, 0, 50)
-		},
-	}
-
 	connStr         string
 	ExchangesConfig = map[string]string{
 		"PublishComment": "direct",
@@ -67,10 +33,6 @@ func GetRabbitMQ() MessageQueueInterface {
 
 // 非RPC类型的消息队列的交换机声明
 func Init() {
-	// 初始化责任链
-	insertChain = InitialInsertChain()
-	deleteChain = InitialDeleteChain()
-
 	// 初始化 消息队列 交换机
 	rabbitMQ := GetRabbitMQ()
 	defer rabbitMQ.Close()

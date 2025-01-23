@@ -1,4 +1,4 @@
-package messaging
+package dispatch
 
 func calculateBatchSize(count uint32, batchSize uint32) uint32 {
 	if count == 0 {

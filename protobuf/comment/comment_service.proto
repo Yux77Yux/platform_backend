@@ -25,6 +25,12 @@ service CommentService {
     };
   }
 
+  rpc DeleteComment(comment.methods.DeleteCommentRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/api/comment/{creation_id}/{comment_id}/{access_token.value=*}"
+    };
+  }
+
   rpc GetTopComments(comment.methods.GetTopCommentsRequest) returns (comment.methods.GetCommentsResponse) {
     option (google.api.http) = {
       get: "/api/comment/top/{creation_id}/{page}"
@@ -43,9 +49,5 @@ service CommentService {
     };
   }
 
-  rpc DeleteComment(comment.methods.DeleteCommentRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      delete: "/api/comment/{comment_id}/{access_token.value=*}"
-    };
-  }
+  
 }

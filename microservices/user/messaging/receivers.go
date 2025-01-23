@@ -47,6 +47,8 @@ func storeCredentialsProcessor(msg amqp.Delivery) error {
 		log.Printf("Error unmarshaling message: %v", err)
 		return fmt.Errorf("register processor error: %w", err)
 	}
+
+	return nil
 }
 
 func registerProcessor(msg amqp.Delivery) error {

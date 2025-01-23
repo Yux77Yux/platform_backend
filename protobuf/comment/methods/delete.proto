@@ -8,5 +8,6 @@ import "common/access_token.proto";
 
 message DeleteCommentRequest {
   int32 comment_id = 1;
-  common.AccessToken access_token = 2;
+  int64 creation_id = 2;
+  common.AccessToken access_token = 3;
 }
