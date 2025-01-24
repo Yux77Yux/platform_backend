@@ -10,37 +10,36 @@ import (
 )
 
 // 监听者结构体
-type InsertListener struct {
-	exeChannel   chan *[]*generated.User // 批量发送评论的通道
-	usersChannel chan *generated.User    // 用于接收评论的通道
-	count        uint32
+type RegisterCacheListener struct {
+	exeChannel             chan *[]*generated.UserCredentials // 批量发送的通道
+	userCredentialsChannel chan *generated.UserCredentials    // 用于接收的通道
+	count                  uint32
 
-	timeoutDuration     time.Duration   // 超时持续时间（触发销毁）
-	timeoutTimer        *time.Timer     // 用于刷新存活时间
-	updateInterval      time.Duration   // 批量插入的间隔时间
-	updateIntervalTimer *time.Timer     // 用于周期性执行批量更新
-	next                *InsertListener // 下一个监听者
-	prev                *InsertListener // 上一个监听者
+	timeoutDuration     time.Duration          // 超时持续时间（触发销毁）
+	timeoutTimer        *time.Timer            // 用于刷新存活时间
+	updateInterval      time.Duration          // 批量插入的间隔时间
+	updateIntervalTimer *time.Timer            // 用于周期性执行批量更新
+	next                *RegisterCacheListener // 下一个监听者
+	prev                *RegisterCacheListener // 上一个监听者
 }
 
-func (listener *InsertListener) GetId() int64 {
+func (listener *RegisterCacheListener) GetId() int64 {
 	return 0
 }
 
 // 启动监听者
-func (listener *InsertListener) StartListening() {
+func (listener *RegisterCacheListener) StartListening() {
 	listener.RestartUpdateIntervalTimer()
 	listener.RestartTimeoutTimer()
 }
 
-// 分发评论至通道
-func (listener *InsertListener) Dispatch(data protoreflect.ProtoMessage) {
+// 分发至通道
+func (listener *RegisterCacheListener) Dispatch(data protoreflect.ProtoMessage) {
 	// 长度加1
 	count := atomic.AddUint32(&listener.count, 1)
 
-	User := data.(*generated.User)
-	// 处理评论的逻辑
-	listener.usersChannel <- User
+	userCredentials := data.(*generated.UserCredentials)
+	listener.userCredentialsChannel <- userCredentials
 
 	if count%MAX_BATCH_SIZE == 0 {
 		listener.RestartUpdateIntervalTimer()
@@ -49,7 +48,7 @@ func (listener *InsertListener) Dispatch(data protoreflect.ProtoMessage) {
 }
 
 // 执行批量更新
-func (listener *InsertListener) SendBatch() {
+func (listener *RegisterCacheListener) SendBatch() {
 	const BatchSize = MAX_BATCH_SIZE
 
 	count := atomic.LoadUint32(&listener.count)
@@ -58,23 +57,20 @@ func (listener *InsertListener) SendBatch() {
 		return
 	}
 
-	insertUsersPtr := insertUsersPool.Get().(*[]*generated.User)
-	insertUsers := *insertUsersPtr
-	insertUsers = insertUsers[:count]
-	for i := 0; uint32(i) < count; i++ {
-		insertUsers[i] = <-listener.usersChannel
+	insertUserCredentialsPtr := insertUserCredentialsPool.Get().(*[]*generated.UserCredentials)
+	insertUserCredentials := *insertUserCredentialsPtr
+	insertUserCredentials = insertUserCredentials[:count]
+	for i := uint32(0); i < count; i++ {
+		insertUserCredentials[i] = <-listener.userCredentialsChannel
 	}
 	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
 	listener.RestartUpdateIntervalTimer()               // 重启定时器
 
-	listener.exeChannel <- insertUsersPtr // 送去批量执行,可能被阻塞
-
-	// 将回收点放到消费者那边
-	// insertUsersPool.Put(insertUsers)
+	listener.exeChannel <- insertUserCredentialsPtr // 送去批量执行,可能被阻塞
 }
 
 // 启动周期执行批量更新的定时器
-func (listener *InsertListener) RestartUpdateIntervalTimer() {
+func (listener *RegisterCacheListener) RestartUpdateIntervalTimer() {
 	// 先重置
 	listener.updateIntervalTimer.Reset(listener.updateInterval)
 
@@ -91,7 +87,7 @@ func (listener *InsertListener) RestartUpdateIntervalTimer() {
 }
 
 // 启动存活时间的定时器
-func (listener *InsertListener) RestartTimeoutTimer() {
+func (listener *RegisterCacheListener) RestartTimeoutTimer() {
 	listener.timeoutTimer.Reset(listener.timeoutDuration)
 
 	listener.timeoutTimer = time.AfterFunc(listener.timeoutDuration, func() {
@@ -99,16 +95,16 @@ func (listener *InsertListener) RestartTimeoutTimer() {
 
 		if count == 0 {
 			// 超时后销毁监听者
-			insertUsersChain.DestroyListener(listener)
+			registerCacheChain.DestroyListener(listener)
 		}
 		listener.RestartTimeoutTimer() // 重启定时器
 	})
 }
 
 // 清理监听者资源
-func (listener *InsertListener) Cleanup() {
-	// 关闭评论通道
-	close(listener.usersChannel)
+func (listener *RegisterCacheListener) Cleanup() {
+	// 关闭通道
+	close(listener.userCredentialsChannel)
 
 	// 清理其他资源（例如定时器、缓存等）
 	if listener.timeoutTimer != nil {

@@ -9,37 +9,63 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 )
 
+const (
+	LISTENER_CHANNEL_COUNT = 80
+	MAX_BATCH_SIZE         = 50
+	EXE_CHANNEL_COUNT      = 5
+)
+
 var (
-	deleteChain     *DeleteChain
-	delListenerPool = sync.Pool{
+	registerChain        *RegisterChain
+	registerCacheChain   *RegisterCacheChain
+	registerListenerPool = sync.Pool{
 		New: func() any {
-			return &DeleteListener{
-				userChannel:     make(chan *generated.User, 30),
+			return &RegisterListener{
+				userCredentialsChannel: make(chan *generated.UserCredentials, LISTENER_CHANNEL_COUNT),
+				timeoutDuration:        10 * time.Second,
+				updateInterval:         3 * time.Second,
+			}
+		},
+	}
+	registerCacheListenerPool = sync.Pool{
+		New: func() any {
+			return &RegisterCacheListener{
+				userCredentialsChannel: make(chan *generated.UserCredentials, LISTENER_CHANNEL_COUNT),
+				timeoutDuration:        10 * time.Second,
+				updateInterval:         3 * time.Second,
+			}
+		},
+	}
+	insertUserCredentialsPool = sync.Pool{
+		New: func() any {
+			slice := make([]*generated.UserCredentials, 0, MAX_BATCH_SIZE)
+			return &slice
+		},
+	}
+
+	insertUsersChain        *InsertChain
+	insertUsersCacheChain   *InsertCacheChain
+	insertUsersListenerPool = sync.Pool{
+		New: func() any {
+			return &InsertListener{
+				usersChannel:    make(chan *generated.User, LISTENER_CHANNEL_COUNT),
 				timeoutDuration: 10 * time.Second,
 				updateInterval:  3 * time.Second,
 			}
 		},
 	}
-	delusersPool = sync.Pool{
+	insertUsersCacheListenerPool = sync.Pool{
 		New: func() any {
-			slice := make([]*generated.AfterAuth, 0, 50)
-			return &slice
-		},
-	}
-
-	insertChain        *InsertChain
-	insertListenerPool = sync.Pool{
-		New: func() any {
-			return &InsertListener{
-				userChannel:     make(chan *generated.User, 50),
-				timeoutDuration: 20 * time.Second,
+			return &InsertCacheListener{
+				usersChannel:    make(chan *generated.User, LISTENER_CHANNEL_COUNT),
+				timeoutDuration: 10 * time.Second,
 				updateInterval:  3 * time.Second,
 			}
 		},
 	}
-	insertusersPool = sync.Pool{
+	insertUsersPool = sync.Pool{
 		New: func() any {
-			slice := make([]*generated.User, 0, 50)
+			slice := make([]*generated.User, 0, MAX_BATCH_SIZE)
 			return &slice
 		},
 	}
@@ -47,15 +73,19 @@ var (
 
 func Init() {
 	// 初始化责任链
-	insertChain = InitialInsertChain()
-	deleteChain = InitialDeleteChain()
+
+	insertUsersCacheChain = InitialInsertCacheChain()
+	insertUsersChain = InitialInsertChain()
+
+	registerCacheChain = InitialRegisterCacheChain()
+	registerChain = InitialRegisterChain()
 }
 
 func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 	switch typeName {
 	case "insert":
-		insertChain.HandleRequest(msg)
-	case "delete":
-		deleteChain.HandleRequest(msg)
+		insertUsersChain.HandleRequest(msg)
+	case "register":
+		registerChain.HandleRequest(msg)
 	}
 }

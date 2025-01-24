@@ -8,13 +8,13 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
 )
 
-func InitialInsertChain() *InsertChain {
-	_chain := &InsertChain{
-		Head:       &InsertListener{prev: nil},
-		Tail:       &InsertListener{next: nil},
+func InitialInsertCacheChain() *InsertCacheChain {
+	_chain := &InsertCacheChain{
+		Head:       &InsertCacheListener{prev: nil},
+		Tail:       &InsertCacheListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.User, EXE_CHANNEL_COUNT),
 	}
@@ -23,33 +23,38 @@ func InitialInsertChain() *InsertChain {
 }
 
 // 责任链
-type InsertChain struct {
-	Head       *InsertListener // 责任链的头部
-	Tail       *InsertListener
+type InsertCacheChain struct {
+	Head       *InsertCacheListener // 责任链的头部
+	Tail       *InsertCacheListener
 	Count      int32 // 监听者数量
 	nodeMux    sync.Mutex
 	exeChannel chan *[]*generated.User
 }
 
-func (chain *InsertChain) ExecuteBatch() {
+func (chain *InsertCacheChain) ComeFromRoot(users *[]*generated.User) {
+	chain.exeChannel <- users
+}
+
+func (chain *InsertCacheChain) ExecuteBatch() {
 	for insertUsersPtr := range chain.exeChannel {
 		go func(insertUsersPtr *[]*generated.User) {
-			// 插入Redis,传递至cache链条
-			go insertUsersCacheChain.ComeFromRoot(insertUsersPtr)
-
 			insertUsers := *insertUsersPtr
-			// 插入数据库
-			err := db.UserAddInfoInTransaction(insertUsers)
+
+			// 插入Redis
+			err := cache.StoreUserInfo(insertUsers)
 			if err != nil {
-				log.Printf("error: UserAddInfoInTransaction error")
+				log.Printf("error: StoreUserInfo error %v", err)
 			}
 
+			// 放回对象池
+			*insertUsersPtr = insertUsers[:0]
+			insertUsersPool.Put(insertUsersPtr)
 		}(insertUsersPtr)
 	}
 }
 
 // 处理评论请求的函数
-func (chain *InsertChain) HandleRequest(data protoreflect.ProtoMessage) {
+func (chain *InsertCacheChain) HandleRequest(data protoreflect.ProtoMessage) {
 	listener := chain.FindListener(data)
 	if listener == nil {
 		// 如果没有找到合适的监听者，创建一个新的监听者
@@ -59,7 +64,7 @@ func (chain *InsertChain) HandleRequest(data protoreflect.ProtoMessage) {
 }
 
 // 查找责任链中的合适监听者
-func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
+func (chain *InsertCacheChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
 	chain.nodeMux.Lock()
 	next := chain.Head.next
 	prev := chain.Tail.prev
@@ -84,8 +89,8 @@ func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerI
 }
 
 // 创建一个新的监听者
-func (chain *InsertChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := insertUsersListenerPool.Get().(*InsertListener)
+func (chain *InsertCacheChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
+	newListener := insertUsersCacheListenerPool.Get().(*InsertCacheListener)
 	newListener.exeChannel = chain.exeChannel
 
 	// 头插法，将新的监听者挂到链中
@@ -106,11 +111,11 @@ func (chain *InsertChain) CreateListener(data protoreflect.ProtoMessage) Listene
 }
 
 // 销毁监听者
-func (chain *InsertChain) DestroyListener(listener ListenerInterface) {
+func (chain *InsertCacheChain) DestroyListener(listener ListenerInterface) {
 	// 找到前一个节点（假设 chain.Head 是链表的头部）
-	current, ok := listener.(*InsertListener)
+	current, ok := listener.(*InsertCacheListener)
 	if !ok {
-		log.Printf("invalid type: expected *InsertListener")
+		log.Printf("invalid type: expected *InsertCacheListener")
 	}
 
 	chain.nodeMux.Lock()

@@ -61,8 +61,9 @@ func (listener *DeleteListener) SendBatch() {
 
 	delCommentsPtr := delCommentsPool.Get().(*[]*generated.AfterAuth)
 	delComments := *delCommentsPtr
+	delComments = delComments[:count]
 	for i := uint32(0); i < count; i++ {
-		delComments = append(delComments, <-listener.commentChannel)
+		delComments[i] = <-listener.commentChannel
 	}
 	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
 	listener.RestartUpdateIntervalTimer()               // 重启定时器

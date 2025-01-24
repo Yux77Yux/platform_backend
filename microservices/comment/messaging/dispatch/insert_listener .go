@@ -61,8 +61,9 @@ func (listener *InsertListener) SendBatch() {
 
 	insertCommentsPtr := insertCommentsPool.Get().(*[]*generated.Comment)
 	insertComments := *insertCommentsPtr
+	insertComments = insertComments[:count]
 	for i := 0; uint32(i) < count; i++ {
-		insertComments = append(insertComments, <-listener.commentChannel)
+		insertComments[i] = <-listener.commentChannel
 	}
 	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
 	listener.RestartUpdateIntervalTimer()               // 重启定时器
