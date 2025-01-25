@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -18,6 +19,15 @@ func InitialInsertChain() *InsertChain {
 		Tail:       &InsertListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.Comment, 8),
+		listenerPool: sync.Pool{
+			New: func() any {
+				return &InsertListener{
+					commentChannel:  make(chan *generated.Comment, LISTENER_CHANNEL_COUNT),
+					timeoutDuration: 12 * time.Second,
+					updateInterval:  3 * time.Second,
+				}
+			},
+		},
 	}
 	_chain.Head.next = _chain.Tail
 	_chain.Tail.prev = _chain.Head
@@ -27,11 +37,12 @@ func InitialInsertChain() *InsertChain {
 
 // 责任链
 type InsertChain struct {
-	Head       *InsertListener // 责任链的头部
-	Tail       *InsertListener
-	Count      int32 // 监听者数量
-	nodeMux    sync.Mutex
-	exeChannel chan *[]*generated.Comment
+	Head         *InsertListener // 责任链的头部
+	Tail         *InsertListener
+	Count        int32 // 监听者数量
+	nodeMux      sync.Mutex
+	exeChannel   chan *[]*generated.Comment
+	listenerPool sync.Pool
 }
 
 func (chain *InsertChain) ExecuteBatch() {
@@ -79,8 +90,7 @@ func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerI
 	next := chain.Head.next
 	prev := chain.Tail.prev
 	for {
-		if prev == nil || next == nil {
-			// 找不到
+		if prev == chain.Head {
 			break
 		}
 		if next.creationId == creationId {
@@ -91,7 +101,7 @@ func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerI
 			chain.nodeMux.Unlock()
 			return prev
 		}
-		if prev == next {
+		if prev == next || prev.prev == next {
 			// 找不到
 			break
 		}
@@ -109,7 +119,7 @@ func (chain *InsertChain) CreateListener(data protoreflect.ProtoMessage) Listene
 		log.Printf("invalid type: expected *generated.Comment")
 	}
 
-	newListener := insertListenerPool.Get().(*InsertListener)
+	newListener := chain.listenerPool.Get().(*InsertListener)
 	newListener.creationId = comment.GetCreationId()
 	newListener.exeChannel = chain.exeChannel
 
@@ -146,5 +156,5 @@ func (chain *InsertChain) DestroyListener(listener ListenerInterface) {
 	chain.nodeMux.Unlock()
 	atomic.AddInt32(&chain.Count, -1)
 
-	listener.Cleanup()
+	chain.listenerPool.Put(listener)
 }

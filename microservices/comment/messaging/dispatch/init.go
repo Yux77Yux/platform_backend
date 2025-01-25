@@ -2,7 +2,6 @@ package dispatch
 
 import (
 	"sync"
-	"time"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -20,15 +19,6 @@ const (
 
 var (
 	deleteChain     *DeleteChain
-	delListenerPool = sync.Pool{
-		New: func() any {
-			return &DeleteListener{
-				commentChannel:  make(chan *generated.AfterAuth, LISTENER_CHANNEL_COUNT),
-				timeoutDuration: 10 * time.Second,
-				updateInterval:  3 * time.Second,
-			}
-		},
-	}
 	delCommentsPool = sync.Pool{
 		New: func() any {
 			slice := make([]*generated.AfterAuth, 0, MAX_BATCH_SIZE)
@@ -37,15 +27,6 @@ var (
 	}
 
 	insertChain        *InsertChain
-	insertListenerPool = sync.Pool{
-		New: func() any {
-			return &InsertListener{
-				commentChannel:  make(chan *generated.Comment, LISTENER_CHANNEL_COUNT),
-				timeoutDuration: 12 * time.Second,
-				updateInterval:  3 * time.Second,
-			}
-		},
-	}
 	insertCommentsPool = sync.Pool{
 		New: func() any {
 			slice := make([]*generated.Comment, 0, MAX_BATCH_SIZE)

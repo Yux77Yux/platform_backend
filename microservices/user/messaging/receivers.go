@@ -73,8 +73,16 @@ func registerProcessor(msg amqp.Delivery) error {
 		id = node.Generate().Int64()
 	}
 
+	// 对密码进行加密
+	pwd, err := tools.HashPassword(credentials.GetPassword())
+	if err != nil {
+		return fmt.Errorf("decrypt hash password failed because %w", err)
+	}
+
+	credentials.Password = pwd
 	credentials.UserId = id
 	log.Printf("credentials: %v", credentials)
+
 	user_info := &generated.User{
 		UserDefault: &common.UserDefault{
 			UserId: id,

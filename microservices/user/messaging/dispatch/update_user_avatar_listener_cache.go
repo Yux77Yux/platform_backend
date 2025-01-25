@@ -42,8 +42,8 @@ func (listener *UserAvatarCacheListener) Dispatch(data protoreflect.ProtoMessage
 	listener.userUpdateAvatarChannel <- UserUpdateAvatar
 
 	if count%MAX_BATCH_SIZE == 0 {
-		listener.RestartUpdateIntervalTimer()
 		go listener.SendBatch()
+		listener.RestartUpdateIntervalTimer()
 	}
 }
 
@@ -64,7 +64,6 @@ func (listener *UserAvatarCacheListener) SendBatch() {
 		userUpdateAvatar[i] = <-listener.userUpdateAvatarChannel
 	}
 	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
-	listener.RestartUpdateIntervalTimer()               // 重启定时器
 
 	listener.exeChannel <- userUpdateAvatarPtr // 送去批量执行,可能被阻塞
 }
@@ -84,10 +83,10 @@ func (listener *UserAvatarCacheListener) RestartUpdateIntervalTimer() {
 		count := atomic.LoadUint32(&listener.count)
 
 		if count > 0 {
-			go listener.SendBatch() // 执行批量更新
+			go listener.SendBatch()        // 执行批量更新
+			listener.RestartTimeoutTimer() // 重启定时器
 		}
 		listener.RestartUpdateIntervalTimer() // 重启定时器
-		listener.RestartTimeoutTimer()        // 重启定时器
 	})
 }
 
@@ -105,10 +104,12 @@ func (listener *UserAvatarCacheListener) RestartTimeoutTimer() {
 		count := atomic.LoadUint32(&listener.count)
 
 		if count == 0 {
+			listener.Cleanup()
 			// 超时后销毁监听者
 			userAvatarCacheChain.DestroyListener(listener)
+		} else {
+			listener.RestartTimeoutTimer() // 重启定时器
 		}
-		listener.RestartTimeoutTimer() // 重启定时器
 	})
 }
 

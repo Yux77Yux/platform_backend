@@ -65,7 +65,6 @@ func (listener *InsertCacheListener) SendBatch() {
 		insertUsers[i] = <-listener.usersChannel
 	}
 	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
-	listener.RestartUpdateIntervalTimer()               // 重启定时器
 
 	listener.exeChannel <- insertUsersPtr // 送去批量执行,可能被阻塞
 }
@@ -87,6 +86,7 @@ func (listener *InsertCacheListener) RestartUpdateIntervalTimer() {
 			go listener.SendBatch() // 执行批量更新
 			listener.RestartTimeoutTimer()
 		}
+		listener.RestartUpdateIntervalTimer() // 重启定时器
 	})
 }
 
@@ -105,6 +105,7 @@ func (listener *InsertCacheListener) RestartTimeoutTimer() {
 
 		if count == 0 {
 			// 超时后销毁监听者
+			listener.Cleanup()
 			insertUsersCacheChain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器

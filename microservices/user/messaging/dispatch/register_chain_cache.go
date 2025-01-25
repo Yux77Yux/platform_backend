@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -23,6 +24,15 @@ func InitialRegisterCacheChain() *RegisterCacheChain {
 		Tail:       &RegisterCacheListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.UserCredentials, EXE_CHANNEL_COUNT),
+		listenerPool: sync.Pool{
+			New: func() any {
+				return &RegisterCacheListener{
+					userCredentialsChannel: make(chan *generated.UserCredentials, LISTENER_CHANNEL_COUNT),
+					timeoutDuration:        10 * time.Second,
+					updateInterval:         3 * time.Second,
+				}
+			},
+		},
 	}
 	_chain.Head.next = _chain.Tail
 	_chain.Tail.prev = _chain.Head
@@ -32,11 +42,12 @@ func InitialRegisterCacheChain() *RegisterCacheChain {
 
 // 责任链
 type RegisterCacheChain struct {
-	Head       *RegisterCacheListener // 责任链的头部
-	Tail       *RegisterCacheListener
-	nodeMux    sync.Mutex
-	Count      int32 // 监听者数量
-	exeChannel chan *[]*generated.UserCredentials
+	Head         *RegisterCacheListener // 责任链的头部
+	Tail         *RegisterCacheListener
+	nodeMux      sync.Mutex
+	Count        int32 // 监听者数量
+	exeChannel   chan *[]*generated.UserCredentials
+	listenerPool sync.Pool
 }
 
 func (chain *RegisterCacheChain) ExecuteBatch() {
@@ -65,6 +76,8 @@ func (chain *RegisterCacheChain) ExecuteBatch() {
 
 // 处理评论请求的函数
 func (chain *RegisterCacheChain) HandleRequest(data protoreflect.ProtoMessage) {
+	log.Printf("RegisterCacheChain exeChannel count: %v", len(chain.exeChannel))
+	log.Printf("RegisterCacheChain exeChannel: %v", chain.exeChannel)
 	listener := chain.FindListener(data)
 	if listener == nil {
 		// 如果没有找到合适的监听者，创建一个新的监听者
@@ -103,7 +116,7 @@ func (chain *RegisterCacheChain) FindListener(data protoreflect.ProtoMessage) Li
 
 // 创建一个新的监听者
 func (chain *RegisterCacheChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := registerCacheListenerPool.Get().(*RegisterCacheListener)
+	newListener := chain.listenerPool.Get().(*RegisterCacheListener)
 	newListener.exeChannel = chain.exeChannel
 
 	// 头插法，将新的监听者挂到链中
@@ -137,7 +150,7 @@ func (chain *RegisterCacheChain) DestroyListener(listener ListenerInterface) {
 	prev.next = next
 	next.prev = prev
 	chain.nodeMux.Unlock()
-	atomic.AddInt32(&chain.Count, -1)
 
-	listener.Cleanup()
+	atomic.AddInt32(&chain.Count, -1)
+	chain.listenerPool.Put(listener)
 }

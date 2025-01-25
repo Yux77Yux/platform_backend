@@ -63,7 +63,6 @@ func (listener *RegisterListener) SendBatch() {
 		insertUserCredentials[i] = <-listener.userCredentialsChannel
 	}
 	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
-	listener.RestartUpdateIntervalTimer()               // 重启定时器
 
 	listener.exeChannel <- insertUserCredentialsPtr // 送去批量执行,可能被阻塞
 }
@@ -84,6 +83,7 @@ func (listener *RegisterListener) RestartUpdateIntervalTimer() {
 			go listener.SendBatch()        // 执行批量更新
 			listener.RestartTimeoutTimer() // 重启定时器
 		}
+		listener.RestartUpdateIntervalTimer() // 重启定时器
 	})
 }
 
@@ -100,6 +100,7 @@ func (listener *RegisterListener) RestartTimeoutTimer() {
 		count := atomic.LoadUint32(&listener.count)
 
 		if count == 0 {
+			listener.Cleanup()
 			// 超时后销毁监听者
 			registerChain.DestroyListener(listener)
 		} else {

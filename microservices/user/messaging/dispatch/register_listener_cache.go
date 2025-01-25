@@ -36,6 +36,10 @@ func (listener *RegisterCacheListener) StartListening() {
 
 // 分发至通道
 func (listener *RegisterCacheListener) Dispatch(data protoreflect.ProtoMessage) {
+	log.Printf("RegisterCacheListener exeChannel %v", listener.exeChannel)
+	log.Printf("RegisterCacheListener exeChannel count %v", len(listener.exeChannel))
+	log.Printf("RegisterCacheListener userCredentialsChannel %v", listener.userCredentialsChannel)
+	log.Printf("RegisterCacheListener userCredentialsChannel count %v", len(listener.userCredentialsChannel))
 	// 长度加1
 	count := atomic.AddUint32(&listener.count, 1)
 
@@ -66,7 +70,6 @@ func (listener *RegisterCacheListener) SendBatch() {
 		insertUserCredentials[i] = <-listener.userCredentialsChannel
 	}
 	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
-	listener.RestartUpdateIntervalTimer()               // 重启定时器
 
 	listener.exeChannel <- insertUserCredentialsPtr // 送去批量执行,可能被阻塞
 }
@@ -87,6 +90,7 @@ func (listener *RegisterCacheListener) RestartUpdateIntervalTimer() {
 			go listener.SendBatch() // 执行批量更新
 			listener.RestartTimeoutTimer()
 		}
+		listener.RestartUpdateIntervalTimer() // 重启定时器
 	})
 }
 
@@ -103,6 +107,7 @@ func (listener *RegisterCacheListener) RestartTimeoutTimer() {
 		count := atomic.LoadUint32(&listener.count)
 
 		if count == 0 {
+			listener.Cleanup()
 			// 超时后销毁监听者
 			registerCacheChain.DestroyListener(listener)
 		} else {

@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -23,6 +24,15 @@ func InitialUserAvatarCacheChain() *UserAvatarCacheChain {
 		Tail:       &UserAvatarCacheListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.UserUpdateAvatar, EXE_CHANNEL_COUNT),
+		listenerPool: sync.Pool{
+			New: func() any {
+				return &UserAvatarCacheListener{
+					userUpdateAvatarChannel: make(chan *generated.UserUpdateAvatar, LISTENER_CHANNEL_COUNT),
+					timeoutDuration:         10 * time.Second,
+					updateInterval:          3 * time.Second,
+				}
+			},
+		},
 	}
 	_chain.Head.next = _chain.Tail
 	_chain.Tail.prev = _chain.Head
@@ -32,11 +42,12 @@ func InitialUserAvatarCacheChain() *UserAvatarCacheChain {
 
 // 责任链
 type UserAvatarCacheChain struct {
-	Head       *UserAvatarCacheListener // 责任链的头部
-	Tail       *UserAvatarCacheListener
-	nodeMux    sync.Mutex
-	Count      int32 // 监听者数量
-	exeChannel chan *[]*generated.UserUpdateAvatar
+	Head         *UserAvatarCacheListener // 责任链的头部
+	Tail         *UserAvatarCacheListener
+	nodeMux      sync.Mutex
+	Count        int32 // 监听者数量
+	exeChannel   chan *[]*generated.UserUpdateAvatar
+	listenerPool sync.Pool
 }
 
 func (chain *UserAvatarCacheChain) ExecuteBatch() {
@@ -95,7 +106,7 @@ func (chain *UserAvatarCacheChain) FindListener(data protoreflect.ProtoMessage) 
 
 // 创建一个新的监听者
 func (chain *UserAvatarCacheChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := userAvatarCacheListenerPool.Get().(*UserAvatarCacheListener)
+	newListener := chain.listenerPool.Get().(*UserAvatarCacheListener)
 	newListener.exeChannel = chain.exeChannel
 
 	// 头插法，将新的监听者挂到链中
@@ -129,7 +140,7 @@ func (chain *UserAvatarCacheChain) DestroyListener(listener ListenerInterface) {
 	prev.next = next
 	next.prev = prev
 	chain.nodeMux.Unlock()
-	atomic.AddInt32(&chain.Count, -1)
 
-	listener.Cleanup()
+	atomic.AddInt32(&chain.Count, -1)
+	chain.listenerPool.Put(listener)
 }

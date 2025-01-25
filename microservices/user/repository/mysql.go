@@ -144,11 +144,6 @@ func UserRegisterInTransaction(user_credentials []*generated.UserCredentials) er
 		VALUES%s`, strings.Join(sqlStr, ","))
 	values := make([]interface{}, count*fieldsCount)
 	for i, user_credential := range user_credentials {
-		// 进行复杂加密
-		pwd, err := tools.HashPassword(user_credential.GetPassword())
-		if err != nil {
-			return fmt.Errorf("decrypt hash password failed because %w", err)
-		}
 		var email interface{} = nil
 		if user_credential.GetUserEmail() != "" {
 			email = user_credential.GetUserEmail()
@@ -157,7 +152,7 @@ func UserRegisterInTransaction(user_credentials []*generated.UserCredentials) er
 		var (
 			UserId       = user_credential.GetUserId()
 			Username     = user_credential.GetUsername()
-			UserPassword = pwd
+			UserPassword = user_credential.GetPassword()
 			UserEmail    = email
 			UserRole     = user_credential.GetUserRole().String()
 		)

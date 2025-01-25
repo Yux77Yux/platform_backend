@@ -38,7 +38,7 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 				Message: "Username already exists",                                                   // 用户友好的消息
 				Details: "The username you entered is already taken. Please choose a different one.", // 更详细的错误信息
 			},
-		}, fmt.Errorf("info: username already exists")
+		}, nil
 	}
 
 	// redis查询邮箱是否存在，是否唯一
@@ -56,7 +56,7 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 					Message: "email already exists",                                                   // 用户友好的消息
 					Details: "The email you entered is already taken. Please choose a different one.", // 更详细的错误信息
 				},
-			}, fmt.Errorf("info: email already exists")
+			}, nil
 		}
 	}
 

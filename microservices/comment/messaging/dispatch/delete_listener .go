@@ -44,7 +44,9 @@ func (listener *DeleteListener) Dispatch(data protoreflect.ProtoMessage) {
 	listener.commentChannel <- comment
 
 	if count%MAX_BATCH_SIZE == 0 {
+		// 主动触发
 		go listener.SendBatch()
+		listener.RestartUpdateIntervalTimer() // 重启定时器
 	}
 }
 
@@ -65,7 +67,6 @@ func (listener *DeleteListener) SendBatch() {
 		delComments[i] = <-listener.commentChannel
 	}
 	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
-	listener.RestartUpdateIntervalTimer()               // 重启定时器
 
 	listener.exeChannel <- delCommentsPtr // 送去批量执行,可能被阻塞
 }
@@ -84,11 +85,12 @@ func (listener *DeleteListener) RestartUpdateIntervalTimer() {
 	listener.updateIntervalTimer = time.AfterFunc(listener.updateInterval, func() {
 		count := atomic.LoadUint32(&listener.count)
 
+		// 大于零则发送，不大于0说明目前没有数据
 		if count > 0 {
-			go listener.SendBatch() // 执行批量更新
+			go listener.SendBatch()        // 执行批量更新
+			listener.RestartTimeoutTimer() // 重启定时器
 		}
 		listener.RestartUpdateIntervalTimer() // 重启定时器
-		listener.RestartTimeoutTimer()        // 重启定时器
 	})
 }
 
@@ -106,10 +108,12 @@ func (listener *DeleteListener) RestartTimeoutTimer() {
 		count := atomic.LoadUint32(&listener.count)
 
 		if count == 0 {
+			listener.Cleanup()
 			// 超时后销毁监听者
 			deleteChain.DestroyListener(listener)
+		} else {
+			listener.RestartTimeoutTimer() // 重启定时器
 		}
-		listener.RestartTimeoutTimer() // 重启定时器
 	})
 }
 

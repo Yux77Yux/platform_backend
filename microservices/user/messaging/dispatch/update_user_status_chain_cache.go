@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -23,6 +24,15 @@ func InitialUserStatusCacheChain() *UserStatusCacheChain {
 		Tail:       &UserStatusCacheListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.UserUpdateStatus, EXE_CHANNEL_COUNT),
+		listenerPool: sync.Pool{
+			New: func() any {
+				return &UserStatusCacheListener{
+					userUpdateStatusChannel: make(chan *generated.UserUpdateStatus, LISTENER_CHANNEL_COUNT),
+					timeoutDuration:         10 * time.Second,
+					updateInterval:          3 * time.Second,
+				}
+			},
+		},
 	}
 	_chain.Head.next = _chain.Tail
 	_chain.Tail.prev = _chain.Head
@@ -32,11 +42,12 @@ func InitialUserStatusCacheChain() *UserStatusCacheChain {
 
 // 责任链
 type UserStatusCacheChain struct {
-	Head       *UserStatusCacheListener // 责任链的头部
-	Tail       *UserStatusCacheListener
-	nodeMux    sync.Mutex
-	Count      int32 // 监听者数量
-	exeChannel chan *[]*generated.UserUpdateStatus
+	Head         *UserStatusCacheListener // 责任链的头部
+	Tail         *UserStatusCacheListener
+	nodeMux      sync.Mutex
+	Count        int32 // 监听者数量
+	exeChannel   chan *[]*generated.UserUpdateStatus
+	listenerPool sync.Pool
 }
 
 func (chain *UserStatusCacheChain) ExecuteBatch() {
@@ -95,7 +106,7 @@ func (chain *UserStatusCacheChain) FindListener(data protoreflect.ProtoMessage) 
 
 // 创建一个新的监听者
 func (chain *UserStatusCacheChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := userStatusCacheListenerPool.Get().(*UserStatusCacheListener)
+	newListener := chain.listenerPool.Get().(*UserStatusCacheListener)
 	newListener.exeChannel = chain.exeChannel
 
 	// 头插法，将新的监听者挂到链中
@@ -129,7 +140,7 @@ func (chain *UserStatusCacheChain) DestroyListener(listener ListenerInterface) {
 	prev.next = next
 	next.prev = prev
 	chain.nodeMux.Unlock()
-	atomic.AddInt32(&chain.Count, -1)
 
-	listener.Cleanup()
+	atomic.AddInt32(&chain.Count, -1)
+	chain.listenerPool.Put(listener)
 }

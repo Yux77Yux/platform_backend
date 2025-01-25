@@ -145,6 +145,10 @@ func StoreEmail(credentials []*generated.UserCredentials) error {
 		}
 		fieldValues = append(fieldValues, email, data)
 	}
+	log.Printf("len(fieldValues) %v", len(fieldValues))
+	if len(fieldValues) == 0 {
+		return nil
+	}
 	resultCh := make(chan error, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
@@ -478,6 +482,7 @@ func GetUserCredentials(userCrdentials *generated.UserCredentials) (*generated.U
 	if email != "" {
 		field = email
 	}
+	log.Printf("field %v", field)
 
 	resultCh := make(chan struct {
 		credentials string
@@ -514,6 +519,9 @@ func GetUserCredentials(userCrdentials *generated.UserCredentials) (*generated.U
 		if err != nil {
 			return nil, err
 		}
+
+		log.Printf("in redis %v", credentials)
+		log.Printf("in req %v", userCrdentials)
 
 		// 验证密码
 		match, err := tools.VerifyPassword(credentials.GetPassword(), userCrdentials.GetPassword())

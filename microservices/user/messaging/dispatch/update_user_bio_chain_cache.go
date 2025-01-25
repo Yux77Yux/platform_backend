@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
@@ -23,6 +24,15 @@ func InitialUserBioCacheChain() *UserBioCacheChain {
 		Tail:       &UserBioCacheListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.UserUpdateBio, EXE_CHANNEL_COUNT),
+		listenerPool: sync.Pool{
+			New: func() any {
+				return &UserBioCacheListener{
+					userUpdateBioChannel: make(chan *generated.UserUpdateBio, LISTENER_CHANNEL_COUNT),
+					timeoutDuration:      10 * time.Second,
+					updateInterval:       3 * time.Second,
+				}
+			},
+		},
 	}
 	_chain.Head.next = _chain.Tail
 	_chain.Tail.prev = _chain.Head
@@ -32,11 +42,12 @@ func InitialUserBioCacheChain() *UserBioCacheChain {
 
 // 责任链
 type UserBioCacheChain struct {
-	Head       *UserBioCacheListener // 责任链的头部
-	Tail       *UserBioCacheListener
-	nodeMux    sync.Mutex
-	Count      int32 // 监听者数量
-	exeChannel chan *[]*generated.UserUpdateBio
+	Head         *UserBioCacheListener // 责任链的头部
+	Tail         *UserBioCacheListener
+	nodeMux      sync.Mutex
+	Count        int32 // 监听者数量
+	exeChannel   chan *[]*generated.UserUpdateBio
+	listenerPool sync.Pool
 }
 
 func (chain *UserBioCacheChain) ExecuteBatch() {
@@ -95,7 +106,7 @@ func (chain *UserBioCacheChain) FindListener(data protoreflect.ProtoMessage) Lis
 
 // 创建一个新的监听者
 func (chain *UserBioCacheChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := userBioCacheListenerPool.Get().(*UserBioCacheListener)
+	newListener := chain.listenerPool.Get().(*UserBioCacheListener)
 	newListener.exeChannel = chain.exeChannel
 
 	// 头插法，将新的监听者挂到链中
@@ -129,7 +140,7 @@ func (chain *UserBioCacheChain) DestroyListener(listener ListenerInterface) {
 	prev.next = next
 	next.prev = prev
 	chain.nodeMux.Unlock()
-	atomic.AddInt32(&chain.Count, -1)
 
-	listener.Cleanup()
+	atomic.AddInt32(&chain.Count, -1)
+	chain.listenerPool.Put(listener)
 }
