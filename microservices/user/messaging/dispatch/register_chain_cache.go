@@ -37,22 +37,24 @@ type RegisterCacheChain struct {
 	exeChannel chan *[]*generated.UserCredentials
 }
 
-func (chain *RegisterCacheChain) ComeFromRoot(userCredentials *[]*generated.UserCredentials) {
-	chain.exeChannel <- userCredentials
-}
-
 func (chain *RegisterCacheChain) ExecuteBatch() {
 	for userCredentialsPtr := range chain.exeChannel {
 		go func(userCredentialsPtr *[]*generated.UserCredentials) {
 			userCredentials := *userCredentialsPtr
 
 			// 插入Redis
-			err := cache.StoreCredentials(userCredentials)
+			err := cache.StoreUsername(userCredentials)
 			if err != nil {
-				log.Printf("error: StoreCredentials error %v", err)
+				log.Printf("error: StoreUsername error %v", err)
 			}
 
-			// 清理结束
+			// 插入Redis
+			err = cache.StoreEmail(userCredentials)
+			if err != nil {
+				log.Printf("error: StoreEmail error %v", err)
+			}
+
+			// 放回对象池
 			*userCredentialsPtr = userCredentials[:0] // 清空切片内容
 			insertUserCredentialsPool.Put(userCredentialsPtr)
 		}(userCredentialsPtr)

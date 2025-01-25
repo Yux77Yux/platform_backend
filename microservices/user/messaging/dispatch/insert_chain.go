@@ -34,9 +34,6 @@ type InsertChain struct {
 func (chain *InsertChain) ExecuteBatch() {
 	for insertUsersPtr := range chain.exeChannel {
 		go func(insertUsersPtr *[]*generated.User) {
-			// 插入Redis,传递至cache链条
-			go insertUsersCacheChain.ComeFromRoot(insertUsersPtr)
-
 			insertUsers := *insertUsersPtr
 			// 插入数据库
 			err := db.UserAddInfoInTransaction(insertUsers)
@@ -44,6 +41,9 @@ func (chain *InsertChain) ExecuteBatch() {
 				log.Printf("error: UserAddInfoInTransaction error")
 			}
 
+			// 放回对象池
+			*insertUsersPtr = insertUsers[:0]
+			insertUsersPool.Put(insertUsersPtr)
 		}(insertUsersPtr)
 	}
 }

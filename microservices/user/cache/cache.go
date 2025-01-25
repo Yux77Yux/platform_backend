@@ -7,8 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	"google.golang.org/protobuf/proto"
+
+	generated "github.com/Yux77Yux/platform_backend/generated/user"
+	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
 func ExistsUsername(username string) (bool, error) {
@@ -127,10 +129,21 @@ func StoreEmail(credentials []*generated.UserCredentials) error {
 	fieldValues := make([]interface{}, 0, count*2)
 
 	for _, credential := range credentials {
-		username := credential.GetUsername()
 		email := credential.GetUserEmail()
-
-		fieldValues = append(fieldValues, email, username)
+		if email == "" {
+			continue
+		}
+		newCredential := &generated.UserCredentials{
+			Password:  credential.GetPassword(),
+			UserId:    credential.GetUserId(),
+			UserEmail: email,
+			UserRole:  credential.GetUserRole(),
+		}
+		data, err := proto.Marshal(newCredential)
+		if err != nil {
+			return fmt.Errorf("failed to marshal credentials: %w", err)
+		}
+		fieldValues = append(fieldValues, email, data)
 	}
 	resultCh := make(chan error, 1)
 
@@ -153,30 +166,26 @@ func StoreEmail(credentials []*generated.UserCredentials) error {
 	}
 }
 
-func StoreCredentials(credentials []*generated.UserCredentials) error {
+func StoreUsername(credentials []*generated.UserCredentials) error {
 	ctx := context.Background()
 
 	count := len(credentials)
-	fieldValues := make([]interface{}, 0, count*4)
+	fieldValues := make([]interface{}, count*2)
 
-	for _, credential := range credentials {
+	for i, credential := range credentials {
 		username := credential.GetUsername()
-		email := credential.GetUserEmail()
 		newCredential := &generated.UserCredentials{
 			Password:  credential.GetPassword(),
 			UserId:    credential.GetUserId(),
-			UserEmail: email,
+			UserEmail: credential.GetUserEmail(),
 			UserRole:  credential.GetUserRole(),
 		}
-		field, err := proto.Marshal(newCredential)
+		data, err := proto.Marshal(newCredential)
 		if err != nil {
 			return fmt.Errorf("failed to marshal credentials: %w", err)
 		}
-
-		if email != "" {
-			fieldValues = append(fieldValues, email, username)
-		}
-		fieldValues = append(fieldValues, field, newCredential)
+		fieldValues[i*2] = username
+		fieldValues[i*2+1] = data
 	}
 	resultCh := make(chan error, 1)
 
@@ -229,7 +238,6 @@ func StoreUserInfo(users []*generated.User) error {
 					"user_bday", userBday,
 					"user_created_at", user.GetUserCreatedAt().AsTime(),
 					"user_updated_at", user.GetUserUpdatedAt().AsTime(),
-					"user_role", user.GetUserRole().String(),
 				)
 			}
 			_, err := pipe.Exec(ctx)
@@ -252,34 +260,40 @@ func StoreUserInfo(users []*generated.User) error {
 }
 
 // UPDATE
-func UpdateUser(user *generated.UserUpdateSpace) error {
+func UpdateUser(users []*generated.UserUpdateSpace) error {
 	ctx := context.Background()
+
+	count := len(users)
 
 	resultCh := make(chan error, 1)
 
-	id := strconv.FormatInt(user.GetUserDefault().GetUserId(), 20)
+	func(count int) {
+		cacheRequestChannel <- func(CacheClient CacheInterface) {
+			pipe := CacheClient.Pipeline()
+			for _, user := range users {
+				var userBday interface{}
+				// 判断是否为空
+				if user.GetUserBday() != nil {
+					// 将 Timestamp 转换为 time.Time 类型
+					userBday = user.GetUserBday().AsTime()
+				} else {
+					userBday = "none"
+				}
 
-	var userBday interface{}
-	// 判断是否为空
-	if user.GetUserBday() != nil {
-		// 将 Timestamp 转换为 time.Time 类型
-		userBday = user.GetUserBday().AsTime()
-	} else {
-		userBday = "none"
-	}
-
-	reqFunc := func(CacheClient CacheInterface) {
-		err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
-			"user_name", user.GetUserDefault().GetUserName(),
-			"user_bio", user.GetUserBio(),
-			"user_gender", user.GetUserGender().String(),
-			"user_bday", userBday,
-			"user_updated_at", time.Now(),
-		)
-		resultCh <- err
-	}
-
-	cacheRequestChannel <- reqFunc
+				pipe.HSet(ctx, fmt.Sprintf("Hash_UserInfo_%d", user.GetUserDefault().GetUserId()),
+					"user_name", user.GetUserDefault().GetUserName(),
+					"user_bio", user.GetUserBio(),
+					"user_gender", user.GetUserGender().String(),
+					"user_bday", userBday,
+					"user_updated_at", time.Now(),
+				)
+			}
+			_, err := pipe.Exec(ctx)
+			if err != nil {
+				resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
+			}
+		}
+	}(count)
 
 	// 使用 select 来监听超时和结果
 	select {
@@ -293,20 +307,28 @@ func UpdateUser(user *generated.UserUpdateSpace) error {
 	}
 }
 
-func UpdateUserAvatar(user *generated.UserUpdateAvatar) error {
+func UpdateUserAvatar(users []*generated.UserUpdateAvatar) error {
 	ctx := context.Background()
+
+	count := len(users)
 
 	resultCh := make(chan error, 1)
 
-	id := strconv.FormatInt(user.GetUserId(), 10)
-
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
-			"user_avatar", user.GetUserAvatar(),
-			"user_updated_at", time.Now(),
-		)
-		resultCh <- err
-	}
+	func(count int) {
+		cacheRequestChannel <- func(CacheClient CacheInterface) {
+			pipe := CacheClient.Pipeline()
+			for _, user := range users {
+				pipe.HSet(ctx, fmt.Sprintf("Hash_UserInfo_%d", user.GetUserId()),
+					"user_avatar", user.GetUserAvatar(),
+					"user_updated_at", time.Now(),
+				)
+			}
+			_, err := pipe.Exec(ctx)
+			if err != nil {
+				resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
+			}
+		}
+	}(count)
 
 	// 使用 select 来监听超时和结果
 	select {
@@ -320,20 +342,63 @@ func UpdateUserAvatar(user *generated.UserUpdateAvatar) error {
 	}
 }
 
-func UpdateUserStatus(user *generated.UserUpdateStatus) error {
+func UpdateUserBio(users []*generated.UserUpdateBio) error {
 	ctx := context.Background()
+
+	count := len(users)
 
 	resultCh := make(chan error, 1)
 
-	id := strconv.FormatInt(user.GetUserId(), 10)
+	func(count int) {
+		cacheRequestChannel <- func(CacheClient CacheInterface) {
+			pipe := CacheClient.Pipeline()
+			for _, user := range users {
+				pipe.HSet(ctx, fmt.Sprintf("Hash_UserInfo_%d", user.GetUserId()),
+					"user_bio", user.GetUserBio(),
+					"user_updated_at", time.Now(),
+				)
+			}
+			_, err := pipe.Exec(ctx)
+			if err != nil {
+				resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
+			}
+		}
+	}(count)
 
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		err := CacheClient.SetFieldsHash(ctx, "UserInfo", id,
-			"user_status", user.GetUserStatus(),
-			"user_updated_at", time.Now(),
-		)
-		resultCh <- err
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result != nil {
+			return result
+		}
+		return nil
 	}
+}
+
+func UpdateUserStatus(users []*generated.UserUpdateStatus) error {
+	ctx := context.Background()
+
+	count := len(users)
+
+	resultCh := make(chan error, 1)
+
+	func(count int) {
+		cacheRequestChannel <- func(CacheClient CacheInterface) {
+			pipe := CacheClient.Pipeline()
+			for _, user := range users {
+				pipe.HSet(ctx, fmt.Sprintf("Hash_UserInfo_%d", user.GetUserId()),
+					"user_status", user.GetUserStatus(),
+					"user_updated_at", time.Now(),
+				)
+			}
+			_, err := pipe.Exec(ctx)
+			if err != nil {
+				resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
+			}
+		}
+	}(count)
 
 	// 使用 select 来监听超时和结果
 	select {
@@ -401,5 +466,64 @@ func GetUserInfo(user_id int64, fields []string) (map[string]string, error) {
 		}
 
 		return result.user, nil
+	}
+}
+
+func GetUserCredentials(userCrdentials *generated.UserCredentials) (*generated.UserCredentials, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	email := userCrdentials.GetUserEmail()
+	field := userCrdentials.GetUsername()
+	if email != "" {
+		field = email
+	}
+
+	resultCh := make(chan struct {
+		credentials string
+		err         error
+	}, 1)
+
+	cacheRequestChannel <- func(CacheClient CacheInterface) {
+		result, err := CacheClient.GetHash(ctx, "User", "Credentials", field)
+		resultCh <- struct {
+			credentials string
+			err         error
+		}{
+			credentials: result,
+			err:         err,
+		}
+
+	}
+
+	// 使用 select 来监听超时和结果
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("timeout: %w", ctx.Err())
+	case result := <-resultCh:
+		if result.err != nil {
+			return nil, result.err
+		}
+
+		if result.credentials == "" {
+			return nil, nil
+		}
+
+		credentials := new(generated.UserCredentials)
+		err := proto.Unmarshal([]byte(result.credentials), credentials)
+		if err != nil {
+			return nil, err
+		}
+
+		// 验证密码
+		match, err := tools.VerifyPassword(credentials.GetPassword(), userCrdentials.GetPassword())
+		if err != nil {
+			return nil, fmt.Errorf("failed to verify password: %w", err)
+		}
+		if !match {
+			return nil, nil
+		}
+
+		return credentials, nil
 	}
 }

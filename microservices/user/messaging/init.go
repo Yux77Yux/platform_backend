@@ -10,10 +10,10 @@ import (
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
-		"register":      "direct",
-		"storeUser":     "direct",
-		"storeRegister": "direct",
-		"updateUser":    "direct",
+		"register":         "direct",
+		"storeUser":        "direct",
+		"storeCredentials": "direct",
+		"updateUser":       "direct",
 		// Add more exchanges here
 	}
 	ListenRPCs = []string{
@@ -57,8 +57,10 @@ func Init() {
 			go ListenToQueue(exchange, "register", "register", registerProcessor)
 		case "storeUser":
 			go ListenToQueue(exchange, "storeUser", "storeUser", storeUserProcessor)
+		case "storeCredentials":
+			go ListenToQueue(exchange, "storeCredentials", "storeCredentials", storeCredentialsProcessor)
 		case "updateUser":
-			go ListenToQueue(exchange, "updateUser", "updateUser", updateUserProcessor)
+			go ListenToQueue(exchange, "updateUserSpace", "updateUserSpace", updateUserSpaceProcessor)
 		}
 	}
 

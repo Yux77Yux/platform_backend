@@ -13,11 +13,6 @@ import (
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/comment/messaging/dispatch"
 )
 
-const (
-	insert = "insert"
-	delete = "delete"
-)
-
 func JoinCommentProcessor(msg amqp.Delivery) error {
 	data := new(generated.AfterAuth)
 	err := proto.Unmarshal(msg.Body, data)
@@ -25,7 +20,7 @@ func JoinCommentProcessor(msg amqp.Delivery) error {
 		return err
 	}
 	// 传递至责任链
-	dispatch.HandleRequest(data, insert)
+	dispatch.HandleRequest(data, dispatch.Insert)
 	return nil
 }
 
@@ -39,6 +34,6 @@ func DeleteCommentProcessor(msg amqp.Delivery) error {
 	}
 
 	// 发送集中处理
-	dispatch.HandleRequest(data, delete)
+	dispatch.HandleRequest(data, dispatch.Delete)
 	return nil
 }

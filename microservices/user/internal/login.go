@@ -17,7 +17,7 @@ import (
 func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	user_credentials := req.GetUserCredentials()
 	// 检查空值
-	if user_credentials.GetUsername() == "" || user_credentials.GetPassword() == "" {
+	if (user_credentials.GetUsername() == "" && user_credentials.GetUserEmail() == "") || user_credentials.GetPassword() == "" {
 		err := status.Errorf(codes.InvalidArgument, "username and password cannot be empty")
 		log.Printf("warning: %v", err)
 		return &generated.LoginResponse{
@@ -31,7 +31,8 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	}
 
 	// 验证密码
-	user_part_info, err := db.UserVerifyInTranscation(user_credentials)
+	var user_part_info *generated.UserCredentials
+	user_part_info, err := cache.GetUserCredentials(user_credentials)
 	if err != nil {
 		return &generated.LoginResponse{
 			Msg: &common.ApiResponse{
@@ -41,6 +42,19 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 				Details: err.Error(),
 			},
 		}, err
+	}
+	if user_part_info == nil {
+		user_part_info, err = db.UserVerifyInTranscation(user_credentials)
+		if err != nil {
+			return &generated.LoginResponse{
+				Msg: &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    "500",
+					Message: "Server error occur",
+					Details: err.Error(),
+				},
+			}, err
+		}
 	}
 
 	if user_part_info == nil {
@@ -53,7 +67,6 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 		}, nil
 	}
 
-	log.Printf("user_part_info %v", user_part_info)
 	user_id := user_part_info.GetUserId()
 	// 判断redis有无存有
 	exist, err := cache.ExistsUserInfo(user_id)

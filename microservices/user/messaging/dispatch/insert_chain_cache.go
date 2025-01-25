@@ -31,10 +31,6 @@ type InsertCacheChain struct {
 	exeChannel chan *[]*generated.User
 }
 
-func (chain *InsertCacheChain) ComeFromRoot(users *[]*generated.User) {
-	chain.exeChannel <- users
-}
-
 func (chain *InsertCacheChain) ExecuteBatch() {
 	for insertUsersPtr := range chain.exeChannel {
 		go func(insertUsersPtr *[]*generated.User) {

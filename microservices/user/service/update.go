@@ -9,7 +9,7 @@ import (
 	internal "github.com/Yux77Yux/platform_backend/microservices/user/internal"
 )
 
-func (s *Server) UpdateUser(ctx context.Context, req *generated.UpdateUserRequest) (*generated.UpdateUserResponse, error) {
+func (s *Server) UpdateUserSpace(ctx context.Context, req *generated.UpdateUserSpaceRequest) (*generated.UpdateUserResponse, error) {
 	log.Println("info: update user service start")
 
 	select {
@@ -25,7 +25,7 @@ func (s *Server) UpdateUser(ctx context.Context, req *generated.UpdateUserReques
 			},
 		}, nil
 	default:
-		response, err := internal.UpdateUser(req)
+		response, err := internal.UpdateUserSpace(req)
 		if err != nil {
 			log.Println("error: update user occur fail")
 			return response, err
@@ -36,14 +36,14 @@ func (s *Server) UpdateUser(ctx context.Context, req *generated.UpdateUserReques
 	}
 }
 
-func (s *Server) UpdateUserAvatar(ctx context.Context, req *generated.UpdateUserAvatarRequest) (*generated.UpdateUserResponse, error) {
+func (s *Server) UpdateUserAvatar(ctx context.Context, req *generated.UpdateUserAvatarRequest) (*generated.UpdateUserAvatarResponse, error) {
 	log.Println("info: update user avatar service start")
 
 	select {
 	case <-ctx.Done():
 		err := ctx.Err()
 		log.Printf("error: service exceeded timeout: %v", err)
-		return &generated.UpdateUserResponse{
+		return &generated.UpdateUserAvatarResponse{
 			Msg: &common.ApiResponse{
 				Status:  common.ApiResponse_FAILED,
 				Code:    "408",

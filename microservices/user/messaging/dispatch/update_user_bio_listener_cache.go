@@ -6,42 +6,40 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/comment"
+	generated "github.com/Yux77Yux/platform_backend/generated/user"
 )
 
 // 监听者结构体
-type InsertListener struct {
-	creationId     int64
-	exeChannel     chan *[]*generated.Comment // 批量发送评论的通道
-	commentChannel chan *generated.Comment    // 用于接收评论的通道
-	count          uint32
+type UserBioCacheListener struct {
+	exeChannel           chan *[]*generated.UserUpdateBio // 批量发送的通道
+	userUpdateBioChannel chan *generated.UserUpdateBio    // 用于接收的通道
+	count                uint32
 
-	timeoutDuration     time.Duration   // 超时持续时间（触发销毁）
-	timeoutTimer        *time.Timer     // 用于刷新存活时间
-	updateInterval      time.Duration   // 批量插入的间隔时间
-	updateIntervalTimer *time.Timer     // 用于周期性执行批量更新
-	next                *InsertListener // 下一个监听者
-	prev                *InsertListener // 上一个监听者
+	timeoutDuration     time.Duration         // 超时持续时间（触发销毁）
+	timeoutTimer        *time.Timer           // 用于刷新存活时间
+	updateInterval      time.Duration         // 批量插入的间隔时间
+	updateIntervalTimer *time.Timer           // 用于周期性执行批量更新
+	next                *UserBioCacheListener // 下一个监听者
+	prev                *UserBioCacheListener // 上一个监听者
 }
 
-func (listener *InsertListener) GetId() int64 {
-	return listener.creationId
+func (listener *UserBioCacheListener) GetId() int64 {
+	return 0
 }
 
 // 启动监听者
-func (listener *InsertListener) StartListening() {
+func (listener *UserBioCacheListener) StartListening() {
 	listener.RestartUpdateIntervalTimer()
 	listener.RestartTimeoutTimer()
 }
 
-// 分发评论至通道
-func (listener *InsertListener) Dispatch(data protoreflect.ProtoMessage) {
+// 分发至通道
+func (listener *UserBioCacheListener) Dispatch(data protoreflect.ProtoMessage) {
 	// 长度加1
 	count := atomic.AddUint32(&listener.count, 1)
 
-	comment := data.(*generated.Comment)
-	// 处理评论的逻辑
-	listener.commentChannel <- comment
+	UserUpdateBio := data.(*generated.UserUpdateBio)
+	listener.userUpdateBioChannel <- UserUpdateBio
 
 	if count%MAX_BATCH_SIZE == 0 {
 		listener.RestartUpdateIntervalTimer()
@@ -50,7 +48,7 @@ func (listener *InsertListener) Dispatch(data protoreflect.ProtoMessage) {
 }
 
 // 执行批量更新
-func (listener *InsertListener) SendBatch() {
+func (listener *UserBioCacheListener) SendBatch() {
 	const BatchSize = MAX_BATCH_SIZE
 
 	count := atomic.LoadUint32(&listener.count)
@@ -59,23 +57,20 @@ func (listener *InsertListener) SendBatch() {
 		return
 	}
 
-	insertCommentsPtr := insertCommentsPool.Get().(*[]*generated.Comment)
-	insertComments := *insertCommentsPtr
-	insertComments = insertComments[:count]
-	for i := 0; uint32(i) < count; i++ {
-		insertComments[i] = <-listener.commentChannel
+	userUpdateBioPtr := userBioPool.Get().(*[]*generated.UserUpdateBio)
+	userUpdateBio := *userUpdateBioPtr
+	userUpdateBio = userUpdateBio[:count]
+	for i := uint32(0); i < count; i++ {
+		userUpdateBio[i] = <-listener.userUpdateBioChannel
 	}
 	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
 	listener.RestartUpdateIntervalTimer()               // 重启定时器
 
-	listener.exeChannel <- insertCommentsPtr // 送去批量执行,可能被阻塞
-
-	// 将回收点放到消费者那边
-	// insertCommentsPool.Put(insertComments)
+	listener.exeChannel <- userUpdateBioPtr // 送去批量执行,可能被阻塞
 }
 
 // 启动周期执行批量更新的定时器
-func (listener *InsertListener) RestartUpdateIntervalTimer() {
+func (listener *UserBioCacheListener) RestartUpdateIntervalTimer() {
 	// 先重置
 	listener.updateIntervalTimer.Reset(listener.updateInterval)
 
@@ -92,7 +87,7 @@ func (listener *InsertListener) RestartUpdateIntervalTimer() {
 }
 
 // 启动存活时间的定时器
-func (listener *InsertListener) RestartTimeoutTimer() {
+func (listener *UserBioCacheListener) RestartTimeoutTimer() {
 	listener.timeoutTimer.Reset(listener.timeoutDuration)
 
 	listener.timeoutTimer = time.AfterFunc(listener.timeoutDuration, func() {
@@ -100,16 +95,16 @@ func (listener *InsertListener) RestartTimeoutTimer() {
 
 		if count == 0 {
 			// 超时后销毁监听者
-			deleteChain.DestroyListener(listener)
+			userBioCacheChain.DestroyListener(listener)
 		}
 		listener.RestartTimeoutTimer() // 重启定时器
 	})
 }
 
 // 清理监听者资源
-func (listener *InsertListener) Cleanup() {
-	// 关闭评论通道
-	close(listener.commentChannel)
+func (listener *UserBioCacheListener) Cleanup() {
+	// 关闭通道
+	close(listener.userUpdateBioChannel)
 
 	// 清理其他资源（例如定时器、缓存等）
 	if listener.timeoutTimer != nil {

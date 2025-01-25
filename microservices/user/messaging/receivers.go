@@ -14,6 +14,7 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
+	dispatch "github.com/Yux77Yux/platform_backend/microservices/user/messaging/dispatch"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
@@ -29,10 +30,7 @@ func storeUserProcessor(msg amqp.Delivery) error {
 	}
 
 	// 写入缓存
-	err = cache.StoreUserInfo(user_info)
-	if err != nil {
-		log.Printf("cache methods StoreUserInfo occur error: %v", err)
-	}
+	go dispatch.HandleRequest(user_info, dispatch.InsertUserCache)
 
 	return nil
 }
@@ -48,6 +46,7 @@ func storeCredentialsProcessor(msg amqp.Delivery) error {
 		return fmt.Errorf("register processor error: %w", err)
 	}
 
+	go dispatch.HandleRequest(credentials, dispatch.RegisterCache)
 	return nil
 }
 
@@ -75,25 +74,42 @@ func registerProcessor(msg amqp.Delivery) error {
 	}
 
 	credentials.UserId = id
-	func(credentials *generated.UserCredentials) {
-		dispatcher.Dispatch(credentials, "credentials")
-	}(credentials)
+	go dispatch.HandleRequest(credentials, dispatch.Register)
+	go dispatch.HandleRequest(credentials, dispatch.RegisterCache)
 
-	func() {
-		user_info := &generated.User{
-			UserDefault: &common.UserDefault{
-				UserId: id,
-			},
-			UserStatus:    generated.UserStatus_INACTIVE,
-			UserGender:    generated.UserGender_UNDEFINED,
-			UserRole:      credentials.GetUserRole(),
-			UserUpdatedAt: timestamppb.Now(),
-			UserCreatedAt: timestamppb.Now(),
-		}
+	user_info := &generated.User{
+		UserDefault: &common.UserDefault{
+			UserId: id,
+		},
+		UserStatus:    generated.UserStatus_INACTIVE,
+		UserGender:    generated.UserGender_UNDEFINED,
+		UserRole:      credentials.GetUserRole(),
+		UserUpdatedAt: timestamppb.Now(),
+		UserCreatedAt: timestamppb.Now(),
+	}
 
-		dispatcher.Dispatch(user_info, "user_info")
-	}()
+	go dispatch.HandleRequest(user_info, dispatch.InsertUser)
+	go dispatch.HandleRequest(user_info, dispatch.InsertUserCache)
 
+	return nil
+}
+
+func updateUserSpaceProcessor(msg amqp.Delivery) error {
+	log.Println("Update User Info Start !!!")
+	user := new(generated.UserUpdateSpace)
+
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, user)
+	if err != nil {
+		log.Printf("Error unmarshaling message: %v", err)
+		return fmt.Errorf("update user processor error: %w", err)
+	}
+
+	// 更新 数据库用户表
+	go dispatch.HandleRequest(user, dispatch.UpdateUserSpace)
+	go dispatch.HandleRequest(user, dispatch.UpdateUserSpaceCache)
+
+	log.Println("UpdateUserProcessor success")
 	return nil
 }
 
@@ -187,31 +203,4 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 			Code:   "200",
 		},
 	}, nil
-}
-
-func updateUserProcessor(msg amqp.Delivery) error {
-	log.Println("Update User Info Start !!!")
-	user := new(generated.UserUpdateSpace)
-
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, user)
-	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("update user processor error: %w", err)
-	}
-
-	// 更新 数据库用户表
-	err = db.UserUpdateInTransaction(user)
-	if err != nil {
-		return fmt.Errorf("update user in db error occur: %w", err)
-	}
-
-	// 更新 缓存
-	err = cache.UpdateUser(user)
-	if err != nil {
-		log.Printf("cache methods UpdateUserInfo occur error: %v", err)
-	}
-
-	log.Println("UpdateUserProcessor success")
-	return nil
 }

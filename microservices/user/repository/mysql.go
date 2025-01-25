@@ -7,8 +7,10 @@ import (
 	"strings"
 	"time"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	generated "github.com/Yux77Yux/platform_backend/generated/user"
+	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
 // SET
@@ -34,12 +36,11 @@ func UserAddInfoInTransaction(users []*generated.User) error {
 	gender,
 	bday,
 	created_at,
-	updated_at
-	)
-	values%s`, strings.Join(sqlStr, ","))
+	updated_at)
+	VALUES %s`, strings.Join(sqlStr, ","))
 
-	values := make([]interface{}, 0, count*fieldsCount)
-	for _, user_info := range users {
+	values := make([]interface{}, count*fieldsCount)
+	for i, user_info := range users {
 		var (
 			UserId        int64       = user_info.GetUserDefault().GetUserId()
 			UserName      string      = user_info.GetUserDefault().GetUserName()
@@ -51,17 +52,26 @@ func UserAddInfoInTransaction(users []*generated.User) error {
 			UserCreatedAt time.Time   = user_info.GetUserCreatedAt().AsTime()
 			UserUpdatedAt time.Time   = user_info.GetUserUpdatedAt().AsTime()
 		)
-		values = append(values,
-			UserId,
-			UserName,
-			UserAvatar,
-			UserBio,
-			UserStatus,
-			UserGender,
-			UserBday,
-			UserCreatedAt,
-			UserUpdatedAt,
-		)
+		values[i*9] = UserId
+		values[i*9+1] = UserName
+		values[i*9+2] = UserAvatar
+		values[i*9+3] = UserBio
+		values[i*9+4] = UserStatus
+		values[i*9+5] = UserGender
+		values[i*9+6] = UserBday
+		values[i*9+7] = UserCreatedAt
+		values[i*9+8] = UserUpdatedAt
+		// values = append(values,
+		// 	UserId,
+		// 	UserName,
+		// 	UserAvatar,
+		// 	UserBio,
+		// 	UserStatus,
+		// 	UserGender,
+		// 	UserBday,
+		// 	UserCreatedAt,
+		// 	UserUpdatedAt,
+		// )
 	}
 
 	ctx := context.Background()
@@ -132,10 +142,10 @@ func UserRegisterInTransaction(user_credentials []*generated.UserCredentials) er
 			email,
 			role)
 		VALUES%s`, strings.Join(sqlStr, ","))
-	values := make([]interface{}, 0, count*fieldsCount)
-	for _, user_credential := range user_credentials {
+	values := make([]interface{}, count*fieldsCount)
+	for i, user_credential := range user_credentials {
 		// 进行复杂加密
-		pwd, err := hashPassword(user_credential.GetPassword())
+		pwd, err := tools.HashPassword(user_credential.GetPassword())
 		if err != nil {
 			return fmt.Errorf("decrypt hash password failed because %w", err)
 		}
@@ -151,13 +161,18 @@ func UserRegisterInTransaction(user_credentials []*generated.UserCredentials) er
 			UserEmail    = email
 			UserRole     = user_credential.GetUserRole().String()
 		)
-		values = append(values,
-			UserId,
-			Username,
-			UserPassword,
-			UserEmail,
-			UserRole,
-		)
+		values[i*5] = UserId
+		values[i*5+1] = Username
+		values[i*5+2] = UserPassword
+		values[i*5+3] = UserEmail
+		values[i*5+4] = UserRole
+		// values = append(values,
+		// 	UserId,
+		// 	Username,
+		// 	UserPassword,
+		// 	UserEmail,
+		// 	UserRole,
+		// )
 	}
 
 	ctx := context.Background()
@@ -365,13 +380,20 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 
 // Verify
 func UserVerifyInTranscation(user_credential *generated.UserCredentials) (*generated.UserCredentials, error) {
-	query := `select 
+	identifier := "username = ?"
+	value := user_credential.GetUsername()
+	if user_credential.GetUserEmail() != "" {
+		identifier = "email = ?"
+		value = user_credential.GetUserEmail()
+	}
+
+	query := fmt.Sprintf(`select 
 	id,
 	password,
 	email,
 	role
 	from db_user_credentials_1.UserCredentials 
-	where username = ?`
+	where %s`, identifier)
 
 	ctx := context.Background()
 
@@ -406,7 +428,7 @@ func UserVerifyInTranscation(user_credential *generated.UserCredentials) (*gener
 
 		return nil, err
 	default:
-		err := tx.QueryRow(query, user_credential.GetUsername()).Scan(&id, &passwordHash, &email, &role)
+		err := tx.QueryRow(query, value).Scan(&id, &passwordHash, &email, &role)
 		if err != nil {
 			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
@@ -421,7 +443,7 @@ func UserVerifyInTranscation(user_credential *generated.UserCredentials) (*gener
 		}
 	}
 
-	match, err := verifyPassword(passwordHash, user_credential.GetPassword())
+	match, err := tools.VerifyPassword(passwordHash, user_credential.GetPassword())
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify password: %w", err)
 	}
@@ -528,7 +550,7 @@ func UserEmailUpdateInTransaction(user_credentials []*generated.UserCredentials)
 	return nil
 }
 
-func UserUpdateInTransaction(users []*generated.UserUpdateSpace) error {
+func UserUpdateSpaceInTransaction(users []*generated.UserUpdateSpace) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
 	const fieldsCount = 4*2 + 1 // 一行4*2+1个问号
@@ -747,6 +769,88 @@ func UserUpdateStatusInTransaction(users []*generated.UserUpdateStatus) error {
 	query := fmt.Sprintf(`UPDATE db_user_1.User 
 		SET 
     		status = CASE
+				%s
+			END
+		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
+
+	ctx := context.Background()
+
+	tx, err := db.BeginTransaction()
+	if err != nil {
+		return err
+	}
+
+	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("transaction failed because %v", r)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		err = fmt.Errorf("exec timeout :%w", ctx.Err())
+		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			err = fmt.Errorf("%w and %w", err, errSecond)
+		}
+
+		return err
+	default:
+		_, err := tx.ExecContext(
+			ctx,
+			query,
+			values...,
+		)
+		if err != nil {
+			err = fmt.Errorf("transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return err
+		}
+
+		if err = db.CommitTransaction(tx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func UserUpdateBioInTransaction(users []*generated.UserUpdateBio) error {
+	const QM = "?"
+	const Conf = "WHEN id = ? THEN ?"
+	const fieldsCount = 1*2 + 1 // 一行2+1个问号
+	count := len(users)
+	if count == 0 {
+		return nil // 没有需要更新的内容
+	}
+
+	// 构建 CASE 表达式
+	Cases := make([]string, count)
+	sqlStr := make([]string, count)
+
+	capacity := count * fieldsCount
+	length := capacity - count
+
+	values := make([]any, capacity)
+	for i, user := range users {
+		sqlStr[i] = QM
+		Cases[i] = Conf
+		id := user.GetUserId()
+
+		values[i*2] = id
+		values[i*2+1] = user.GetUserBio()
+		values[length+i] = id
+	}
+
+	query := fmt.Sprintf(`UPDATE db_user_1.User 
+		SET 
+    		bio = CASE
 				%s
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))

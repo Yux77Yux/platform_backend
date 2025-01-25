@@ -17,45 +17,44 @@ import (
 	先留着，以后再建堆
 */
 
-func InitialRegisterChain() *RegisterChain {
-	_chain := &RegisterChain{
-		Head:       &RegisterListener{prev: nil},
-		Tail:       &RegisterListener{next: nil},
+func InitialUserAvatarChain() *UserAvatarChain {
+	_chain := &UserAvatarChain{
+		Head:       &UserAvatarListener{prev: nil},
+		Tail:       &UserAvatarListener{next: nil},
 		Count:      0,
-		exeChannel: make(chan *[]*generated.UserCredentials, EXE_CHANNEL_COUNT),
+		exeChannel: make(chan *[]*generated.UserUpdateAvatar, EXE_CHANNEL_COUNT),
 	}
 	go _chain.ExecuteBatch()
 	return _chain
 }
 
 // 责任链
-type RegisterChain struct {
-	Head       *RegisterListener // 责任链的头部
-	Tail       *RegisterListener
+type UserAvatarChain struct {
+	Head       *UserAvatarListener // 责任链的头部
+	Tail       *UserAvatarListener
 	nodeMux    sync.Mutex
 	Count      int32 // 监听者数量
-	exeChannel chan *[]*generated.UserCredentials
+	exeChannel chan *[]*generated.UserUpdateAvatar
 }
 
-func (chain *RegisterChain) ExecuteBatch() {
-	for userCredentialsPtr := range chain.exeChannel {
-		go func(userCredentialsPtr *[]*generated.UserCredentials) {
-			userCredentials := *userCredentialsPtr
-			// 用户注册信息插入数据库
-			err := db.UserRegisterInTransaction(userCredentials)
+func (chain *UserAvatarChain) ExecuteBatch() {
+	for userAvatarsPtr := range chain.exeChannel {
+		go func(userAvatarsPtr *[]*generated.UserUpdateAvatar) {
+			userAvatars := *userAvatarsPtr
+			// 更新头像
+			err := db.UserUpdateAvatarInTransaction(userAvatars)
 			if err != nil {
-				log.Printf("error: UserRegisterInTransaction error")
+				log.Printf("error: UserUpdateAvatarInTransaction error")
 			}
 
-			// 放回对象池
-			*userCredentialsPtr = userCredentials[:0] // 清空切片内容
-			insertUserCredentialsPool.Put(userCredentialsPtr)
-		}(userCredentialsPtr)
+			*userAvatarsPtr = userAvatars[:0]
+			userAvatarPool.Put(userAvatarsPtr)
+		}(userAvatarsPtr)
 	}
 }
 
 // 处理评论请求的函数
-func (chain *RegisterChain) HandleRequest(data protoreflect.ProtoMessage) {
+func (chain *UserAvatarChain) HandleRequest(data protoreflect.ProtoMessage) {
 	listener := chain.FindListener(data)
 	if listener == nil {
 		// 如果没有找到合适的监听者，创建一个新的监听者
@@ -65,7 +64,7 @@ func (chain *RegisterChain) HandleRequest(data protoreflect.ProtoMessage) {
 }
 
 // 查找责任链中的合适监听者
-func (chain *RegisterChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
+func (chain *UserAvatarChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
 	chain.nodeMux.Lock()
 	next := chain.Head.next
 	prev := chain.Tail.prev
@@ -90,8 +89,8 @@ func (chain *RegisterChain) FindListener(data protoreflect.ProtoMessage) Listene
 }
 
 // 创建一个新的监听者
-func (chain *RegisterChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := registerListenerPool.Get().(*RegisterListener)
+func (chain *UserAvatarChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
+	newListener := userAvatarListenerPool.Get().(*UserAvatarListener)
 	newListener.exeChannel = chain.exeChannel
 
 	// 头插法，将新的监听者挂到链中
@@ -112,11 +111,11 @@ func (chain *RegisterChain) CreateListener(data protoreflect.ProtoMessage) Liste
 }
 
 // 销毁监听者
-func (chain *RegisterChain) DestroyListener(listener ListenerInterface) {
+func (chain *UserAvatarChain) DestroyListener(listener ListenerInterface) {
 	// 找到前一个节点（假设 chain.Head 是链表的头部）
-	current, ok := listener.(*RegisterListener)
+	current, ok := listener.(*UserAvatarListener)
 	if !ok {
-		log.Printf("invalid type: expected *RegisterListener")
+		log.Printf("invalid type: expected *UserAvatarListener")
 	}
 
 	chain.nodeMux.Lock()

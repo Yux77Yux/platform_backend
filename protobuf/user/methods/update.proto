@@ -7,10 +7,11 @@ option go_package = "github.com/Yux77Yux/platform_backend/generated/user";
 import "user/messages/user_update_space.proto";
 import "user/messages/user_update_status.proto";
 import "user/messages/user_update_avatar.proto";
+import "user/messages/user_update_bio.proto";
 import "common/access_token.proto";
 import "common/api_response.proto";
 
-message UpdateUserRequest {
+message UpdateUserSpaceRequest {
   user.messages.UserUpdateSpace user_update_space = 1;
   common.AccessToken access_token = 2;
 }
@@ -23,9 +24,22 @@ message UpdateUserAvatarRequest {
   common.AccessToken access_token = 2;
 }
 
+// avatar
+message UpdateUserAvatarResponse {
+  common.ApiResponse msg = 1;
+  user.messages.UserUpdateAvatar user_update_avatar = 2;
+}
+
+
 // status
 message UpdateUserStatusRequest {
   user.messages.UserUpdateStatus user_update_status = 1;
+  common.AccessToken access_token = 2;
+}
+
+// bio
+message UpdateUserBioRequest {
+  user.messages.UserUpdateBio user_update_bio = 1;
   common.AccessToken access_token = 2;
 }
 

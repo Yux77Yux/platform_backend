@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package user.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/user";
+
+message UserUpdateBio {
+  int64 user_id = 1;
+  string user_bio = 2;
+}

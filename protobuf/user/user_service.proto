@@ -28,7 +28,7 @@ service UserService {
   }
 
   // 批量字段
-  rpc UpdateUser(user.methods.UpdateUserRequest) returns (user.methods.UpdateUserResponse) {
+  rpc UpdateUserSpace(user.methods.UpdateUserSpaceRequest) returns (user.methods.UpdateUserResponse) {
     option (google.api.http) = {
       patch: "/api/user/{user_update_space.user_default.user_id=*}"
       body: "*"
@@ -36,7 +36,7 @@ service UserService {
   }
 
   // User Avatar
-  rpc UpdateUserAvatar(user.methods.UpdateUserAvatarRequest) returns (user.methods.UpdateUserResponse) {
+  rpc UpdateUserAvatar(user.methods.UpdateUserAvatarRequest) returns (user.methods.UpdateUserAvatarResponse) {
     option (google.api.http) = {
       patch: "/api/user/{user_update_avatar.user_id}/avatar"
       body: "*"
@@ -47,6 +47,14 @@ service UserService {
   rpc UpdateUserStatus(user.methods.UpdateUserStatusRequest) returns (user.methods.UpdateUserResponse) {
     option (google.api.http) = {
       patch: "/api/user/{user_update_status.user_id}/status"
+      body: "*"
+    };
+  }
+
+  // User Bio
+  rpc UpdateUserBio(user.methods.UpdateUserBioRequest) returns (user.methods.UpdateUserResponse) {
+    option (google.api.http) = {
+      patch: "/api/user/{user_update_bio.user_id}/bio"
       body: "*"
     };
   }
