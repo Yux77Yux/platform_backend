@@ -58,8 +58,8 @@ func (listener *UserAvatarCacheListener) SendBatch() {
 	}
 
 	userUpdateAvatarPtr := userAvatarPool.Get().(*[]*generated.UserUpdateAvatar)
+	*userUpdateAvatarPtr = (*userUpdateAvatarPtr)[:count]
 	userUpdateAvatar := *userUpdateAvatarPtr
-	userUpdateAvatar = userUpdateAvatar[:count]
 	for i := uint32(0); i < count; i++ {
 		userUpdateAvatar[i] = <-listener.userUpdateAvatarChannel
 	}
@@ -72,7 +72,12 @@ func (listener *UserAvatarCacheListener) SendBatch() {
 // 启动周期执行批量更新的定时器
 func (listener *UserAvatarCacheListener) RestartUpdateIntervalTimer() {
 	// 先重置
-	listener.updateIntervalTimer.Reset(listener.updateInterval)
+	if listener.updateIntervalTimer != nil {
+		// 如果 timer 已存在，确保安全地重置
+		if !listener.updateIntervalTimer.Stop() {
+			<-listener.updateIntervalTimer.C // 清理可能遗留的信号
+		}
+	}
 
 	// 再执行
 	listener.updateIntervalTimer = time.AfterFunc(listener.updateInterval, func() {
@@ -88,7 +93,13 @@ func (listener *UserAvatarCacheListener) RestartUpdateIntervalTimer() {
 
 // 启动存活时间的定时器
 func (listener *UserAvatarCacheListener) RestartTimeoutTimer() {
-	listener.timeoutTimer.Reset(listener.timeoutDuration)
+	// 先重置
+	if listener.timeoutTimer != nil {
+		// 如果 timer 已存在，确保安全地重置
+		if !listener.timeoutTimer.Stop() {
+			<-listener.timeoutTimer.C // 清理可能遗留的信号
+		}
+	}
 
 	listener.timeoutTimer = time.AfterFunc(listener.timeoutDuration, func() {
 		count := atomic.LoadUint32(&listener.count)

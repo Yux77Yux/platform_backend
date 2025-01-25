@@ -18,6 +18,8 @@ func InitialInsertChain() *InsertChain {
 		Count:      0,
 		exeChannel: make(chan *[]*generated.User, EXE_CHANNEL_COUNT),
 	}
+	_chain.Head.next = _chain.Tail
+	_chain.Tail.prev = _chain.Head
 	go _chain.ExecuteBatch()
 	return _chain
 }
@@ -32,9 +34,11 @@ type InsertChain struct {
 }
 
 func (chain *InsertChain) ExecuteBatch() {
+	log.Printf("我他妈来啦!!！ ")
 	for insertUsersPtr := range chain.exeChannel {
 		go func(insertUsersPtr *[]*generated.User) {
 			insertUsers := *insertUsersPtr
+			log.Printf("我他妈来啦！ %v", insertUsers)
 			// 插入数据库
 			err := db.UserAddInfoInTransaction(insertUsers)
 			if err != nil {
@@ -64,15 +68,18 @@ func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerI
 	next := chain.Head.next
 	prev := chain.Tail.prev
 	for {
-		if atomic.LoadUint32(&next.count) == LISTENER_CHANNEL_COUNT {
+		if prev == chain.Head {
+			break
+		}
+		if atomic.LoadUint32(&next.count) < LISTENER_CHANNEL_COUNT {
 			chain.nodeMux.Unlock()
 			return next
 		}
-		if atomic.LoadUint32(&prev.count) == LISTENER_CHANNEL_COUNT {
+		if atomic.LoadUint32(&prev.count) < LISTENER_CHANNEL_COUNT {
 			chain.nodeMux.Unlock()
 			return prev
 		}
-		if prev == next {
+		if prev == next || prev.prev == next {
 			// 找不到
 			break
 		}

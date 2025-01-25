@@ -74,9 +74,7 @@ func registerProcessor(msg amqp.Delivery) error {
 	}
 
 	credentials.UserId = id
-	go dispatch.HandleRequest(credentials, dispatch.Register)
-	go dispatch.HandleRequest(credentials, dispatch.RegisterCache)
-
+	log.Printf("credentials: %v", credentials)
 	user_info := &generated.User{
 		UserDefault: &common.UserDefault{
 			UserId: id,
@@ -90,6 +88,9 @@ func registerProcessor(msg amqp.Delivery) error {
 
 	go dispatch.HandleRequest(user_info, dispatch.InsertUser)
 	go dispatch.HandleRequest(user_info, dispatch.InsertUserCache)
+
+	go dispatch.HandleRequest(credentials, dispatch.Register)
+	go dispatch.HandleRequest(credentials, dispatch.RegisterCache)
 
 	return nil
 }

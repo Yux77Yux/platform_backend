@@ -44,7 +44,6 @@ func (listener *DeleteListener) Dispatch(data protoreflect.ProtoMessage) {
 	listener.commentChannel <- comment
 
 	if count%MAX_BATCH_SIZE == 0 {
-		listener.RestartUpdateIntervalTimer()
 		go listener.SendBatch()
 	}
 }
@@ -60,8 +59,8 @@ func (listener *DeleteListener) SendBatch() {
 	}
 
 	delCommentsPtr := delCommentsPool.Get().(*[]*generated.AfterAuth)
+	*delCommentsPtr = (*delCommentsPtr)[:count]
 	delComments := *delCommentsPtr
-	delComments = delComments[:count]
 	for i := uint32(0); i < count; i++ {
 		delComments[i] = <-listener.commentChannel
 	}
@@ -69,15 +68,17 @@ func (listener *DeleteListener) SendBatch() {
 	listener.RestartUpdateIntervalTimer()               // 重启定时器
 
 	listener.exeChannel <- delCommentsPtr // 送去批量执行,可能被阻塞
-
-	// 将回收点放到消费者那边
-	// delCommentsPool.Put(delComments)
 }
 
 // 启动周期执行批量更新的定时器
 func (listener *DeleteListener) RestartUpdateIntervalTimer() {
 	// 先重置
-	listener.updateIntervalTimer.Reset(listener.updateInterval)
+	if listener.updateIntervalTimer != nil {
+		// 如果 timer 已存在，确保安全地重置
+		if !listener.updateIntervalTimer.Stop() {
+			<-listener.updateIntervalTimer.C // 清理可能遗留的信号
+		}
+	}
 
 	// 再执行
 	listener.updateIntervalTimer = time.AfterFunc(listener.updateInterval, func() {
@@ -93,7 +94,13 @@ func (listener *DeleteListener) RestartUpdateIntervalTimer() {
 
 // 启动存活时间的定时器
 func (listener *DeleteListener) RestartTimeoutTimer() {
-	listener.timeoutTimer.Reset(listener.timeoutDuration)
+	// 先重置
+	if listener.timeoutTimer != nil {
+		// 如果 timer 已存在，确保安全地重置
+		if !listener.timeoutTimer.Stop() {
+			<-listener.timeoutTimer.C // 清理可能遗留的信号
+		}
+	}
 
 	listener.timeoutTimer = time.AfterFunc(listener.timeoutDuration, func() {
 		count := atomic.LoadUint32(&listener.count)

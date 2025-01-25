@@ -19,6 +19,8 @@ func InitialInsertChain() *InsertChain {
 		Count:      0,
 		exeChannel: make(chan *[]*generated.Comment, 8),
 	}
+	_chain.Head.next = _chain.Tail
+	_chain.Tail.prev = _chain.Head
 	go _chain.ExecuteBatch()
 	return _chain
 }
@@ -77,6 +79,10 @@ func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerI
 	next := chain.Head.next
 	prev := chain.Tail.prev
 	for {
+		if prev == nil || next == nil {
+			// 找不到
+			break
+		}
 		if next.creationId == creationId {
 			chain.nodeMux.Unlock()
 			return next

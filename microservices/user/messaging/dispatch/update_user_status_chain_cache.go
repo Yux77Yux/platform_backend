@@ -24,6 +24,8 @@ func InitialUserStatusCacheChain() *UserStatusCacheChain {
 		Count:      0,
 		exeChannel: make(chan *[]*generated.UserUpdateStatus, EXE_CHANNEL_COUNT),
 	}
+	_chain.Head.next = _chain.Tail
+	_chain.Tail.prev = _chain.Head
 	go _chain.ExecuteBatch()
 	return _chain
 }
@@ -69,15 +71,18 @@ func (chain *UserStatusCacheChain) FindListener(data protoreflect.ProtoMessage) 
 	next := chain.Head.next
 	prev := chain.Tail.prev
 	for {
-		if atomic.LoadUint32(&next.count) == 50 {
+		if prev == chain.Head {
+			break
+		}
+		if atomic.LoadUint32(&next.count) < LISTENER_CHANNEL_COUNT {
 			chain.nodeMux.Unlock()
 			return next
 		}
-		if atomic.LoadUint32(&prev.count) == 50 {
+		if atomic.LoadUint32(&prev.count) < LISTENER_CHANNEL_COUNT {
 			chain.nodeMux.Unlock()
 			return prev
 		}
-		if prev == next {
+		if prev == next || prev.prev == next {
 			// 找不到
 			break
 		}

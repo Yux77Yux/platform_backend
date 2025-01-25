@@ -42,12 +42,12 @@ func (listener *RegisterListener) Dispatch(data protoreflect.ProtoMessage) {
 	listener.userCredentialsChannel <- userCredentials
 
 	if count%MAX_BATCH_SIZE == 0 {
-		listener.RestartUpdateIntervalTimer()
 		go listener.SendBatch()
+		listener.RestartUpdateIntervalTimer()
 	}
 }
 
-// 执行批量更新
+// 做成·批量数据·然后发到别的通道
 func (listener *RegisterListener) SendBatch() {
 	const BatchSize = MAX_BATCH_SIZE
 
@@ -56,10 +56,9 @@ func (listener *RegisterListener) SendBatch() {
 	if count == 0 {
 		return
 	}
-
 	insertUserCredentialsPtr := insertUserCredentialsPool.Get().(*[]*generated.UserCredentials)
+	*insertUserCredentialsPtr = (*insertUserCredentialsPtr)[:count]
 	insertUserCredentials := *insertUserCredentialsPtr
-	insertUserCredentials = insertUserCredentials[:count]
 	for i := uint32(0); i < count; i++ {
 		insertUserCredentials[i] = <-listener.userCredentialsChannel
 	}
@@ -71,24 +70,31 @@ func (listener *RegisterListener) SendBatch() {
 
 // 启动周期执行批量更新的定时器
 func (listener *RegisterListener) RestartUpdateIntervalTimer() {
-	// 先重置
-	listener.updateIntervalTimer.Reset(listener.updateInterval)
+	if listener.updateIntervalTimer != nil {
+		if !listener.updateIntervalTimer.Stop() {
+			<-listener.updateIntervalTimer.C // 清理可能遗留的信号
+		}
+	}
 
 	// 再执行
 	listener.updateIntervalTimer = time.AfterFunc(listener.updateInterval, func() {
 		count := atomic.LoadUint32(&listener.count)
 
 		if count > 0 {
-			go listener.SendBatch() // 执行批量更新
+			go listener.SendBatch()        // 执行批量更新
+			listener.RestartTimeoutTimer() // 重启定时器
 		}
-		listener.RestartUpdateIntervalTimer() // 重启定时器
-		listener.RestartTimeoutTimer()        // 重启定时器
 	})
 }
 
 // 启动存活时间的定时器
 func (listener *RegisterListener) RestartTimeoutTimer() {
-	listener.timeoutTimer.Reset(listener.timeoutDuration)
+	// 先重置
+	if listener.timeoutTimer != nil {
+		if !listener.timeoutTimer.Stop() {
+			<-listener.timeoutTimer.C // 清理可能遗留的信号
+		}
+	}
 
 	listener.timeoutTimer = time.AfterFunc(listener.timeoutDuration, func() {
 		count := atomic.LoadUint32(&listener.count)
@@ -96,8 +102,9 @@ func (listener *RegisterListener) RestartTimeoutTimer() {
 		if count == 0 {
 			// 超时后销毁监听者
 			registerChain.DestroyListener(listener)
+		} else {
+			listener.RestartTimeoutTimer() // 重启定时器
 		}
-		listener.RestartTimeoutTimer() // 重启定时器
 	})
 }
 

@@ -60,8 +60,8 @@ func (listener *InsertListener) SendBatch() {
 	}
 
 	insertCommentsPtr := insertCommentsPool.Get().(*[]*generated.Comment)
+	*insertCommentsPtr = (*insertCommentsPtr)[:count]
 	insertComments := *insertCommentsPtr
-	insertComments = insertComments[:count]
 	for i := 0; uint32(i) < count; i++ {
 		insertComments[i] = <-listener.commentChannel
 	}
@@ -69,31 +69,38 @@ func (listener *InsertListener) SendBatch() {
 	listener.RestartUpdateIntervalTimer()               // 重启定时器
 
 	listener.exeChannel <- insertCommentsPtr // 送去批量执行,可能被阻塞
-
-	// 将回收点放到消费者那边
-	// insertCommentsPool.Put(insertComments)
 }
 
 // 启动周期执行批量更新的定时器
 func (listener *InsertListener) RestartUpdateIntervalTimer() {
 	// 先重置
-	listener.updateIntervalTimer.Reset(listener.updateInterval)
+	if listener.updateIntervalTimer != nil {
+		// 如果 timer 已存在，确保安全地重置
+		if !listener.updateIntervalTimer.Stop() {
+			<-listener.updateIntervalTimer.C // 清理可能遗留的信号
+		}
+	}
 
 	// 再执行
 	listener.updateIntervalTimer = time.AfterFunc(listener.updateInterval, func() {
 		count := atomic.LoadUint32(&listener.count)
 
 		if count > 0 {
-			go listener.SendBatch() // 执行批量更新
+			go listener.SendBatch()        // 执行批量更新
+			listener.RestartTimeoutTimer() // 重启定时器
 		}
-		listener.RestartUpdateIntervalTimer() // 重启定时器
-		listener.RestartTimeoutTimer()        // 重启定时器
 	})
 }
 
 // 启动存活时间的定时器
 func (listener *InsertListener) RestartTimeoutTimer() {
-	listener.timeoutTimer.Reset(listener.timeoutDuration)
+	// 先重置
+	if listener.timeoutTimer != nil {
+		// 如果 timer 已存在，确保安全地重置
+		if !listener.timeoutTimer.Stop() {
+			<-listener.timeoutTimer.C // 清理可能遗留的信号
+		}
+	}
 
 	listener.timeoutTimer = time.AfterFunc(listener.timeoutDuration, func() {
 		count := atomic.LoadUint32(&listener.count)

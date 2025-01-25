@@ -197,7 +197,7 @@ var (
 	}
 )
 
-func Init() {
+func init() {
 	// 初始化责任链
 
 	insertUsersCacheChain = InitialInsertCacheChain()

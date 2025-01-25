@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS Comments (
     dialog INT DEFAULT 0,                         -- 二级评论ID
     user_id BIGINT NOT NULL,                         -- 发言的用户ID
     creation_id BIGINT NOT NULL,                     -- 作品ID
-    created_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
     status ENUM('PUBLISHED','DELETE') NOT NULL DEFAULT 'PUBLISHED',  -- 公告状态，默认是草稿
 
     INDEX idx_creation_root(creation_id, root),  -- 评论索引
@@ -47,5 +47,5 @@ CREATE TABLE IF NOT EXISTS Comments (
 CREATE TABLE IF NOT EXISTS CommentContent (
     comment_id INT PRIMARY KEY,                   -- 评论ID，外键关联评论表
     content TEXT,                                    -- 评论内容，TEXT类型
-    media TEXT,                                      -- 评论附件媒体文件，URL或文件路径（如果有）
+    media TEXT                                      -- 评论附件媒体文件，URL或文件路径（如果有）
 );
