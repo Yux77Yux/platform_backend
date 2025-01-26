@@ -13,7 +13,7 @@ var (
 		"register":         "direct",
 		"storeUser":        "direct",
 		"storeCredentials": "direct",
-		"updateUser":       "direct",
+		"updateUserSpace":  "direct",
 		// Add more exchanges here
 	}
 	ListenRPCs = []string{
@@ -59,7 +59,7 @@ func Init() {
 			go ListenToQueue(exchange, "storeUser", "storeUser", storeUserProcessor)
 		case "storeCredentials":
 			go ListenToQueue(exchange, "storeCredentials", "storeCredentials", storeCredentialsProcessor)
-		case "updateUser":
+		case "updateUserSpace":
 			go ListenToQueue(exchange, "updateUserSpace", "updateUserSpace", updateUserSpaceProcessor)
 		}
 	}

@@ -264,7 +264,7 @@ func StoreUserInfo(users []*generated.User) error {
 }
 
 // UPDATE
-func UpdateUser(users []*generated.UserUpdateSpace) error {
+func UpdateUserSpace(users []*generated.UserUpdateSpace) error {
 	ctx := context.Background()
 
 	count := len(users)
@@ -313,7 +313,6 @@ func UpdateUser(users []*generated.UserUpdateSpace) error {
 
 func UpdateUserAvatar(users []*generated.UserUpdateAvatar) error {
 	ctx := context.Background()
-
 	count := len(users)
 
 	resultCh := make(chan error, 1)
@@ -328,6 +327,7 @@ func UpdateUserAvatar(users []*generated.UserUpdateAvatar) error {
 				)
 			}
 			_, err := pipe.Exec(ctx)
+			log.Printf("pipe Exec OKOKOK")
 			if err != nil {
 				resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
 			}
@@ -482,7 +482,6 @@ func GetUserCredentials(userCrdentials *generated.UserCredentials) (*generated.U
 	if email != "" {
 		field = email
 	}
-	log.Printf("field %v", field)
 
 	resultCh := make(chan struct {
 		credentials string
@@ -519,9 +518,6 @@ func GetUserCredentials(userCrdentials *generated.UserCredentials) (*generated.U
 		if err != nil {
 			return nil, err
 		}
-
-		log.Printf("in redis %v", credentials)
-		log.Printf("in req %v", userCrdentials)
 
 		// 验证密码
 		match, err := tools.VerifyPassword(credentials.GetPassword(), userCrdentials.GetPassword())

@@ -171,6 +171,7 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 			}, fmt.Errorf("fail to get user info in redis: %w", err)
 		}
 
+		log.Printf("Map UserInfo %v", result)
 		// 调用函数，传递转换后的 map
 		user_info = tools.MapUserByString(result)
 	} else {

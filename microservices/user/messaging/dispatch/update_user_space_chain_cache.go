@@ -54,8 +54,9 @@ func (chain *UserSpaceCacheChain) ExecuteBatch() {
 	for usersPtr := range chain.exeChannel {
 		go func(usersPtr *[]*generated.UserUpdateSpace) {
 			users := *usersPtr
+			log.Printf("UserUpdateSpace %v", users)
 			// 更新头像
-			err := cache.UpdateUser(users)
+			err := cache.UpdateUserSpace(users)
 			if err != nil {
 				log.Printf("error: UserUserSpaceCacheInTransaction error")
 			}

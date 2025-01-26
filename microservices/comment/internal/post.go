@@ -29,8 +29,8 @@ func PublishComment(req *generated.PublishCommentRequest) (*generated.PublishCom
 	// 以上为鉴权
 
 	// 将token中的userId填充到请求体
-	req.Comment.UserId = user_id
 	comment := req.GetComment()
+	comment.UserId = user_id
 
 	// 异步处理
 	err = messaging.SendMessage("PublishComment", "PublishComment", comment)

@@ -24,8 +24,7 @@ func RPCPattern(
 		body []byte
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	body, err = proto.Marshal(req)
 	if err != nil {

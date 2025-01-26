@@ -138,11 +138,9 @@ func MapUserByString(result map[string]string) *generated.User {
 func MapUser(result map[string]interface{}) *generated.User {
 	statusStr := result["user_status"].(string)
 	genderStr := result["user_gender"].(string)
-	roleStr := result["user_role"].(string)
 
 	status := generated.UserStatus(generated.UserStatus_value[statusStr])
 	gender := generated.UserGender(generated.UserGender_value[genderStr])
-	role := generated.UserRole(generated.UserRole_value[roleStr])
 
 	var bday *timestamppb.Timestamp = nil
 	if result["user_bday"] != nil {
@@ -177,6 +175,5 @@ func MapUser(result map[string]interface{}) *generated.User {
 		UserBday:      bday,
 		UserCreatedAt: createdAt,
 		UserUpdatedAt: updatedAt,
-		UserRole:      role,
 	}
 }

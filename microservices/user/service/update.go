@@ -58,7 +58,7 @@ func (s *Server) UpdateUserAvatar(ctx context.Context, req *generated.UpdateUser
 			return response, err
 		}
 
-		log.Println("info: update user avatar occur success")
+		log.Printf("info: update user avatar occur success: %v", response)
 		return response, nil
 	}
 }

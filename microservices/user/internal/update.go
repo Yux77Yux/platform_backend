@@ -31,16 +31,8 @@ func UpdateUserSpace(req *generated.UpdateUserSpaceRequest) (*generated.UpdateUs
 			},
 		}, nil
 	}
-	token_userId := accessClaims.UserID
-	if token_userId != space.GetUserDefault().GetUserId() {
-		return &generated.UpdateUserResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "400",
-				Message: "the userId different between token and request",
-			},
-		}, nil
-	}
+
+	space.UserDefault.UserId = accessClaims.UserID
 
 	reqId := make(chan string, 1)
 	select {
@@ -94,16 +86,6 @@ func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.Update
 			},
 		}, nil
 	}
-	token_userId := accessClaims.UserID
-	if token_userId != req.GetUserUpdateAvatar().GetUserId() {
-		return &generated.UpdateUserAvatarResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "400",
-				Message: "the userId different between token and request",
-			},
-		}, nil
-	}
 
 	// 操作oss上传
 	fileBytesStr := req.GetUserUpdateAvatar().GetUserAvatar()
@@ -125,8 +107,10 @@ func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.Update
 		}, nil
 	}
 	log.Printf("avatar url: %s over", userAvatar)
+	userId := accessClaims.UserID
+
 	updateAvatar := &generated.UserUpdateAvatar{
-		UserId:     req.GetUserUpdateAvatar().GetUserId(),
+		UserId:     userId,
 		UserAvatar: userAvatar,
 	}
 
@@ -157,18 +141,11 @@ func UpdateUserStatus(req *generated.UpdateUserStatusRequest) (*generated.Update
 			},
 		}, nil
 	}
-	token_userId := accessClaims.UserID
-	if token_userId != req.GetUserUpdateStatus().GetUserId() {
-		return &generated.UpdateUserResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "400",
-				Message: "the userId different between token and request",
-			},
-		}, nil
-	}
 
 	updateStatus := req.GetUserUpdateStatus()
+	userId := accessClaims.UserID
+	updateStatus.UserId = userId
+
 	go dispatch.HandleRequest(updateStatus, dispatch.UpdateUserStatus)
 	go dispatch.HandleRequest(updateStatus, dispatch.UpdateUserStatusCache)
 
@@ -195,18 +172,11 @@ func UpdateUserBio(req *generated.UpdateUserBioRequest) (*generated.UpdateUserRe
 			},
 		}, nil
 	}
-	token_userId := accessClaims.UserID
-	if token_userId != req.GetUserUpdateBio().GetUserId() {
-		return &generated.UpdateUserResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "400",
-				Message: "the userId different between token and request",
-			},
-		}, nil
-	}
 
 	updateBio := req.GetUserUpdateBio()
+	userId := accessClaims.UserID
+	updateBio.UserId = userId
+
 	go dispatch.HandleRequest(updateBio, dispatch.UpdateUserBio)
 	go dispatch.HandleRequest(updateBio, dispatch.UpdateUserBioCache)
 

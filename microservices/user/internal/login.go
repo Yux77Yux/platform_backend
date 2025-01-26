@@ -82,7 +82,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	}
 
 	var user_info *generated.UserLogin
-	fields := []string{"user_name", "user_avatar", "user_role"}
+	fields := []string{"user_name", "user_avatar"}
 	if exist {
 		// 先从redis取信息
 		result, err := cache.GetUserInfo(user_id, fields)
@@ -103,7 +103,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 				UserName: result["user_name"],
 			},
 			UserAvatar: result["user_avatar"],
-			UserRole:   generated.UserRole(generated.UserRole_value[result["user_role"]]),
+			UserRole:   user_info.GetUserRole(),
 		}
 	} else {
 		// redis未存有，则从数据库取信息
