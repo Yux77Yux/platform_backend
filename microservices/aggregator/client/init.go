@@ -1,11 +1,10 @@
 package client
 
 var (
-	user_service_address string
-	auth_service_address string
+	service_address string
 )
 
+// 使用了envoy，所以使用envoy地址即可
 func InitStr(SERVER_ADDRESS string) {
-	user_service_address = SERVER_ADDRESS
-	auth_service_address = SERVER_ADDRESS
+	service_address = SERVER_ADDRESS
 }

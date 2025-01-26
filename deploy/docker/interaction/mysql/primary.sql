@@ -17,7 +17,7 @@ USE db_interaction_1;
 CREATE TABLE IF NOT EXISTS Interaction (
     user_id BIGINT,    -- 用户ID
     creation_id BIGINT,                -- 作品ID
-    action_tag TINYINT DEFAULT 1,                   -- 动作记录，100表示收藏，010表示点赞，001表示观看
+    action_tag TINYINT DEFAULT 1,                   -- 动作记录，1??表示收藏，?1?表示点赞，??1表示观看过
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 默认当前时间
     save_at TIMESTAMP DEFAULT NULL,                           -- 收藏的时间
 

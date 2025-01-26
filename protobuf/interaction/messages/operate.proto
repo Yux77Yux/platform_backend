@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package interaction.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/interaction";
+
+enum Operate {
+  NONE = 0;
+  VIEW = 1;
+  LIKE = 2;
+  CANCEL_COLLECT = 3;
+  COLLECT = 4;
+  CANCEL_LIKE = 5;
+  DEL_VIEW = 6;
+}

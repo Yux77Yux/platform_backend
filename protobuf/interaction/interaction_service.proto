@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package interaction;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/interaction";
+
+import "google/api/annotations.proto";
+
+import "interaction/methods/post.proto";
+import "interaction/methods/get.proto";
+import "interaction/methods/update.proto";
+
+service InteractionService {
+  // POST
+  rpc PostInteraction(interaction.methods.PostInteractionRequest) returns (interaction.methods.PostInteractionResponse) {
+    option (google.api.http) = {
+      post: "/api/interaction"
+      body: "*"
+    };
+  }
+
+  // Get
+  rpc GetActionTag(interaction.methods.GetCreationInteractionRequest) returns (interaction.methods.GetCreationInteractionResponse) {
+    option (google.api.http) = {
+      get: "/api/interaction/creation/{base.creation_id=*}/{access_token.value=*}"
+    };
+  }
+
+  rpc GetHistories(interaction.methods.GetHistoriesRequest) returns (interaction.methods.GetInteractionsResponse) {
+    option (google.api.http) = {
+      get: "/api/interaction/history/{access_token.value=*}"
+    };
+  }
+
+  rpc GetCollections(interaction.methods.GetCollectionsRequest) returns (interaction.methods.GetInteractionsResponse) {
+    option (google.api.http) = {
+      get: "/api/interaction/collection/{access_token.value=*}"
+    };
+  }
+
+  // UPDATE
+  // 实际是修改对于的action tag
+  rpc DelHistories(interaction.methods.UpdateInteractionRequest) returns (interaction.methods.UpdateInteractionResponse) {
+    option (google.api.http) = {
+      patch: "/api/interaction/history"
+      body: "*"
+    };
+  }
+
+  // 实际是修改对于的action tag
+  rpc ClickCollection(interaction.methods.UpdateInteractionRequest) returns (interaction.methods.UpdateInteractionResponse) {
+    option (google.api.http) = {
+      patch: "/api/interaction/collection"
+      body: "*"
+    };
+  }
+
+  rpc CancelCollections(interaction.methods.UpdateInteractionsRequest) returns (interaction.methods.UpdateInteractionResponse) {
+    option (google.api.http) = {
+      patch: "/api/interaction/collection/cancel"
+      body: "*"
+    };
+  }
+
+  rpc ClickLike(interaction.methods.UpdateInteractionRequest) returns (interaction.methods.UpdateInteractionResponse) {
+    option (google.api.http) = {
+      patch: "/api/interaction/like"
+      body: "*"
+    };
+  }
+
+  rpc CancelLike(interaction.methods.UpdateInteractionRequest) returns (interaction.methods.UpdateInteractionResponse) {
+    option (google.api.http) = {
+      patch: "/api/interaction/like/cancel"
+      body: "*"
+    };
+  }
+}

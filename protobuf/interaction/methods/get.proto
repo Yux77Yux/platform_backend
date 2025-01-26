@@ -1,21 +1,34 @@
 syntax = "proto3";
 
-package comment.methods;
+package interaction.methods;
 
-option go_package = "github.com/Yux77Yux/platform_backend/generated/comment";
+option go_package = "github.com/Yux77Yux/platform_backend/generated/interaction";
 
 import "interaction/messages/interaction.proto";
+import "interaction/messages/base_interaction.proto";
 
 import "common/access_token.proto";
 import "common/api_response.proto";
 
-// 作品的一级评论
-message InitalCommentsRequest {
-  int64 creation_id = 1;
+message GetCreationInteractionRequest {
+  interaction.messages.BaseInteraction base = 1;
+  common.AccessToken access_token = 2;
 }
 
-message InitalCommentsResponse {
-  repeated comment.messages.Comment comments = 1;
-  comment.messages.CommentArea comment_area = 2;
-  common.ApiResponse msg = 3;
+message GetCreationInteractionResponse {
+  common.ApiResponse msg = 1;
+  interaction.messages.Interaction interaction = 2;
+}
+
+message GetHistoriesRequest {
+  common.AccessToken access_token = 1;
+}
+
+message GetCollectionsRequest {
+  common.AccessToken access_token = 1;
+}
+
+message GetInteractionsResponse {
+  common.ApiResponse msg = 1;
+  interaction.messages.AnyInteraction any_interaction = 2;
 }

@@ -1,16 +1,21 @@
 syntax = "proto3";
 
-package comment.methods;
+package interaction.methods;
 
-option go_package = "github.com/Yux77Yux/platform_backend/generated/comment";
+option go_package = "github.com/Yux77Yux/platform_backend/generated/interaction";
 
-import "interaction/messages/operate_interaction.proto";
+import "interaction/messages/base_interaction.proto";
 
 import "common/api_response.proto";
 import "common/access_token.proto";
 
 message UpdateInteractionRequest {
   interaction.messages.OperateInteraction operate_interaction = 1;
+  common.AccessToken access_token = 2;
+}
+
+message UpdateInteractionsRequest {
+  interaction.messages.OperateAnyInteraction operate_interaction = 1;
   common.AccessToken access_token = 2;
 }
 

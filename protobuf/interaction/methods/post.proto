@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package interaction.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/interaction";
+
+import "interaction/messages/base_interaction.proto";
+
+import "common/access_token.proto";
+import "common/api_response.proto";
+
+message PostInteractionRequest {
+  interaction.messages.BaseInteraction base = 1;
+  common.AccessToken access_token = 2;
+}
+
+message PostInteractionResponse {
+  common.ApiResponse msg = 1;
+}

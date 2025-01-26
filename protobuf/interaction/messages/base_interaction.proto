@@ -4,9 +4,19 @@ package interaction.messages;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/interaction";
 
-import "google/protobuf/timestamp.proto";
+import "interaction/messages/operate.proto";
 
 message BaseInteraction {
   int64 user_id = 1;
   int64 creation_id = 2;
+}
+
+message OperateInteraction {
+  interaction.messages.Operate action = 1;
+  BaseInteraction interction = 2;
+}
+
+message OperateAnyInteraction {
+  interaction.messages.Operate action = 1;
+  repeated BaseInteraction any_interction = 2;
 }

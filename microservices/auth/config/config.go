@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	GRPC_SERVER_ADDRESS = ":50020"
-	HTTP_SERVER_ADDRESS = ":50021"
+	GRPC_SERVER_ADDRESS = ":51000"
+	HTTP_SERVER_ADDRESS = ":51001"
 )
 
 var RoleScopeMapping = map[string][]string{

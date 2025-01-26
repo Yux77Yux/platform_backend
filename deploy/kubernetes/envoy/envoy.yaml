@@ -78,4 +78,4 @@ static_resources:
                 address:
                   socket_address:
                     address: 10.208.58.76 # gRPC auth 服务地址 #集群的话则为${AUTH_SERVICE_HOST}
-                    port_value: 50010 # gRPC 服务端口
+                    port_value: 50060 # gRPC 服务端口

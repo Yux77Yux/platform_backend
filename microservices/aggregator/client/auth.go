@@ -17,7 +17,7 @@ type AuthClient struct {
 
 func NewAuthClient() (*AuthClient, error) {
 	// 建立与服务器的连接
-	conn, err := grpc.NewClient(auth_service_address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(service_address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("did not connect: %v", err)
 	}

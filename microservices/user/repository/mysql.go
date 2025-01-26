@@ -692,7 +692,6 @@ func UserUpdateAvatarInTransaction(users []*generated.UserUpdateAvatar) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("db Exec OKOKOK")
 
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
 	defer func() {
