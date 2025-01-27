@@ -440,7 +440,7 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 		// 查询的分区id
 		categoriesIds := make([]int32, len(ids))
 
-		rows, err := tx.Query(
+		rows, err := tx.QueryContext(ctx,
 			query,
 			str,
 		)
@@ -507,7 +507,7 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 		rows.Close()
 
 		// 查 统计数
-		rows, err = tx.Query(
+		rows, err = tx.QueryContext(ctx,
 			queryCardEngagement,
 			str,
 		)
@@ -565,7 +565,7 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 		// 拼接
 		str = strings.Join(categorys, ",")
 
-		rows, err = tx.Query(
+		rows, err = tx.QueryContext(ctx,
 			queryCardCategory,
 			str,
 		)

@@ -209,7 +209,7 @@ func GetPublisherIdInTransaction(comment_id int32) (int64, error) {
 		return -1, err
 	default:
 		// 查统计
-		err = tx.QueryRow(
+		err = tx.QueryRowContext(ctx,
 			query,
 			comment_id,
 		).Scan(&userId)
@@ -269,7 +269,7 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
-		return nil, []*generated.Comment{}, err
+		return nil, nil, err
 	}
 
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
@@ -296,10 +296,10 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 			err = fmt.Errorf("%w and %w", err, errSecond)
 		}
 
-		return nil, []*generated.Comment{}, err
+		return nil, nil, err
 	default:
 		// 查统计
-		err = tx.QueryRow(
+		err = tx.QueryRowContext(ctx,
 			queryArea,
 			creation_id,
 		).Scan(&total, &status)
@@ -309,18 +309,18 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return nil, []*generated.Comment{}, err
+			return nil, nil, err
 		}
 
 		// 非公开则直接返回
 		if status != "ACTIVE" {
 			return &generated.CommentArea{
 				AreaStatus: generated.CommentArea_Status(generated.CommentArea_Status_value[status]),
-			}, []*generated.Comment{}, nil
+			}, nil, nil
 		}
 
 		// 查评论
-		rows, err := tx.Query(
+		rows, err := tx.QueryContext(ctx,
 			query,
 			creation_id,
 		)
@@ -330,7 +330,7 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return nil, []*generated.Comment{}, err
+			return nil, nil, err
 		}
 
 		for rows.Next() {
@@ -345,7 +345,15 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 				media      string
 			)
 
-			rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
+			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
+			if err != nil {
+				// 如果读取行数据失败，处理错误
+				err = fmt.Errorf("failed to scan row because %v", err)
+				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+					err = fmt.Errorf("%w and %w", err, errSecond)
+				}
+				return nil, nil, err
+			}
 			comments = append(comments, &generated.Comment{
 				CommentId:  id,
 				Root:       root,
@@ -360,7 +368,7 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 		}
 
 		if err = db.CommitTransaction(tx); err != nil {
-			return nil, []*generated.Comment{}, err
+			return nil, nil, err
 		}
 	}
 
@@ -401,7 +409,7 @@ func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*genera
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
-		return []*generated.Comment{}, err
+		return nil, err
 	}
 
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
@@ -425,10 +433,10 @@ func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*genera
 			err = fmt.Errorf("%w and %w", err, errSecond)
 		}
 
-		return []*generated.Comment{}, err
+		return nil, err
 	default:
 		// 查评论
-		rows, err := tx.Query(
+		rows, err := tx.QueryContext(ctx,
 			query,
 			creation_id,
 			offset,
@@ -439,7 +447,7 @@ func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*genera
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return []*generated.Comment{}, err
+			return nil, err
 		}
 
 		for rows.Next() {
@@ -454,7 +462,15 @@ func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*genera
 				media      string
 			)
 
-			rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
+			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
+			if err != nil {
+				// 如果读取行数据失败，处理错误
+				err = fmt.Errorf("failed to scan row because %v", err)
+				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+					err = fmt.Errorf("%w and %w", err, errSecond)
+				}
+				return nil, err
+			}
 			comments = append(comments, &generated.Comment{
 				CommentId:  id,
 				Root:       root,
@@ -469,7 +485,7 @@ func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*genera
 		}
 
 		if err = db.CommitTransaction(tx); err != nil {
-			return []*generated.Comment{}, err
+			return nil, err
 		}
 	}
 
@@ -507,7 +523,7 @@ func GetSecondCommentsInTransaction(creation_id int64, root, pageNumber int32) (
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
-		return []*generated.Comment{}, err
+		return nil, err
 	}
 
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
@@ -531,10 +547,10 @@ func GetSecondCommentsInTransaction(creation_id int64, root, pageNumber int32) (
 			err = fmt.Errorf("%w and %w", err, errSecond)
 		}
 
-		return []*generated.Comment{}, err
+		return nil, err
 	default:
 		// 查评论
-		rows, err := tx.Query(
+		rows, err := tx.QueryContext(ctx,
 			query,
 			creation_id,
 			root,
@@ -546,7 +562,7 @@ func GetSecondCommentsInTransaction(creation_id int64, root, pageNumber int32) (
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return []*generated.Comment{}, err
+			return nil, err
 		}
 
 		for rows.Next() {
@@ -576,7 +592,7 @@ func GetSecondCommentsInTransaction(creation_id int64, root, pageNumber int32) (
 		}
 
 		if err = db.CommitTransaction(tx); err != nil {
-			return []*generated.Comment{}, err
+			return nil, err
 		}
 	}
 
@@ -613,7 +629,7 @@ func GetReplyCommentsInTransaction(user_id int64, page int32) ([]*generated.Comm
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
-		return []*generated.Comment{}, err
+		return nil, err
 	}
 
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
@@ -637,10 +653,10 @@ func GetReplyCommentsInTransaction(user_id int64, page int32) ([]*generated.Comm
 			err = fmt.Errorf("%w and %w", err, errSecond)
 		}
 
-		return []*generated.Comment{}, err
+		return nil, err
 	default:
 		// 查评论
-		rows, err := tx.Query(
+		rows, err := tx.QueryContext(ctx,
 			query,
 			user_id,
 			offset,
@@ -651,7 +667,7 @@ func GetReplyCommentsInTransaction(user_id int64, page int32) ([]*generated.Comm
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return []*generated.Comment{}, err
+			return nil, err
 		}
 
 		for rows.Next() {
@@ -682,7 +698,7 @@ func GetReplyCommentsInTransaction(user_id int64, page int32) ([]*generated.Comm
 		}
 
 		if err = db.CommitTransaction(tx); err != nil {
-			return []*generated.Comment{}, err
+			return nil, err
 		}
 	}
 
@@ -717,7 +733,7 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
-		return []*generated.AfterAuth{}, err
+		return nil, err
 	}
 
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
@@ -737,7 +753,7 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 			err = fmt.Errorf("%w and %w", err, errSecond)
 		}
 
-		return []*generated.AfterAuth{}, err
+		return nil, err
 	default:
 		// 查评论
 		rows, err := tx.QueryContext(
@@ -751,7 +767,7 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
 
-			return []*generated.AfterAuth{}, err
+			return nil, err
 		}
 
 		for rows.Next() {
@@ -768,7 +784,7 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 		}
 
 		if err = db.CommitTransaction(tx); err != nil {
-			return []*generated.AfterAuth{}, err
+			return nil, err
 		}
 	}
 

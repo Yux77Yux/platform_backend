@@ -260,7 +260,7 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 
 		return nil, err
 	default:
-		rows, err := tx.Query(query, id)
+		rows, err := tx.QueryContext(ctx, query, id)
 		if err != nil {
 			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
@@ -274,12 +274,20 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 		// 获取列名
 		cols, err := rows.Columns()
 		if err != nil {
-			return nil, fmt.Errorf("failed to get columns: %w", err)
+			err = fmt.Errorf("failed to get columns: %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return nil, err
 		}
 
 		// 确保有结果
 		if !rows.Next() {
-			return nil, nil
+			// 无结果直接结束事务
+			if err = db.CommitTransaction(tx); err != nil {
+				return nil, err
+			}
 		}
 
 		// 创建一个存储列值的切片
@@ -291,7 +299,11 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 
 		// 扫描结果到指针数组
 		if err := rows.Scan(pointers...); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+			err = fmt.Errorf("failed to scan row: %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+			return nil, err
 		}
 
 		// 将结果填充到 map 中
@@ -308,14 +320,20 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 						// 将字符串解析为 time.Time（假设格式是 "YYYY-MM-DD"）
 						parsedTime, err := time.Parse("2006-01-02", string(value))
 						if err != nil {
-							log.Printf("colName %s value %v with error: %v", colName, values[i], err)
-							return nil, fmt.Errorf("failed to parse time %v: %v", value, err)
+							err = fmt.Errorf("failed to parse time: %v", err)
+							if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+								err = fmt.Errorf("%w and %w", err, errSecond)
+							}
+							return nil, err
 						}
 
 						result[colName] = timestamppb.New(parsedTime)
 					} else {
-						log.Printf("colName %s value %v with error: %v", colName, values[i], err)
-						return nil, fmt.Errorf("assert %v timeType failed ", values[i])
+						err = fmt.Errorf("assert %v timeType failed ", values[i])
+						if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+							err = fmt.Errorf("%w and %w", err, errSecond)
+						}
+						return nil, err
 					}
 				}
 			case "created_at", "updated_at":
@@ -323,22 +341,30 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 					// 将字符串解析为 time.Time（假设格式是 "YYYY-MM-DD HH:MM:SS"）
 					parsedTime, err := time.Parse("2006-01-02 15:04:05", string(value))
 					if err != nil {
-						log.Printf("colName %s value %v with error: %v", colName, values[i], err)
-						return nil, fmt.Errorf("failed to parse time %v: %v", string(value), err)
+						err = fmt.Errorf("failed to parse time %v: %v", string(value), err)
+						if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+							err = fmt.Errorf("%w and %w", err, errSecond)
+						}
+						return nil, err
 					}
 
 					result[colName] = timestamppb.New(parsedTime)
 				} else {
-					log.Printf("colName %s value %v with error: %v", colName, values[i], err)
-					return nil, fmt.Errorf("assert %v timeType failed ", values[i])
+					err = fmt.Errorf("assert %v timeType failed ", values[i])
+					if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+						err = fmt.Errorf("%w and %w", err, errSecond)
+					}
+					return nil, err
 				}
 			default:
 				if value, ok := values[i].([]byte); ok {
 					result[colName] = string(value)
-					log.Printf("%s :%s", colName, result[colName])
 				} else {
-					log.Printf("colName %s value %v with error: %v", colName, values[i], err)
-					return nil, fmt.Errorf("assert %v type failed ", values[i])
+					err = fmt.Errorf("assert %v type failed ", values[i])
+					if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+						err = fmt.Errorf("%w and %w", err, errSecond)
+					}
+					return nil, err
 				}
 			}
 		}
@@ -350,6 +376,9 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 		)
 		query = "SELECT email,role FROM db_user_credentials_1.UserCredentials WHERE id = ?"
 		if err := tx.QueryRow(query, id).Scan(&email, &role); err != nil {
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
 			return nil, err
 		}
 
@@ -360,8 +389,11 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 			if value, ok := email.([]byte); ok {
 				result["email"] = string(value)
 			} else {
-
-				return nil, fmt.Errorf("assert email type failed ")
+				err = fmt.Errorf("assert email type failed ")
+				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+					err = fmt.Errorf("%w and %w", err, errSecond)
+				}
+				return nil, err
 			}
 		}
 		result["role"] = role
@@ -382,13 +414,13 @@ func UserVerifyInTranscation(user_credential *generated.UserCredentials) (*gener
 		value = user_credential.GetUserEmail()
 	}
 
-	query := fmt.Sprintf(`select 
-	id,
-	password,
-	email,
-	role
-	from db_user_credentials_1.UserCredentials 
-	where %s`, identifier)
+	query := fmt.Sprintf(`SELECT 
+			id,
+			password,
+			email,
+			role
+		FROM db_user_credentials_1.UserCredentials 
+		WHERE %s`, identifier)
 
 	ctx := context.Background()
 
