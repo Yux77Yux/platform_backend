@@ -15,7 +15,6 @@ message Interaction {
   google.protobuf.Timestamp save_at = 4;
 }
 
-
 message AnyInteraction {
   repeated Interaction any_interction = 2;
 }

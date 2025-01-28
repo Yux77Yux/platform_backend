@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"context"
 	"fmt"
 	"log"
 
@@ -13,7 +12,7 @@ import (
 	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
 
-func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequest) (*generated.GetCreationInteractionResponse, error) {
+func GetActionTag(req *generated.GetCreationInteractionRequest) (*generated.GetCreationInteractionResponse, error) {
 	response := &generated.GetCreationInteractionResponse{
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
@@ -23,7 +22,7 @@ func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequ
 	return response, nil
 }
 
-func GetCollections(ctx context.Context, req *generated.GetCollectionsRequest) (*generated.GetInteractionsResponse, error) {
+func GetCollections(req *generated.GetCollectionsRequest) (*generated.GetInteractionsResponse, error) {
 	response := &generated.GetInteractionsResponse{
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
@@ -33,7 +32,7 @@ func GetCollections(ctx context.Context, req *generated.GetCollectionsRequest) (
 	return response, nil
 }
 
-func GetHistories(ctx context.Context, req *generated.GetHistoriesRequest) (*generated.GetInteractionsResponse, error) {
+func GetHistories(req *generated.GetHistoriesRequest) (*generated.GetInteractionsResponse, error) {
 	response := &generated.GetInteractionsResponse{
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,

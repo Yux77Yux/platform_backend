@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"context"
 	"fmt"
 	"log"
 
@@ -15,7 +14,7 @@ import (
 	jwt "github.com/Yux77Yux/platform_backend/pkg/jwt"
 )
 
-func CancelCollections(ctx context.Context, req *generated.UpdateInteractionsRequest) (*generated.UpdateInteractionResponse, error) {
+func CancelCollections(req *generated.UpdateInteractionsRequest) (*generated.UpdateInteractionResponse, error) {
 	response := &generated.UpdateInteractionResponse{
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
@@ -25,7 +24,7 @@ func CancelCollections(ctx context.Context, req *generated.UpdateInteractionsReq
 	return response, nil
 }
 
-func CancelLike(ctx context.Context, req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
+func CancelLike(req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
 	response := &generated.UpdateInteractionResponse{
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
@@ -35,7 +34,7 @@ func CancelLike(ctx context.Context, req *generated.UpdateInteractionRequest) (*
 	return response, nil
 }
 
-func ClickCollection(ctx context.Context, req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
+func ClickCollection(req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
 	response := &generated.UpdateInteractionResponse{
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
@@ -45,7 +44,7 @@ func ClickCollection(ctx context.Context, req *generated.UpdateInteractionReques
 	return response, nil
 }
 
-func ClickLike(ctx context.Context, req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
+func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
 	response := &generated.UpdateInteractionResponse{
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
@@ -55,7 +54,7 @@ func ClickLike(ctx context.Context, req *generated.UpdateInteractionRequest) (*g
 	return response, nil
 }
 
-func DelHistories(ctx context.Context, req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
+func DelHistories(req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
 	response := &generated.UpdateInteractionResponse{
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -228,4 +229,80 @@ func GetHistories(userId int64) ([]*generated.Interaction, error) {
 	}
 
 	return interactions, nil
+}
+
+// UPDATE
+func UpdateInteractions(req []*generated.Interaction) error {
+	const (
+		QM = "(?,?,?,?,?)"
+	)
+	count := len(req)
+	sqlStr := make([]string, count)
+	values := make([]interface{}, count*5)
+	for i, val := range req {
+		sqlStr[i] = QM
+		values[i*5] = val.GetBase().GetUserId()
+		values[i*5+1] = val.GetBase().GetCreationId()
+		values[i*5+2] = val.GetActionTag()
+		values[i*5+3] = val.GetUpdatedAt()
+		values[i*5+4] = val.GetSaveAt()
+	}
+
+	query := fmt.Sprintf(`
+		INSERT INTO db_interaction_1.Interaction (user_id, creation_id, action_tag,updated_at,save_at)
+		VALUES %s
+		ON DUPLICATE KEY UPDATE action_tag = CASE 
+        	WHEN VALUES(action_tag) = 1 THEN action_tag | 1
+        	WHEN VALUES(action_tag) = 2 THEN action_tag | 2
+        	WHEN VALUES(action_tag) = 4 THEN action_tag | 4
+        	WHEN VALUES(action_tag) = 3 THEN action_tag & 3
+        	WHEN VALUES(action_tag) = 5 THEN action_tag & 5
+        	WHEN VALUES(action_tag) = 6 THEN action_tag & 6
+        	ELSE action_tag
+        END;`, strings.Join(sqlStr, ","))
+
+	ctx := context.Background()
+	tx, err := db.BeginTransaction()
+	if err != nil {
+		return err
+	}
+
+	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("transaction failed because %v", r)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+		}
+	}()
+	select {
+	case <-ctx.Done():
+		err = fmt.Errorf("exec timeout :%w", ctx.Err())
+		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			err = fmt.Errorf("%w and %w", err, errSecond)
+		}
+
+		return err
+	default:
+		_, err := tx.ExecContext(
+			ctx,
+			query,
+			values...,
+		)
+		if err != nil {
+			err = fmt.Errorf("transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return err
+		}
+
+		if err = db.CommitTransaction(tx); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

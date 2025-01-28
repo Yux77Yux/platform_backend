@@ -9,7 +9,7 @@ import (
 	internal "github.com/Yux77Yux/platform_backend/microservices/interaction/internal"
 )
 
-func PostInteraction(ctx context.Context, req *generated.PostInteractionRequest) (*generated.PostInteractionResponse, error) {
+func PostInteraction(req *generated.PostInteractionRequest) (*generated.PostInteractionResponse, error) {
 	response := &generated.PostInteractionResponse{
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
