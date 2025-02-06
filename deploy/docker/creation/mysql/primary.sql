@@ -45,9 +45,9 @@ CREATE TABLE IF NOT EXISTS CreationEngagement (
     publish_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 作品发布时间
 
     PRIMARY KEY (creation_id),                   -- 使用 id 作为主键
-    INDEX idx_creation_views (creation_id, views),    -- 按 creation_id 和 views 联合索引，最多播放
-    INDEX idx_creation_saves (creation_id, saves),    -- 按 creation_id 和 saves 联合索引，最多收藏
-    INDEX idx_creation_publish_time (creation_id, publish_time) -- 按 creation_id 和 publish_time 联合索引，最新发布
+    INDEX idx_creation_views (views),    -- 按 creation_id 和 views 联合索引，最多播放
+    INDEX idx_creation_saves (saves),    -- 按 creation_id 和 saves 联合索引，最多收藏
+    INDEX idx_creation_publish_time (publish_time) -- 按 creation_id 和 publish_time 联合索引，最新发布
 );
 
 -- 使用 db_category_1 数据库

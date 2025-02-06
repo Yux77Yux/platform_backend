@@ -28,11 +28,11 @@ func RecommendItemBased(userId int64) ([]int64, error) {
 	// 构建倒排索引：map[creationId]map[userId]weight
 	itemUserIndex := make(map[int64]map[int64]float64)
 	for _, ub := range allUsers {
-		for creationId, weight := range ub.userWeight {
+		for creationId, weight := range ub.Weight {
 			if itemUserIndex[creationId] == nil {
 				itemUserIndex[creationId] = make(map[int64]float64)
 			}
-			itemUserIndex[creationId][ub.userId] = weight
+			itemUserIndex[creationId][ub.Id] = weight
 		}
 	}
 
@@ -52,7 +52,7 @@ func RecommendItemBased(userId int64) ([]int64, error) {
 	recScores := make(map[int64]float64)
 	// user_creationId 为目标用户的历史记录的作品id，即用户id->作品id->weight 中的 用户id
 	// creation_userId 为形成的倒排索引中的  作品id->用户id->weight中的 作品id
-	for user_creationId, user_weight := range targetUser.userWeight {
+	for user_creationId, user_weight := range targetUser.Weight {
 		// creation_userIdMap为记录 目标用户的观看记录中的作品 ，观看过该作品的其他用户。
 		// 我看过的，你们也看过
 		creation_userIdMap := itemUserIndex[user_creationId]
@@ -99,7 +99,7 @@ func RecommendItemBased(userId int64) ([]int64, error) {
 
 	// 移除目标用户已经看过的视频
 	// 由于存在 a1和a2之间的两两比较，即此时b1或b2或b3或b4...可能和a2相同，也可能和a1或a3或a4相同
-	for creationId := range targetUser.userWeight {
+	for creationId := range targetUser.Weight {
 		delete(recScores, creationId)
 	}
 

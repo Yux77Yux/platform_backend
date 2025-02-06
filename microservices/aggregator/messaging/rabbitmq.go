@@ -10,6 +10,49 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+func SendMessage(exchange string, routeKey string, req proto.Message) error {
+	log.Printf("info: start send message to exchange %s with routeKey %s", exchange, routeKey)
+	const retries = 3
+	var (
+		err  error
+		body []byte
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	body, err = proto.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	rabbitMQ := GetRabbitMQ()
+	defer rabbitMQ.Close()
+
+	for i := 0; i < retries; i++ {
+		err := rabbitMQ.Publish(
+			ctx,
+			exchange,
+			routeKey,
+			false,
+			false,
+			amqp.Publishing{
+				DeliveryMode: amqp.Persistent,
+				ContentType:  "application/x-protobuf",
+				Body:         body,
+			})
+
+		if err == nil {
+			log.Println("info: success in sending mq")
+			return nil
+		}
+
+		log.Printf("error: failed to publish message, retrying... (%d/3)\n", i+1)
+		time.Sleep(time.Second * 2) // Wait before retrying
+	}
+	return fmt.Errorf("failed to publish request: %w", err)
+}
+
 // (交换机名，请求队列，响应队列，路由键，请求id，
 // 请求消息体)
 func RPCPattern(
