@@ -685,3 +685,85 @@ func DeleteCreationInTransaction(id int64) error {
 
 	return nil
 }
+
+// UPDATE
+func UpdateViewsInTransaction(creationId int64, changingNum int) error {
+	query := `
+	UPDATE db_creation_engagment_1.CreationEngagement
+	SET views = views + ?
+	WHERE creation_id = ?`
+
+	ctx := context.Background()
+
+	select {
+	case <-ctx.Done():
+		err := fmt.Errorf("exec timeout :%w", ctx.Err())
+		return err
+	default:
+		_, err := db.Exec(
+			query,
+			changingNum,
+			creationId,
+		)
+		if err != nil {
+			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func UpdateLikesInTransaction(creationId int64, changingNum int) error {
+	query := `
+	UPDATE db_creation_engagment_1.CreationEngagement
+	SET likes = likes + ?
+	WHERE creation_id = ?`
+
+	ctx := context.Background()
+
+	select {
+	case <-ctx.Done():
+		err := fmt.Errorf("exec timeout :%w", ctx.Err())
+		return err
+	default:
+		_, err := db.Exec(
+			query,
+			changingNum,
+			creationId,
+		)
+		if err != nil {
+			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func UpdateSavesInTransaction(creationId int64, changingNum int) error {
+	query := `
+	UPDATE db_creation_engagment_1.CreationEngagement
+	SET saves = saves + ?
+	WHERE creation_id = ?`
+
+	ctx := context.Background()
+
+	select {
+	case <-ctx.Done():
+		err := fmt.Errorf("exec timeout :%w", ctx.Err())
+		return err
+	default:
+		_, err := db.Exec(
+			query,
+			changingNum,
+			creationId,
+		)
+		if err != nil {
+			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
+			return err
+		}
+	}
+
+	return nil
+}

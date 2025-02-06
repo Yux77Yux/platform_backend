@@ -1,9 +1,9 @@
 package internal
 
 var (
-	requestChannel chan RequestHandlerFunc
+	RequestChannel chan RequestHandlerFunc
 )
 
 func EmpowerDispatch(master DispatcherInterface) {
-	requestChannel = master.GetChannel()
+	RequestChannel = master.GetChannel()
 }

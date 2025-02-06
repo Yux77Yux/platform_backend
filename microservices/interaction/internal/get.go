@@ -1,43 +1,173 @@
 package internal
 
 import (
-	"fmt"
-	"log"
-
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
-	mq "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
+	// mq "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
+	recommend "github.com/Yux77Yux/platform_backend/microservices/interaction/recommend"
 	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
-	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
+	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
 func GetActionTag(req *generated.GetCreationInteractionRequest) (*generated.GetCreationInteractionResponse, error) {
-	response := &generated.GetCreationInteractionResponse{
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "202",
-		},
+	var response = new(generated.GetCreationInteractionResponse)
+	base := req.GetBase()
+	interaction, err := cache.GetInteraction(base)
+	if err != nil {
+		response.Interaction = interaction
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "500",
+		}
+		interaction, err := db.GetActionTag(base)
+		if err != nil {
+			return response, nil
+		}
+
+		response.Interaction = interaction
+		// 补充Redis
+		// action:=interaction.GetActionTag()
+		// if action & 2 ==2{
+
+		// }
+		// if action & 4 == 4{
+
+		// }
+	}
+
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
 	}
 	return response, nil
 }
 
 func GetCollections(req *generated.GetCollectionsRequest) (*generated.GetInteractionsResponse, error) {
-	response := &generated.GetInteractionsResponse{
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "202",
-		},
+	var response = new(generated.GetInteractionsResponse)
+	pageNum := req.GetPage()
+	token := req.GetAccessToken().GetValue()
+	pass, userId, err := auth.Auth("get", "interaction", token)
+	if err != nil {
+		return &generated.GetInteractionsResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_FAILED,
+				Code:   "500",
+			},
+		}, err
+	}
+	if !pass {
+		return &generated.GetInteractionsResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_ERROR,
+				Code:   "403",
+			},
+		}, nil
+	}
+
+	interactions, err := cache.GetCollections(userId, pageNum)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "500",
+		}
+		interactions, err = db.GetCollections(userId, pageNum)
+
+		if err != nil {
+			return response, nil
+		}
+
+		// 补充Redis
+	}
+	response.AnyInteraction = &generated.AnyInteraction{
+		AnyInterction: interactions,
+	}
+
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
 	}
 	return response, nil
 }
 
 func GetHistories(req *generated.GetHistoriesRequest) (*generated.GetInteractionsResponse, error) {
-	response := &generated.GetInteractionsResponse{
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "202",
-		},
+	var response = new(generated.GetInteractionsResponse)
+	pageNum := req.GetPage()
+	token := req.GetAccessToken().GetValue()
+	pass, userId, err := auth.Auth("get", "interaction", token)
+	if err != nil {
+		return &generated.GetInteractionsResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_FAILED,
+				Code:   "500",
+			},
+		}, err
+	}
+	if !pass {
+		return &generated.GetInteractionsResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_ERROR,
+				Code:   "403",
+			},
+		}, nil
+	}
+
+	interactions, err := cache.GetHistories(userId, pageNum)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "500",
+		}
+		interactions, err = db.GetHistories(userId, pageNum)
+
+		if err != nil {
+			return response, nil
+		}
+	}
+	response.AnyInteraction = &generated.AnyInteraction{
+		AnyInterction: interactions,
+	}
+
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
+}
+
+func GetRecommend(req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
+	var response = new(generated.GetRecommendResponse)
+	token := req.GetAccessToken().GetValue()
+	pass, userId, err := auth.Auth("get", "interaction", token)
+	if err != nil {
+		return &generated.GetRecommendResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_FAILED,
+				Code:   "500",
+			},
+		}, err
+	}
+	if !pass {
+		return &generated.GetRecommendResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_ERROR,
+				Code:   "403",
+			},
+		}, nil
+	}
+
+	interactions, err := recommend.Recommend(userId)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "500",
+		}
+	}
+	response.Creations = interactions
+
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
 	}
 	return response, nil
 }

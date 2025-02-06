@@ -10,6 +10,16 @@ import "interaction/messages/base_interaction.proto";
 import "common/access_token.proto";
 import "common/api_response.proto";
 
+message GetRecommendRequest {
+  common.AccessToken access_token = 1;
+}
+
+message GetRecommendResponse {
+  common.ApiResponse msg = 1;
+  repeated int64 creations = 2;
+}
+
+
 message GetCreationInteractionRequest {
   interaction.messages.BaseInteraction base = 1;
   common.AccessToken access_token = 2;
@@ -22,10 +32,12 @@ message GetCreationInteractionResponse {
 
 message GetHistoriesRequest {
   common.AccessToken access_token = 1;
+  int32 page = 2;
 }
 
 message GetCollectionsRequest {
   common.AccessToken access_token = 1;
+  int32 page = 2; 
 }
 
 message GetInteractionsResponse {

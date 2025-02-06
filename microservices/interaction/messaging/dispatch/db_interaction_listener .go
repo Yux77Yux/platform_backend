@@ -6,40 +6,41 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/user"
+	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 )
 
 // 监听者结构体
-type UserSpaceCacheListener struct {
-	exeChannel             chan *[]*generated.UserUpdateSpace // 批量发送的通道
-	userUpdateSpaceChannel chan *generated.UserUpdateSpace    // 用于接收的通道
-	count                  uint32
+type DbInteractionsListener struct {
+	exeChannel   chan *[]*generated.Interaction // 批量发送评论的通道
+	datasChannel chan *generated.Interaction    // 用于接收评论的通道
+	count        uint32
 
 	timeoutDuration     time.Duration           // 超时持续时间（触发销毁）
 	timeoutTimer        *time.Timer             // 用于刷新存活时间
 	updateInterval      time.Duration           // 批量插入的间隔时间
 	updateIntervalTimer *time.Timer             // 用于周期性执行批量更新
-	next                *UserSpaceCacheListener // 下一个监听者
-	prev                *UserSpaceCacheListener // 上一个监听者
+	next                *DbInteractionsListener // 下一个监听者
+	prev                *DbInteractionsListener // 上一个监听者
 }
 
-func (listener *UserSpaceCacheListener) GetId() int64 {
+func (listener *DbInteractionsListener) GetId() int64 {
 	return 0
 }
 
 // 启动监听者
-func (listener *UserSpaceCacheListener) StartListening() {
+func (listener *DbInteractionsListener) StartListening() {
 	listener.RestartUpdateIntervalTimer()
 	listener.RestartTimeoutTimer()
 }
 
-// 分发至通道
-func (listener *UserSpaceCacheListener) Dispatch(data protoreflect.ProtoMessage) {
+// 分发评论至通道
+func (listener *DbInteractionsListener) Dispatch(data protoreflect.ProtoMessage) {
 	// 长度加1
 	count := atomic.AddUint32(&listener.count, 1)
 
-	UserUpdateSpace := data.(*generated.UserUpdateSpace)
-	listener.userUpdateSpaceChannel <- UserUpdateSpace
+	_data := data.(*generated.Interaction)
+	// 处理评论的逻辑
+	listener.datasChannel <- _data
 
 	if count%MAX_BATCH_SIZE == 0 {
 		go listener.SendBatch()
@@ -48,7 +49,7 @@ func (listener *UserSpaceCacheListener) Dispatch(data protoreflect.ProtoMessage)
 }
 
 // 执行批量更新
-func (listener *UserSpaceCacheListener) SendBatch() {
+func (listener *DbInteractionsListener) SendBatch() {
 	const BatchSize = MAX_BATCH_SIZE
 
 	count := atomic.LoadUint32(&listener.count)
@@ -57,22 +58,20 @@ func (listener *UserSpaceCacheListener) SendBatch() {
 		return
 	}
 
-	userUpdateSpacePtr := userSpacePool.Get().(*[]*generated.UserUpdateSpace)
-	*userUpdateSpacePtr = (*userUpdateSpacePtr)[:count]
-	userUpdateSpace := *userUpdateSpacePtr
-	for i := uint32(0); i < count; i++ {
-		userUpdateSpace[i] = <-listener.userUpdateSpaceChannel
+	datasPtr := interactionsPool.Get().(*[]*generated.Interaction)
+	*datasPtr = (*datasPtr)[:count]
+	insertUsers := *datasPtr
+	for i := 0; uint32(i) < count; i++ {
+		insertUsers[i] = <-listener.datasChannel
 	}
 	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
 
-	listener.exeChannel <- userUpdateSpacePtr // 送去批量执行,可能被阻塞
+	listener.exeChannel <- datasPtr // 送去批量执行,可能被阻塞
 }
 
 // 启动周期执行批量更新的定时器
-func (listener *UserSpaceCacheListener) RestartUpdateIntervalTimer() {
-	// 先重置
+func (listener *DbInteractionsListener) RestartUpdateIntervalTimer() {
 	if listener.updateIntervalTimer != nil {
-		// 如果 timer 已存在，确保安全地重置
 		if !listener.updateIntervalTimer.Stop() {
 			<-listener.updateIntervalTimer.C // 清理可能遗留的信号
 		}
@@ -83,15 +82,15 @@ func (listener *UserSpaceCacheListener) RestartUpdateIntervalTimer() {
 		count := atomic.LoadUint32(&listener.count)
 
 		if count > 0 {
-			go listener.SendBatch()        // 执行批量更新
-			listener.RestartTimeoutTimer() // 重启定时器
+			go listener.SendBatch() // 执行批量更新
+			listener.RestartTimeoutTimer()
 		}
 		listener.RestartUpdateIntervalTimer() // 重启定时器
 	})
 }
 
 // 启动存活时间的定时器
-func (listener *UserSpaceCacheListener) RestartTimeoutTimer() {
+func (listener *DbInteractionsListener) RestartTimeoutTimer() {
 	// 先重置
 	if listener.timeoutTimer != nil {
 		// 如果 timer 已存在，确保安全地重置
@@ -104,9 +103,9 @@ func (listener *UserSpaceCacheListener) RestartTimeoutTimer() {
 		count := atomic.LoadUint32(&listener.count)
 
 		if count == 0 {
-			listener.Cleanup()
 			// 超时后销毁监听者
-			userSpaceCacheChain.DestroyListener(listener)
+			listener.Cleanup()
+			dbInteractionsChain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}
@@ -114,9 +113,9 @@ func (listener *UserSpaceCacheListener) RestartTimeoutTimer() {
 }
 
 // 清理监听者资源
-func (listener *UserSpaceCacheListener) Cleanup() {
-	// 关闭通道
-	close(listener.userUpdateSpaceChannel)
+func (listener *DbInteractionsListener) Cleanup() {
+	// 关闭评论通道
+	close(listener.datasChannel)
 
 	// 清理其他资源（例如定时器、缓存等）
 	if listener.timeoutTimer != nil {

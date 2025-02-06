@@ -8,28 +8,22 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
+	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
+	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 )
 
-/*
-	这里的链表不太符合高并发特点的设计，问题在于持有锁时间会很长
-	改进的办法是使用堆建立，或者使用HASH对节点进行映射
-	先留着，以后再建堆
-*/
-
-func InitialUserBioCacheChain() *UserBioCacheChain {
-	_chain := &UserBioCacheChain{
-		Head:       &UserBioCacheListener{prev: nil},
-		Tail:       &UserBioCacheListener{next: nil},
+func InitialCancelLikeCacheChain() *CancelLikeCacheChain {
+	_chain := &CancelLikeCacheChain{
+		Head:       &CancelLikeListener{prev: nil},
+		Tail:       &CancelLikeListener{next: nil},
 		Count:      0,
-		exeChannel: make(chan *[]*generated.UserUpdateBio, EXE_CHANNEL_COUNT),
+		exeChannel: make(chan *[]*generated.BaseInteraction, EXE_CHANNEL_COUNT),
 		listenerPool: sync.Pool{
 			New: func() any {
-				return &UserBioCacheListener{
-					userUpdateBioChannel: make(chan *generated.UserUpdateBio, LISTENER_CHANNEL_COUNT),
-					timeoutDuration:      10 * time.Second,
-					updateInterval:       3 * time.Second,
+				return &CancelLikeListener{
+					datasChannel:    make(chan *generated.BaseInteraction, LISTENER_CHANNEL_COUNT),
+					timeoutDuration: 10 * time.Second,
+					updateInterval:  3 * time.Second,
 				}
 			},
 		},
@@ -41,33 +35,36 @@ func InitialUserBioCacheChain() *UserBioCacheChain {
 }
 
 // 责任链
-type UserBioCacheChain struct {
-	Head         *UserBioCacheListener // 责任链的头部
-	Tail         *UserBioCacheListener
-	nodeMux      sync.Mutex
+type CancelLikeCacheChain struct {
+	Head         *CancelLikeListener // 责任链的头部
+	Tail         *CancelLikeListener
 	Count        int32 // 监听者数量
-	exeChannel   chan *[]*generated.UserUpdateBio
+	nodeMux      sync.Mutex
+	exeChannel   chan *[]*generated.BaseInteraction
 	listenerPool sync.Pool
 }
 
-func (chain *UserBioCacheChain) ExecuteBatch() {
-	for usersPtr := range chain.exeChannel {
-		go func(usersPtr *[]*generated.UserUpdateBio) {
-			users := *usersPtr
-			// 更新头像
-			err := cache.UpdateUserBio(users)
+func (chain *CancelLikeCacheChain) ExecuteBatch() {
+	log.Printf("我他妈来啦!!！ ")
+	for interactionsPtr := range chain.exeChannel {
+		go func(interactionsPtr *[]*generated.BaseInteraction) {
+			interactions := *interactionsPtr
+			log.Printf("我他妈来啦！ %v", interactions)
+			// 插入数据库
+			err := cache.DelLike(interactions)
 			if err != nil {
-				log.Printf("error: UserUserBioCacheInTransaction error")
+				log.Printf("error: DelLike error")
 			}
 
-			*usersPtr = users[:0]
-			userBioPool.Put(usersPtr)
-		}(usersPtr)
+			// 放回对象池
+			*interactionsPtr = interactions[:0]
+			baseInteractionsPool.Put(interactionsPtr)
+		}(interactionsPtr)
 	}
 }
 
 // 处理评论请求的函数
-func (chain *UserBioCacheChain) HandleRequest(data protoreflect.ProtoMessage) {
+func (chain *CancelLikeCacheChain) HandleRequest(data protoreflect.ProtoMessage) {
 	listener := chain.FindListener(data)
 	if listener == nil {
 		// 如果没有找到合适的监听者，创建一个新的监听者
@@ -77,7 +74,7 @@ func (chain *UserBioCacheChain) HandleRequest(data protoreflect.ProtoMessage) {
 }
 
 // 查找责任链中的合适监听者
-func (chain *UserBioCacheChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
+func (chain *CancelLikeCacheChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
 	chain.nodeMux.Lock()
 	next := chain.Head.next
 	prev := chain.Tail.prev
@@ -105,8 +102,8 @@ func (chain *UserBioCacheChain) FindListener(data protoreflect.ProtoMessage) Lis
 }
 
 // 创建一个新的监听者
-func (chain *UserBioCacheChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := chain.listenerPool.Get().(*UserBioCacheListener)
+func (chain *CancelLikeCacheChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
+	newListener := chain.listenerPool.Get().(*CancelLikeListener)
 	newListener.exeChannel = chain.exeChannel
 
 	// 头插法，将新的监听者挂到链中
@@ -127,11 +124,11 @@ func (chain *UserBioCacheChain) CreateListener(data protoreflect.ProtoMessage) L
 }
 
 // 销毁监听者
-func (chain *UserBioCacheChain) DestroyListener(listener ListenerInterface) {
+func (chain *CancelLikeCacheChain) DestroyListener(listener ListenerInterface) {
 	// 找到前一个节点（假设 chain.Head 是链表的头部）
-	current, ok := listener.(*UserBioCacheListener)
+	current, ok := listener.(*CancelLikeListener)
 	if !ok {
-		log.Printf("invalid type: expected *UserBioCacheListener")
+		log.Printf("invalid type: expected *CancelLikeListener")
 	}
 
 	chain.nodeMux.Lock()

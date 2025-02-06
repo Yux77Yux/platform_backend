@@ -8,28 +8,22 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
+	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 )
 
-/*
-	这里的链表不太符合高并发特点的设计，问题在于持有锁时间会很长
-	改进的办法是使用堆建立，或者使用HASH对节点进行映射
-	先留着，以后再建堆
-*/
-
-func InitialUserSpaceChain() *UserSpaceChain {
-	_chain := &UserSpaceChain{
-		Head:       &UserSpaceListener{prev: nil},
-		Tail:       &UserSpaceListener{next: nil},
+func InitialLikeCacheChain() *LikeCacheChain {
+	_chain := &LikeCacheChain{
+		Head:       &LikeListener{prev: nil},
+		Tail:       &LikeListener{next: nil},
 		Count:      0,
-		exeChannel: make(chan *[]*generated.UserUpdateSpace, EXE_CHANNEL_COUNT),
+		exeChannel: make(chan *[]*generated.BaseInteraction, EXE_CHANNEL_COUNT),
 		listenerPool: sync.Pool{
 			New: func() any {
-				return &UserSpaceListener{
-					userUpdateSpaceChannel: make(chan *generated.UserUpdateSpace, LISTENER_CHANNEL_COUNT),
-					timeoutDuration:        10 * time.Second,
-					updateInterval:         3 * time.Second,
+				return &LikeListener{
+					datasChannel:    make(chan *generated.BaseInteraction, LISTENER_CHANNEL_COUNT),
+					timeoutDuration: 10 * time.Second,
+					updateInterval:  3 * time.Second,
 				}
 			},
 		},
@@ -41,33 +35,36 @@ func InitialUserSpaceChain() *UserSpaceChain {
 }
 
 // 责任链
-type UserSpaceChain struct {
-	Head         *UserSpaceListener // 责任链的头部
-	Tail         *UserSpaceListener
-	nodeMux      sync.Mutex
+type LikeCacheChain struct {
+	Head         *LikeListener // 责任链的头部
+	Tail         *LikeListener
 	Count        int32 // 监听者数量
-	exeChannel   chan *[]*generated.UserUpdateSpace
+	nodeMux      sync.Mutex
+	exeChannel   chan *[]*generated.BaseInteraction
 	listenerPool sync.Pool
 }
 
-func (chain *UserSpaceChain) ExecuteBatch() {
-	for usersPtr := range chain.exeChannel {
-		go func(usersPtr *[]*generated.UserUpdateSpace) {
-			users := *usersPtr
-			// 更新头像
-			err := db.UserUpdateSpaceInTransaction(users)
+func (chain *LikeCacheChain) ExecuteBatch() {
+	log.Printf("我他妈来啦!!！ ")
+	for interactionsPtr := range chain.exeChannel {
+		go func(interactionsPtr *[]*generated.BaseInteraction) {
+			interactions := *interactionsPtr
+			log.Printf("我他妈来啦！ %v", interactions)
+			// 插入数据库
+			err := cache.ModifyLike(interactions)
 			if err != nil {
-				log.Printf("error: UserUpdateSpaceInTransaction error")
+				log.Printf("error: ModifyLike error")
 			}
 
-			*usersPtr = users[:0]
-			userSpacePool.Put(usersPtr)
-		}(usersPtr)
+			// 放回对象池
+			*interactionsPtr = interactions[:0]
+			baseInteractionsPool.Put(interactionsPtr)
+		}(interactionsPtr)
 	}
 }
 
 // 处理评论请求的函数
-func (chain *UserSpaceChain) HandleRequest(data protoreflect.ProtoMessage) {
+func (chain *LikeCacheChain) HandleRequest(data protoreflect.ProtoMessage) {
 	listener := chain.FindListener(data)
 	if listener == nil {
 		// 如果没有找到合适的监听者，创建一个新的监听者
@@ -77,7 +74,7 @@ func (chain *UserSpaceChain) HandleRequest(data protoreflect.ProtoMessage) {
 }
 
 // 查找责任链中的合适监听者
-func (chain *UserSpaceChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
+func (chain *LikeCacheChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
 	chain.nodeMux.Lock()
 	next := chain.Head.next
 	prev := chain.Tail.prev
@@ -105,8 +102,8 @@ func (chain *UserSpaceChain) FindListener(data protoreflect.ProtoMessage) Listen
 }
 
 // 创建一个新的监听者
-func (chain *UserSpaceChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := chain.listenerPool.Get().(*UserSpaceListener)
+func (chain *LikeCacheChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
+	newListener := chain.listenerPool.Get().(*LikeListener)
 	newListener.exeChannel = chain.exeChannel
 
 	// 头插法，将新的监听者挂到链中
@@ -127,11 +124,11 @@ func (chain *UserSpaceChain) CreateListener(data protoreflect.ProtoMessage) List
 }
 
 // 销毁监听者
-func (chain *UserSpaceChain) DestroyListener(listener ListenerInterface) {
+func (chain *LikeCacheChain) DestroyListener(listener ListenerInterface) {
 	// 找到前一个节点（假设 chain.Head 是链表的头部）
-	current, ok := listener.(*UserSpaceListener)
+	current, ok := listener.(*LikeListener)
 	if !ok {
-		log.Printf("invalid type: expected *UserSpaceListener")
+		log.Printf("invalid type: expected *LikeListener")
 	}
 
 	chain.nodeMux.Lock()

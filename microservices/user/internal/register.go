@@ -60,38 +60,25 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 		}
 	}
 
-	reqId := make(chan string, 1)
-	select {
-	// 闭包传递
-	case requestChannel <- func(reqID string) error {
-		reqId <- reqID
-		log.Printf("info: handling request with ID: %s\n", reqID)
+	reqIdCh := make(chan string, 1)
+	requestChannel <- func(reqID string) error {
+		reqIdCh <- reqID
 
 		err = userMQ.SendMessage("register", "register", user_credentials)
 		if err != nil {
 			return fmt.Errorf("err: request_id: %s ,message: %w", reqID, err)
 		}
 		return nil
-	}:
-		log.Println("info: handler completely sent to UserRequestChan")
-		return &generated.RegisterResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-				Code:    "201",                      // HTTP 状态码，201 表示创建成功
-				Message: "OK",                       // 标识完成
-				Details: "Register success",         // 更详细的成功信息
-			},
-		}, nil
-	default:
-		log.Println("warning: userChan is full or closed, registration may not complete")
-		return &generated.RegisterResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,                             // 使用 ERROR 而不是 SUCCESS，因为发生了错误
-				Code:    "503",                                                // HTTP 状态码 503，表示服务不可用
-				Message: "Service Unavailable",                                // 提供用户友好的消息
-				Details: "User request queue is full, please try again later", // 更详细的错误信息
-				TraceId: <-reqId,                                              // 跟踪码
-			},
-		}, status.Errorf(codes.Unavailable, "user request queue is full, please try again later")
 	}
+	reqId := <-reqIdCh
+
+	return &generated.RegisterResponse{
+		Msg: &common.ApiResponse{
+			Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
+			Code:    "201",                      // HTTP 状态码，201 表示创建成功
+			Message: "OK",                       // 标识完成
+			Details: "Register success",         // 更详细的成功信息
+			TraceId: reqId,
+		},
+	}, nil
 }

@@ -23,6 +23,11 @@ var RoleScopeMapping = map[string][]string{
 		"update:user:own", // 更新自己的资料
 		"delete:user:own", // 更新自己的资料
 
+		"get:interaction:own",
+		"post:interaction:own",   // 行为数据
+		"update:interaction:own", // 更新
+		"delete:interaction:own", // 删除
+
 		"get:comment:public", // 查看评论
 		"post:comment:own",   // 发表自己的评论
 		"delete:comment:own", // 删除自己的评论

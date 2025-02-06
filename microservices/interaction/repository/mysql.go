@@ -71,15 +71,13 @@ func GetActionTag(req *generated.BaseInteraction) (*generated.Interaction, error
 	}
 
 	return &generated.Interaction{
-		Base: &generated.BaseInteraction{
-			UserId:     userId,
-			CreationId: creationId,
-		},
+		Base:      req,
 		ActionTag: actionTag,
 	}, nil
 }
 
-func GetCollections(userId int64) ([]*generated.Interaction, error) {
+func GetCollections(userId int64, page int32) ([]*generated.Interaction, error) {
+	offset := (page - 1) * 30
 	query := `
 		SELECT 
 			creation_id,
@@ -87,7 +85,8 @@ func GetCollections(userId int64) ([]*generated.Interaction, error) {
 		FROM db_interaction_1.Interaction
 		WHERE user_id = ?
 		AND action_tag & 4 = 4
-		ORDER BY save_at DESC`
+		ORDER BY save_at DESC
+		LIMIT 30 OFFSET ?`
 
 	var interactions []*generated.Interaction
 
@@ -117,7 +116,7 @@ func GetCollections(userId int64) ([]*generated.Interaction, error) {
 
 		return nil, err
 	default:
-		rows, err := tx.QueryContext(ctx, query, userId)
+		rows, err := tx.QueryContext(ctx, query, userId, offset)
 		if err != nil {
 			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
@@ -155,7 +154,8 @@ func GetCollections(userId int64) ([]*generated.Interaction, error) {
 	return interactions, nil
 }
 
-func GetHistories(userId int64) ([]*generated.Interaction, error) {
+func GetHistories(userId int64, page int32) ([]*generated.Interaction, error) {
+	offset := (page - 1) * 30
 	query := `
 		SELECT 
 			creation_id,
@@ -163,7 +163,8 @@ func GetHistories(userId int64) ([]*generated.Interaction, error) {
 		FROM db_interaction_1.Interaction
 		WHERE user_id = ?
 		AND action_tag & 1 = 1
-		ORDER BY updated_at DESC`
+		ORDER BY updated_at DESC
+		LIMIT 30 OFFSET ?`
 
 	var interactions []*generated.Interaction
 
@@ -193,7 +194,7 @@ func GetHistories(userId int64) ([]*generated.Interaction, error) {
 
 		return nil, err
 	default:
-		rows, err := tx.QueryContext(ctx, query, userId)
+		rows, err := tx.QueryContext(ctx, query, userId, offset)
 		if err != nil {
 			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
@@ -219,6 +220,89 @@ func GetHistories(userId int64) ([]*generated.Interaction, error) {
 			}
 			interactions = append(interactions, &generated.Interaction{
 				Base:      &generated.BaseInteraction{CreationId: creation_id},
+				UpdatedAt: timestamppb.New(updated_at),
+			})
+		}
+
+		if err = db.CommitTransaction(tx); err != nil {
+			return nil, err
+		}
+	}
+
+	return interactions, nil
+}
+
+// 用于推荐系统返回
+func GetOtherUserHistories(userId int64, page int32) ([]*generated.Interaction, error) {
+	const limit = 5000
+	offset := (page - 1) * limit
+	query := `
+		SELECT 
+			creation_id,
+			action_tag,
+			updated_at
+		FROM db_interaction_1.Interaction
+		WHERE user_id < ? 
+		OR user_id > ?
+		ORDER BY updated_at DESC
+		LIMIT 5000 offset ?`
+
+	var interactions []*generated.Interaction
+
+	ctx := context.Background()
+
+	tx, err := db.BeginTransaction()
+	if err != nil {
+		return nil, err
+	}
+
+	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("transaction failed because %v", r)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		err = fmt.Errorf("exec timeout :%w", ctx.Err())
+		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			err = fmt.Errorf("%w and %w", err, errSecond)
+		}
+
+		return nil, err
+	default:
+		rows, err := tx.QueryContext(ctx, query, userId, userId, offset)
+		if err != nil {
+			err = fmt.Errorf("transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return nil, err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var (
+				creation_id int64
+				action_tag  int32
+				updated_at  time.Time
+			)
+			err := rows.Scan(&creation_id, &action_tag, &updated_at)
+			if err != nil {
+				err = fmt.Errorf("error: GetHistories rows.Scan error %v", err)
+				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+					err = fmt.Errorf("%w and %w", err, errSecond)
+				}
+				return nil, err
+			}
+			interactions = append(interactions, &generated.Interaction{
+				Base:      &generated.BaseInteraction{CreationId: creation_id},
+				ActionTag: action_tag,
 				UpdatedAt: timestamppb.New(updated_at),
 			})
 		}

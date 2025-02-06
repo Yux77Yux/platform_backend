@@ -10,10 +10,7 @@ import (
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
-		"register":         "direct",
-		"storeUser":        "direct",
-		"storeCredentials": "direct",
-		"updateUserSpace":  "direct",
+		// "register":         "direct",
 		// Add more exchanges here
 	}
 	ListenRPCs = []string{
@@ -53,22 +50,16 @@ func Init() {
 
 		switch exchange {
 		// 不同的exchange使用不同函数
-		case "register":
-			go ListenToQueue(exchange, "register", "register", registerProcessor)
-		case "storeUser":
-			go ListenToQueue(exchange, "storeUser", "storeUser", storeUserProcessor)
-		case "storeCredentials":
-			go ListenToQueue(exchange, "storeCredentials", "storeCredentials", storeCredentialsProcessor)
-		case "updateUserSpace":
-			go ListenToQueue(exchange, "updateUserSpace", "updateUserSpace", updateUserSpaceProcessor)
+		// case "register":
+		// 	go ListenToQueue(exchange, "register", "register", registerProcessor)
 		}
 	}
 
 	for _, exchange := range ListenRPCs {
 		switch exchange {
 		// 不同的exchange使用不同函数
-		case "agg_user":
-			go ListenRPC(exchange, "getUser", "getUser", getUserProcessor)
+		// case "agg_user":
+		// 	go ListenRPC(exchange, "getUser", "getUser", getUserProcessor)
 		}
 	}
 

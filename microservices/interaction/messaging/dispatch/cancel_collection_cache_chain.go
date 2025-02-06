@@ -8,20 +8,20 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
+	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 )
 
-func InitialInsertChain() *InsertChain {
-	_chain := &InsertChain{
-		Head:       &InsertListener{prev: nil},
-		Tail:       &InsertListener{next: nil},
+func InitialCancelCollectionCacheChain() *CancelCollectionCacheChain {
+	_chain := &CancelCollectionCacheChain{
+		Head:       &CancelCollectionListener{prev: nil},
+		Tail:       &CancelCollectionListener{next: nil},
 		Count:      0,
-		exeChannel: make(chan *[]*generated.User, EXE_CHANNEL_COUNT),
+		exeChannel: make(chan *[]*generated.BaseInteraction, EXE_CHANNEL_COUNT),
 		listenerPool: sync.Pool{
 			New: func() any {
-				return &InsertListener{
-					usersChannel:    make(chan *generated.User, LISTENER_CHANNEL_COUNT),
+				return &CancelCollectionListener{
+					datasChannel:    make(chan *generated.BaseInteraction, LISTENER_CHANNEL_COUNT),
 					timeoutDuration: 10 * time.Second,
 					updateInterval:  3 * time.Second,
 				}
@@ -35,36 +35,36 @@ func InitialInsertChain() *InsertChain {
 }
 
 // 责任链
-type InsertChain struct {
-	Head         *InsertListener // 责任链的头部
-	Tail         *InsertListener
+type CancelCollectionCacheChain struct {
+	Head         *CancelCollectionListener // 责任链的头部
+	Tail         *CancelCollectionListener
 	Count        int32 // 监听者数量
 	nodeMux      sync.Mutex
-	exeChannel   chan *[]*generated.User
+	exeChannel   chan *[]*generated.BaseInteraction
 	listenerPool sync.Pool
 }
 
-func (chain *InsertChain) ExecuteBatch() {
+func (chain *CancelCollectionCacheChain) ExecuteBatch() {
 	log.Printf("我他妈来啦!!！ ")
-	for insertUsersPtr := range chain.exeChannel {
-		go func(insertUsersPtr *[]*generated.User) {
-			insertUsers := *insertUsersPtr
-			log.Printf("我他妈来啦！ %v", insertUsers)
+	for interactionsPtr := range chain.exeChannel {
+		go func(interactionsPtr *[]*generated.BaseInteraction) {
+			interactions := *interactionsPtr
+			log.Printf("我他妈来啦！ %v", interactions)
 			// 插入数据库
-			err := db.UserAddInfoInTransaction(insertUsers)
+			err := cache.DelCollections(interactions)
 			if err != nil {
-				log.Printf("error: UserAddInfoInTransaction error")
+				log.Printf("error: DelCollections error")
 			}
 
 			// 放回对象池
-			*insertUsersPtr = insertUsers[:0]
-			insertUsersPool.Put(insertUsersPtr)
-		}(insertUsersPtr)
+			*interactionsPtr = interactions[:0]
+			baseInteractionsPool.Put(interactionsPtr)
+		}(interactionsPtr)
 	}
 }
 
 // 处理评论请求的函数
-func (chain *InsertChain) HandleRequest(data protoreflect.ProtoMessage) {
+func (chain *CancelCollectionCacheChain) HandleRequest(data protoreflect.ProtoMessage) {
 	listener := chain.FindListener(data)
 	if listener == nil {
 		// 如果没有找到合适的监听者，创建一个新的监听者
@@ -74,7 +74,7 @@ func (chain *InsertChain) HandleRequest(data protoreflect.ProtoMessage) {
 }
 
 // 查找责任链中的合适监听者
-func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
+func (chain *CancelCollectionCacheChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
 	chain.nodeMux.Lock()
 	next := chain.Head.next
 	prev := chain.Tail.prev
@@ -102,8 +102,8 @@ func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerI
 }
 
 // 创建一个新的监听者
-func (chain *InsertChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := chain.listenerPool.Get().(*InsertListener)
+func (chain *CancelCollectionCacheChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
+	newListener := chain.listenerPool.Get().(*CancelCollectionListener)
 	newListener.exeChannel = chain.exeChannel
 
 	// 头插法，将新的监听者挂到链中
@@ -124,11 +124,11 @@ func (chain *InsertChain) CreateListener(data protoreflect.ProtoMessage) Listene
 }
 
 // 销毁监听者
-func (chain *InsertChain) DestroyListener(listener ListenerInterface) {
+func (chain *CancelCollectionCacheChain) DestroyListener(listener ListenerInterface) {
 	// 找到前一个节点（假设 chain.Head 是链表的头部）
-	current, ok := listener.(*InsertListener)
+	current, ok := listener.(*CancelCollectionListener)
 	if !ok {
-		log.Printf("invalid type: expected *InsertListener")
+		log.Printf("invalid type: expected *CancelCollectionListener")
 	}
 
 	chain.nodeMux.Lock()

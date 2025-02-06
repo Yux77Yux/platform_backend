@@ -89,3 +89,29 @@ func (s *Server) GetHistories(ctx context.Context, req *generated.GetHistoriesRe
 		return response, nil
 	}
 }
+func (s *Server) GetRecommend(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
+	log.Println("info: GetRecommend service start")
+
+	select {
+	case <-ctx.Done():
+		err := ctx.Err()
+		log.Printf("error: service exceeded timeout: %v", err)
+		return &generated.GetRecommendResponse{
+			Msg: &common.ApiResponse{
+				Status:  common.ApiResponse_FAILED,
+				Code:    "408",
+				Message: "Time out",
+				Details: err.Error(),
+			},
+		}, nil
+	default:
+		response, err := internal.GetRecommend(req)
+		if err != nil {
+			log.Println("error: GetHistories fail: ", err)
+			return response, nil
+		}
+
+		log.Println("info: GetHistories success")
+		return response, nil
+	}
+}

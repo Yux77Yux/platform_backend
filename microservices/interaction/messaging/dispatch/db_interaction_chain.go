@@ -8,28 +8,22 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
+	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
 )
 
-/*
-	这里的链表不太符合高并发特点的设计，问题在于持有锁时间会很长
-	改进的办法是使用堆建立，或者使用HASH对节点进行映射
-	先留着，以后再建堆
-*/
-
-func InitialUserStatusChain() *UserStatusChain {
-	_chain := &UserStatusChain{
-		Head:       &UserStatusListener{prev: nil},
-		Tail:       &UserStatusListener{next: nil},
+func InitialDbChain() *DbInteractionChain {
+	_chain := &DbInteractionChain{
+		Head:       &DbInteractionsListener{prev: nil},
+		Tail:       &DbInteractionsListener{next: nil},
 		Count:      0,
-		exeChannel: make(chan *[]*generated.UserUpdateStatus, EXE_CHANNEL_COUNT),
+		exeChannel: make(chan *[]*generated.Interaction, EXE_CHANNEL_COUNT),
 		listenerPool: sync.Pool{
 			New: func() any {
-				return &UserStatusListener{
-					userUpdateStatusChannel: make(chan *generated.UserUpdateStatus, LISTENER_CHANNEL_COUNT),
-					timeoutDuration:         10 * time.Second,
-					updateInterval:          3 * time.Second,
+				return &DbInteractionsListener{
+					datasChannel:    make(chan *generated.Interaction, LISTENER_CHANNEL_COUNT),
+					timeoutDuration: 10 * time.Second,
+					updateInterval:  3 * time.Second,
 				}
 			},
 		},
@@ -41,33 +35,36 @@ func InitialUserStatusChain() *UserStatusChain {
 }
 
 // 责任链
-type UserStatusChain struct {
-	Head         *UserStatusListener // 责任链的头部
-	Tail         *UserStatusListener
-	nodeMux      sync.Mutex
+type DbInteractionChain struct {
+	Head         *DbInteractionsListener // 责任链的头部
+	Tail         *DbInteractionsListener
 	Count        int32 // 监听者数量
-	exeChannel   chan *[]*generated.UserUpdateStatus
+	nodeMux      sync.Mutex
+	exeChannel   chan *[]*generated.Interaction
 	listenerPool sync.Pool
 }
 
-func (chain *UserStatusChain) ExecuteBatch() {
-	for usersPtr := range chain.exeChannel {
-		go func(usersPtr *[]*generated.UserUpdateStatus) {
-			users := *usersPtr
-			// 更新头像
-			err := db.UserUpdateStatusInTransaction(users)
+func (chain *DbInteractionChain) ExecuteBatch() {
+	log.Printf("我他妈来啦!!！ ")
+	for interactionsPtr := range chain.exeChannel {
+		go func(interactionsPtr *[]*generated.Interaction) {
+			interactions := *interactionsPtr
+			log.Printf("我他妈来啦！ %v", interactions)
+			// 插入数据库
+			err := db.UpdateInteractions(interactions)
 			if err != nil {
-				log.Printf("error: UserUpdateStatusInTransaction error")
+				log.Printf("error: UpdateInteractions error")
 			}
 
-			*usersPtr = users[:0]
-			userStatusPool.Put(usersPtr)
-		}(usersPtr)
+			// 放回对象池
+			*interactionsPtr = interactions[:0]
+			interactionsPool.Put(interactionsPtr)
+		}(interactionsPtr)
 	}
 }
 
 // 处理评论请求的函数
-func (chain *UserStatusChain) HandleRequest(data protoreflect.ProtoMessage) {
+func (chain *DbInteractionChain) HandleRequest(data protoreflect.ProtoMessage) {
 	listener := chain.FindListener(data)
 	if listener == nil {
 		// 如果没有找到合适的监听者，创建一个新的监听者
@@ -77,7 +74,7 @@ func (chain *UserStatusChain) HandleRequest(data protoreflect.ProtoMessage) {
 }
 
 // 查找责任链中的合适监听者
-func (chain *UserStatusChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
+func (chain *DbInteractionChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
 	chain.nodeMux.Lock()
 	next := chain.Head.next
 	prev := chain.Tail.prev
@@ -105,8 +102,8 @@ func (chain *UserStatusChain) FindListener(data protoreflect.ProtoMessage) Liste
 }
 
 // 创建一个新的监听者
-func (chain *UserStatusChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := chain.listenerPool.Get().(*UserStatusListener)
+func (chain *DbInteractionChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
+	newListener := chain.listenerPool.Get().(*DbInteractionsListener)
 	newListener.exeChannel = chain.exeChannel
 
 	// 头插法，将新的监听者挂到链中
@@ -127,11 +124,11 @@ func (chain *UserStatusChain) CreateListener(data protoreflect.ProtoMessage) Lis
 }
 
 // 销毁监听者
-func (chain *UserStatusChain) DestroyListener(listener ListenerInterface) {
+func (chain *DbInteractionChain) DestroyListener(listener ListenerInterface) {
 	// 找到前一个节点（假设 chain.Head 是链表的头部）
-	current, ok := listener.(*UserStatusListener)
+	current, ok := listener.(*DbInteractionsListener)
 	if !ok {
-		log.Printf("invalid type: expected *UserStatusListener")
+		log.Printf("invalid type: expected *DbInteractionsListener")
 	}
 
 	chain.nodeMux.Lock()

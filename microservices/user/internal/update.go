@@ -34,11 +34,9 @@ func UpdateUserSpace(req *generated.UpdateUserSpaceRequest) (*generated.UpdateUs
 
 	space.UserDefault.UserId = accessClaims.UserID
 
-	reqId := make(chan string, 1)
-	select {
-	// 闭包传递
-	case requestChannel <- func(reqID string) error {
-		reqId <- reqID
+	reqIdCh := make(chan string, 1)
+	requestChannel <- func(reqID string) error {
+		reqIdCh <- reqID
 		log.Printf("info: handling updateUser request with ID: %s\n", reqID)
 
 		err = userMQ.SendMessage("updateUserSpace", "updateUserSpace", space)
@@ -49,28 +47,18 @@ func UpdateUserSpace(req *generated.UpdateUserSpaceRequest) (*generated.UpdateUs
 		log.Printf("info: send to messaging queue updateUser request with ID: %s\n", reqID)
 
 		return nil
-	}:
-		log.Println("info: handler completely sent to UserRequestChan")
-		return &generated.UpdateUserResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-				Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-				Message: "OK",                       // 标识完成
-				Details: "UpdateUser success",       // 更详细的成功信息
-			},
-		}, nil
-	default:
-		log.Println("warning: userChan is full or closed, registration may not complete")
-		return &generated.UpdateUserResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,                             // 使用 ERROR 而不是 SUCCESS，因为发生了错误
-				Code:    "503",                                                // HTTP 状态码 503，表示服务不可用
-				Message: "Service Unavailable",                                // 提供用户友好的消息
-				Details: "User request queue is full, please try again later", // 更详细的错误信息
-				TraceId: <-reqId,                                              // 跟踪码
-			},
-		}, nil
 	}
+	reqId := <-reqIdCh
+
+	return &generated.UpdateUserResponse{
+		Msg: &common.ApiResponse{
+			Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
+			Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
+			Message: "OK",                       // 标识完成
+			Details: "UpdateUser success",       // 更详细的成功信息
+			TraceId: reqId,
+		},
+	}, nil
 }
 
 func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.UpdateUserAvatarResponse, error) {

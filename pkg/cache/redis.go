@@ -393,8 +393,8 @@ func (r *RedisClient) GetElementsList(ctx context.Context, kind string, unique s
 // Set
 
 // SScan
-func (r *RedisClient) ScanSet(ctx context.Context, kind string, unique string, fliter string, cursor uint64, count int64) ([]string, uint64, error) {
-	key := fmt.Sprintf("Set_%s_%s", kind, unique)
+func (r *RedisClient) ScanSet(ctx context.Context, kind string, fliter string, cursor uint64, count int64) ([]string, uint64, error) {
+	key := fmt.Sprintf("Set_%s_", kind)
 	result, newCursor, err := r.redisClient.SScan(ctx, key, cursor, fliter, count).Result()
 	if err != nil {
 		return nil, 0, err
@@ -451,8 +451,8 @@ func (r *RedisClient) GetMembersSet(ctx context.Context, kind string, unique str
 // 没做 ZInter交集 ZDiff差集 ZPopMax弹出最高分数成员 ZPopMin弹出最低分数成员 ZCard获取成员总数
 
 // ZScan
-func (r *RedisClient) ScanZSet(ctx context.Context, kind string, unique string, fliter string, cursor uint64, count int64) ([]string, uint64, error) {
-	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
+func (r *RedisClient) ScanZSet(ctx context.Context, kind string, fliter string, cursor uint64, count int64) ([]string, uint64, error) {
+	key := fmt.Sprintf("ZSet_%s_", kind)
 	result, newCursor, err := r.redisClient.ZScan(ctx, key, cursor, fliter, count).Result()
 	if err != nil {
 		return nil, 0, err
@@ -464,7 +464,7 @@ func (r *RedisClient) ScanZSet(ctx context.Context, kind string, unique string, 
 // 正常添加, 若重复添加则不会添加
 func (r *RedisClient) AddZSet(ctx context.Context, kind string, unique string, member string, score float64) error {
 	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
-	return r.redisClient.ZAddNX(ctx, key, &redis.Z{Score: score, Member: member}).Err()
+	return r.redisClient.ZAdd(ctx, key, &redis.Z{Score: score, Member: member}).Err()
 }
 
 // 修改，当没有该成员则不会更新
@@ -526,6 +526,22 @@ func (r *RedisClient) RevRangeZSet(ctx context.Context, kind string, unique stri
 	}
 	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
 	members, err := r.redisClient.ZRevRange(ctx, key, start, stop).Result()
+	if err == redis.Nil {
+		return nil, fmt.Errorf("member does not exist")
+	} else if err != nil {
+		return nil, err
+	} else {
+		return members, nil
+	}
+}
+
+// 返回基于分数递减的排名(索引下标)范围的成员
+func (r *RedisClient) RevRangeZSetWithScore(ctx context.Context, kind string, unique string, start, stop int64) ([]redis.Z, error) {
+	if start == 0 && stop == 0 {
+		stop = -1
+	}
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
+	members, err := r.redisClient.ZRevRangeWithScores(ctx, key, start, stop).Result()
 	if err == redis.Nil {
 		return nil, fmt.Errorf("member does not exist")
 	} else if err != nil {

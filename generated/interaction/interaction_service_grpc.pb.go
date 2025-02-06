@@ -20,13 +20,14 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	InteractionService_PostInteraction_FullMethodName   = "/interaction.InteractionService/PostInteraction"
+	InteractionService_GetRecommend_FullMethodName      = "/interaction.InteractionService/GetRecommend"
 	InteractionService_GetActionTag_FullMethodName      = "/interaction.InteractionService/GetActionTag"
 	InteractionService_GetHistories_FullMethodName      = "/interaction.InteractionService/GetHistories"
 	InteractionService_GetCollections_FullMethodName    = "/interaction.InteractionService/GetCollections"
-	InteractionService_DelHistories_FullMethodName      = "/interaction.InteractionService/DelHistories"
 	InteractionService_ClickCollection_FullMethodName   = "/interaction.InteractionService/ClickCollection"
-	InteractionService_CancelCollections_FullMethodName = "/interaction.InteractionService/CancelCollections"
 	InteractionService_ClickLike_FullMethodName         = "/interaction.InteractionService/ClickLike"
+	InteractionService_CancelCollections_FullMethodName = "/interaction.InteractionService/CancelCollections"
+	InteractionService_DelHistories_FullMethodName      = "/interaction.InteractionService/DelHistories"
 	InteractionService_CancelLike_FullMethodName        = "/interaction.InteractionService/CancelLike"
 )
 
@@ -37,16 +38,14 @@ type InteractionServiceClient interface {
 	// POST
 	PostInteraction(ctx context.Context, in *PostInteractionRequest, opts ...grpc.CallOption) (*PostInteractionResponse, error)
 	// Get
+	GetRecommend(ctx context.Context, in *GetRecommendRequest, opts ...grpc.CallOption) (*GetRecommendResponse, error)
 	GetActionTag(ctx context.Context, in *GetCreationInteractionRequest, opts ...grpc.CallOption) (*GetCreationInteractionResponse, error)
 	GetHistories(ctx context.Context, in *GetHistoriesRequest, opts ...grpc.CallOption) (*GetInteractionsResponse, error)
 	GetCollections(ctx context.Context, in *GetCollectionsRequest, opts ...grpc.CallOption) (*GetInteractionsResponse, error)
-	// UPDATE
-	// 实际是修改对于的action tag
-	DelHistories(ctx context.Context, in *UpdateInteractionRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error)
-	// 实际是修改对于的action tag
 	ClickCollection(ctx context.Context, in *UpdateInteractionRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error)
-	CancelCollections(ctx context.Context, in *UpdateInteractionsRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error)
 	ClickLike(ctx context.Context, in *UpdateInteractionRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error)
+	CancelCollections(ctx context.Context, in *UpdateInteractionsRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error)
+	DelHistories(ctx context.Context, in *UpdateInteractionsRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error)
 	CancelLike(ctx context.Context, in *UpdateInteractionRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error)
 }
 
@@ -62,6 +61,16 @@ func (c *interactionServiceClient) PostInteraction(ctx context.Context, in *Post
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PostInteractionResponse)
 	err := c.cc.Invoke(ctx, InteractionService_PostInteraction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *interactionServiceClient) GetRecommend(ctx context.Context, in *GetRecommendRequest, opts ...grpc.CallOption) (*GetRecommendResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRecommendResponse)
+	err := c.cc.Invoke(ctx, InteractionService_GetRecommend_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -98,20 +107,20 @@ func (c *interactionServiceClient) GetCollections(ctx context.Context, in *GetCo
 	return out, nil
 }
 
-func (c *interactionServiceClient) DelHistories(ctx context.Context, in *UpdateInteractionRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error) {
+func (c *interactionServiceClient) ClickCollection(ctx context.Context, in *UpdateInteractionRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateInteractionResponse)
-	err := c.cc.Invoke(ctx, InteractionService_DelHistories_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, InteractionService_ClickCollection_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *interactionServiceClient) ClickCollection(ctx context.Context, in *UpdateInteractionRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error) {
+func (c *interactionServiceClient) ClickLike(ctx context.Context, in *UpdateInteractionRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateInteractionResponse)
-	err := c.cc.Invoke(ctx, InteractionService_ClickCollection_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, InteractionService_ClickLike_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -128,10 +137,10 @@ func (c *interactionServiceClient) CancelCollections(ctx context.Context, in *Up
 	return out, nil
 }
 
-func (c *interactionServiceClient) ClickLike(ctx context.Context, in *UpdateInteractionRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error) {
+func (c *interactionServiceClient) DelHistories(ctx context.Context, in *UpdateInteractionsRequest, opts ...grpc.CallOption) (*UpdateInteractionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateInteractionResponse)
-	err := c.cc.Invoke(ctx, InteractionService_ClickLike_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, InteractionService_DelHistories_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -155,16 +164,14 @@ type InteractionServiceServer interface {
 	// POST
 	PostInteraction(context.Context, *PostInteractionRequest) (*PostInteractionResponse, error)
 	// Get
+	GetRecommend(context.Context, *GetRecommendRequest) (*GetRecommendResponse, error)
 	GetActionTag(context.Context, *GetCreationInteractionRequest) (*GetCreationInteractionResponse, error)
 	GetHistories(context.Context, *GetHistoriesRequest) (*GetInteractionsResponse, error)
 	GetCollections(context.Context, *GetCollectionsRequest) (*GetInteractionsResponse, error)
-	// UPDATE
-	// 实际是修改对于的action tag
-	DelHistories(context.Context, *UpdateInteractionRequest) (*UpdateInteractionResponse, error)
-	// 实际是修改对于的action tag
 	ClickCollection(context.Context, *UpdateInteractionRequest) (*UpdateInteractionResponse, error)
-	CancelCollections(context.Context, *UpdateInteractionsRequest) (*UpdateInteractionResponse, error)
 	ClickLike(context.Context, *UpdateInteractionRequest) (*UpdateInteractionResponse, error)
+	CancelCollections(context.Context, *UpdateInteractionsRequest) (*UpdateInteractionResponse, error)
+	DelHistories(context.Context, *UpdateInteractionsRequest) (*UpdateInteractionResponse, error)
 	CancelLike(context.Context, *UpdateInteractionRequest) (*UpdateInteractionResponse, error)
 	mustEmbedUnimplementedInteractionServiceServer()
 }
@@ -179,6 +186,9 @@ type UnimplementedInteractionServiceServer struct{}
 func (UnimplementedInteractionServiceServer) PostInteraction(context.Context, *PostInteractionRequest) (*PostInteractionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PostInteraction not implemented")
 }
+func (UnimplementedInteractionServiceServer) GetRecommend(context.Context, *GetRecommendRequest) (*GetRecommendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRecommend not implemented")
+}
 func (UnimplementedInteractionServiceServer) GetActionTag(context.Context, *GetCreationInteractionRequest) (*GetCreationInteractionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetActionTag not implemented")
 }
@@ -188,17 +198,17 @@ func (UnimplementedInteractionServiceServer) GetHistories(context.Context, *GetH
 func (UnimplementedInteractionServiceServer) GetCollections(context.Context, *GetCollectionsRequest) (*GetInteractionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCollections not implemented")
 }
-func (UnimplementedInteractionServiceServer) DelHistories(context.Context, *UpdateInteractionRequest) (*UpdateInteractionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DelHistories not implemented")
-}
 func (UnimplementedInteractionServiceServer) ClickCollection(context.Context, *UpdateInteractionRequest) (*UpdateInteractionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClickCollection not implemented")
+}
+func (UnimplementedInteractionServiceServer) ClickLike(context.Context, *UpdateInteractionRequest) (*UpdateInteractionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClickLike not implemented")
 }
 func (UnimplementedInteractionServiceServer) CancelCollections(context.Context, *UpdateInteractionsRequest) (*UpdateInteractionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelCollections not implemented")
 }
-func (UnimplementedInteractionServiceServer) ClickLike(context.Context, *UpdateInteractionRequest) (*UpdateInteractionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ClickLike not implemented")
+func (UnimplementedInteractionServiceServer) DelHistories(context.Context, *UpdateInteractionsRequest) (*UpdateInteractionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DelHistories not implemented")
 }
 func (UnimplementedInteractionServiceServer) CancelLike(context.Context, *UpdateInteractionRequest) (*UpdateInteractionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelLike not implemented")
@@ -238,6 +248,24 @@ func _InteractionService_PostInteraction_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(InteractionServiceServer).PostInteraction(ctx, req.(*PostInteractionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InteractionService_GetRecommend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRecommendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InteractionServiceServer).GetRecommend(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InteractionService_GetRecommend_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InteractionServiceServer).GetRecommend(ctx, req.(*GetRecommendRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -296,24 +324,6 @@ func _InteractionService_GetCollections_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_DelHistories_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateInteractionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(InteractionServiceServer).DelHistories(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: InteractionService_DelHistories_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).DelHistories(ctx, req.(*UpdateInteractionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _InteractionService_ClickCollection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateInteractionRequest)
 	if err := dec(in); err != nil {
@@ -328,6 +338,24 @@ func _InteractionService_ClickCollection_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(InteractionServiceServer).ClickCollection(ctx, req.(*UpdateInteractionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InteractionService_ClickLike_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateInteractionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InteractionServiceServer).ClickLike(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InteractionService_ClickLike_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InteractionServiceServer).ClickLike(ctx, req.(*UpdateInteractionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -350,20 +378,20 @@ func _InteractionService_CancelCollections_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_ClickLike_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateInteractionRequest)
+func _InteractionService_DelHistories_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateInteractionsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InteractionServiceServer).ClickLike(ctx, in)
+		return srv.(InteractionServiceServer).DelHistories(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InteractionService_ClickLike_FullMethodName,
+		FullMethod: InteractionService_DelHistories_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).ClickLike(ctx, req.(*UpdateInteractionRequest))
+		return srv.(InteractionServiceServer).DelHistories(ctx, req.(*UpdateInteractionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -398,6 +426,10 @@ var InteractionService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _InteractionService_PostInteraction_Handler,
 		},
 		{
+			MethodName: "GetRecommend",
+			Handler:    _InteractionService_GetRecommend_Handler,
+		},
+		{
 			MethodName: "GetActionTag",
 			Handler:    _InteractionService_GetActionTag_Handler,
 		},
@@ -410,20 +442,20 @@ var InteractionService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _InteractionService_GetCollections_Handler,
 		},
 		{
-			MethodName: "DelHistories",
-			Handler:    _InteractionService_DelHistories_Handler,
-		},
-		{
 			MethodName: "ClickCollection",
 			Handler:    _InteractionService_ClickCollection_Handler,
+		},
+		{
+			MethodName: "ClickLike",
+			Handler:    _InteractionService_ClickLike_Handler,
 		},
 		{
 			MethodName: "CancelCollections",
 			Handler:    _InteractionService_CancelCollections_Handler,
 		},
 		{
-			MethodName: "ClickLike",
-			Handler:    _InteractionService_ClickLike_Handler,
+			MethodName: "DelHistories",
+			Handler:    _InteractionService_DelHistories_Handler,
 		},
 		{
 			MethodName: "CancelLike",

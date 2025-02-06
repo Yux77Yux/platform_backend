@@ -10,7 +10,6 @@ ALTER USER 'yuxyuxx'@'%' IDENTIFIED WITH mysql_native_password BY 'yuxyuxx';
 GRANT REPLICATION SLAVE ON *.* TO 'yuxyuxx'@'%';
 FLUSH PRIVILEGES;
 
-
 -- 使用 db_interaction_1 数据库
 USE db_interaction_1;
 

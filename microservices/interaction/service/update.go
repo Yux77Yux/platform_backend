@@ -117,7 +117,7 @@ func (s *Server) ClickLike(ctx context.Context, req *generated.UpdateInteraction
 	}
 }
 
-func (s *Server) DelHistories(ctx context.Context, req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
+func (s *Server) DelHistories(ctx context.Context, req *generated.UpdateInteractionsRequest) (*generated.UpdateInteractionResponse, error) {
 	log.Println("info: DelHistories service start")
 
 	select {

@@ -12,45 +12,32 @@ import "interaction/methods/update.proto";
 
 service InteractionService {
   // POST
-  rpc PostInteraction(interaction.methods.PostInteractionRequest) returns (interaction.methods.PostInteractionResponse) {
-    option (google.api.http) = {
-      post: "/api/interaction"
-      body: "*"
-    };
-  }
+  // 这个为展示完视频信息之后再查看是否登录，判断是否发送事件
+  rpc PostInteraction(interaction.methods.PostInteractionRequest) returns (interaction.methods.PostInteractionResponse);
 
   // Get
-  rpc GetActionTag(interaction.methods.GetCreationInteractionRequest) returns (interaction.methods.GetCreationInteractionResponse) {
-    option (google.api.http) = {
-      get: "/api/interaction/creation/{base.creation_id=*}/{access_token.value=*}"
-    };
-  }
+  rpc GetRecommend(interaction.methods.GetRecommendRequest) returns (interaction.methods.GetRecommendResponse);
 
-  rpc GetHistories(interaction.methods.GetHistoriesRequest) returns (interaction.methods.GetInteractionsResponse) {
-    option (google.api.http) = {
-      get: "/api/interaction/history/{access_token.value=*}"
-    };
-  }
+  // 这个为展示完视频信息之后再查看是否登录，再盘点是否已经点赞过
+  rpc GetActionTag(interaction.methods.GetCreationInteractionRequest) returns (interaction.methods.GetCreationInteractionResponse);
 
-  rpc GetCollections(interaction.methods.GetCollectionsRequest) returns (interaction.methods.GetInteractionsResponse) {
-    option (google.api.http) = {
-      get: "/api/interaction/collection/{access_token.value=*}"
-    };
-  }
+  rpc GetHistories(interaction.methods.GetHistoriesRequest) returns (interaction.methods.GetInteractionsResponse);
+
+  rpc GetCollections(interaction.methods.GetCollectionsRequest) returns (interaction.methods.GetInteractionsResponse);
 
   // UPDATE
   // 实际是修改对于的action tag
-  rpc DelHistories(interaction.methods.UpdateInteractionRequest) returns (interaction.methods.UpdateInteractionResponse) {
+
+  rpc ClickCollection(interaction.methods.UpdateInteractionRequest) returns (interaction.methods.UpdateInteractionResponse) {
     option (google.api.http) = {
-      patch: "/api/interaction/history"
+      patch: "/api/interaction/collection"
       body: "*"
     };
   }
 
-  // 实际是修改对于的action tag
-  rpc ClickCollection(interaction.methods.UpdateInteractionRequest) returns (interaction.methods.UpdateInteractionResponse) {
+  rpc ClickLike(interaction.methods.UpdateInteractionRequest) returns (interaction.methods.UpdateInteractionResponse) {
     option (google.api.http) = {
-      patch: "/api/interaction/collection"
+      patch: "/api/interaction/like"
       body: "*"
     };
   }
@@ -62,9 +49,9 @@ service InteractionService {
     };
   }
 
-  rpc ClickLike(interaction.methods.UpdateInteractionRequest) returns (interaction.methods.UpdateInteractionResponse) {
+  rpc DelHistories(interaction.methods.UpdateInteractionsRequest) returns (interaction.methods.UpdateInteractionResponse) {
     option (google.api.http) = {
-      patch: "/api/interaction/like"
+      patch: "/api/interaction/history"
       body: "*"
     };
   }
