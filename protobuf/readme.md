@@ -16,6 +16,9 @@ protoc -I protobuf --go_out=./generated --go-grpc_out=./generated `
           protobuf/comment/*.proto `
           protobuf/comment/messages/*.proto `
           protobuf/comment/methods/*.proto `
+          protobuf/review/*.proto `
+          protobuf/review/messages/*.proto `
+          protobuf/review/methods/*.proto `
           protobuf/interaction/*.proto `
           protobuf/interaction/messages/*.proto `
           protobuf/interaction/methods/*.proto
@@ -41,6 +44,9 @@ protoc -I protobuf `
           protobuf/comment/*.proto `
           protobuf/comment/messages/*.proto `
           protobuf/comment/methods/*.proto `
+          protobuf/review/*.proto `
+          protobuf/review/messages/*.proto `
+          protobuf/review/methods/*.proto `
           protobuf/interaction/*.proto `
           protobuf/interaction/messages/*.proto `
           protobuf/interaction/methods/*.proto

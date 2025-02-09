@@ -5,13 +5,28 @@ package user;
 option go_package = "github.com/Yux77Yux/platform_backend/generated/user;";
 
 import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
 
-import "user/methods/register.proto";
-import "user/methods/login.proto";
+import "user/methods/post.proto";
 import "user/methods/get.proto";
 import "user/methods/update.proto";
 
 service UserService {
+  // POST
+  rpc AddReviewer(user.methods.AddReviewerRequest) returns (user.methods.AddReviewerResponse) {
+    option (google.api.http) = {
+      post: "/api/reviewer"
+      body: "user_credentials"
+    };
+  }
+
+  rpc Follow(user.methods.FollowRequest) returns (user.methods.FollowResponse) {
+    option (google.api.http) = {
+      post: "/api/user/follow"
+      body: "*"
+    };
+  }
+
   rpc Register(user.methods.RegisterRequest) returns (user.methods.RegisterResponse) {
     option (google.api.http) = {
       post: "/api/user/register"
@@ -19,7 +34,33 @@ service UserService {
     };
   }
 
+  // DEL
+  rpc CancelFollow(user.methods.FollowRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/api/user/follow/{follow.follower_id}/{follow.followee_id}"
+    };
+  }
+
+  // GET
   rpc Login(user.methods.LoginRequest) returns (user.methods.LoginResponse);
+
+  rpc GetFolloweesByTime(user.methods.GetFollowRequest) returns (user.methods.GetFollowResponse) {
+    option (google.api.http) = {
+      get: "/api/user/followee/time/{user_id}/{access_token.value=*}"
+    };
+  }
+  
+  rpc GetFolloweesByViews(user.methods.GetFollowRequest) returns (user.methods.GetFollowResponse) {
+    option (google.api.http) = {
+      get: "/api/user/followee/views/{user_id}/{access_token.value=*}"
+    };
+  }
+  
+  rpc GetFollowers(user.methods.GetFollowRequest) returns (user.methods.GetFollowResponse) {
+    option (google.api.http) = {
+      get: "/api/user/follower/{user_id}/{access_token.value=*}"
+    };
+  }
 
   rpc GetUser(user.methods.GetUserRequest) returns (user.methods.GetUserResponse) {
     option (google.api.http) = {
@@ -27,6 +68,7 @@ service UserService {
     };
   }
 
+  // UPDATE
   // 批量字段
   rpc UpdateUserSpace(user.methods.UpdateUserSpaceRequest) returns (user.methods.UpdateUserResponse) {
     option (google.api.http) = {

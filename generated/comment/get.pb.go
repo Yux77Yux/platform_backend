@@ -351,6 +351,104 @@ func (x *GetCommentsResponse) GetMsg() *common.ApiResponse {
 	return nil
 }
 
+type GetCommentRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	CreationId int64 `protobuf:"varint,1,opt,name=creation_id,json=creationId,proto3" json:"creation_id,omitempty"`
+}
+
+func (x *GetCommentRequest) Reset() {
+	*x = GetCommentRequest{}
+	mi := &file_comment_methods_get_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCommentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCommentRequest) ProtoMessage() {}
+
+func (x *GetCommentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_comment_methods_get_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCommentRequest.ProtoReflect.Descriptor instead.
+func (*GetCommentRequest) Descriptor() ([]byte, []int) {
+	return file_comment_methods_get_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetCommentRequest) GetCreationId() int64 {
+	if x != nil {
+		return x.CreationId
+	}
+	return 0
+}
+
+type GetCommentResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Comment *Comment            `protobuf:"bytes,1,opt,name=comment,proto3" json:"comment,omitempty"`
+	Msg     *common.ApiResponse `protobuf:"bytes,2,opt,name=msg,proto3" json:"msg,omitempty"`
+}
+
+func (x *GetCommentResponse) Reset() {
+	*x = GetCommentResponse{}
+	mi := &file_comment_methods_get_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCommentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCommentResponse) ProtoMessage() {}
+
+func (x *GetCommentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_comment_methods_get_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCommentResponse.ProtoReflect.Descriptor instead.
+func (*GetCommentResponse) Descriptor() ([]byte, []int) {
+	return file_comment_methods_get_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetCommentResponse) GetComment() *Comment {
+	if x != nil {
+		return x.Comment
+	}
+	return nil
+}
+
+func (x *GetCommentResponse) GetMsg() *common.ApiResponse {
+	if x != nil {
+		return x.Msg
+	}
+	return nil
+}
+
 var File_comment_methods_get_proto protoreflect.FileDescriptor
 
 var file_comment_methods_get_proto_rawDesc = []byte{
@@ -402,11 +500,21 @@ var file_comment_methods_get_proto_rawDesc = []byte{
 	0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x08, 0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x12,
 	0x25, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x63,
 	0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x41, 0x70, 0x69, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x52, 0x03, 0x6d, 0x73, 0x67, 0x42, 0x38, 0x5a, 0x36, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
-	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x59, 0x75, 0x78, 0x37, 0x37, 0x59, 0x75, 0x78, 0x2f, 0x70, 0x6c,
-	0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x5f, 0x62, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x2f, 0x67,
-	0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x64, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x65, 0x52, 0x03, 0x6d, 0x73, 0x67, 0x22, 0x34, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x43, 0x6f, 0x6d,
+	0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1f, 0x0a, 0x0b, 0x63,
+	0x72, 0x65, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03,
+	0x52, 0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x22, 0x70, 0x0a, 0x12,
+	0x47, 0x65, 0x74, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x33, 0x0a, 0x07, 0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x2e, 0x6d, 0x65,
+	0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x2e, 0x43, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x07,
+	0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x12, 0x25, 0x0a, 0x03, 0x6d, 0x73, 0x67, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x41, 0x70,
+	0x69, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x03, 0x6d, 0x73, 0x67, 0x42, 0x38,
+	0x5a, 0x36, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x59, 0x75, 0x78,
+	0x37, 0x37, 0x59, 0x75, 0x78, 0x2f, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x5f, 0x62,
+	0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x2f, 0x67, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x64,
+	0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x65, 0x6e, 0x74, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -421,7 +529,7 @@ func file_comment_methods_get_proto_rawDescGZIP() []byte {
 	return file_comment_methods_get_proto_rawDescData
 }
 
-var file_comment_methods_get_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_comment_methods_get_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_comment_methods_get_proto_goTypes = []any{
 	(*InitalCommentsRequest)(nil),    // 0: comment.methods.InitalCommentsRequest
 	(*InitalCommentsResponse)(nil),   // 1: comment.methods.InitalCommentsResponse
@@ -429,23 +537,27 @@ var file_comment_methods_get_proto_goTypes = []any{
 	(*GetSecondCommentsRequest)(nil), // 3: comment.methods.GetSecondCommentsRequest
 	(*GetReplyCommentsRequest)(nil),  // 4: comment.methods.GetReplyCommentsRequest
 	(*GetCommentsResponse)(nil),      // 5: comment.methods.GetCommentsResponse
-	(*Comment)(nil),                  // 6: comment.messages.Comment
-	(*CommentArea)(nil),              // 7: comment.messages.CommentArea
-	(*common.ApiResponse)(nil),       // 8: common.ApiResponse
-	(*common.AccessToken)(nil),       // 9: common.AccessToken
+	(*GetCommentRequest)(nil),        // 6: comment.methods.GetCommentRequest
+	(*GetCommentResponse)(nil),       // 7: comment.methods.GetCommentResponse
+	(*Comment)(nil),                  // 8: comment.messages.Comment
+	(*CommentArea)(nil),              // 9: comment.messages.CommentArea
+	(*common.ApiResponse)(nil),       // 10: common.ApiResponse
+	(*common.AccessToken)(nil),       // 11: common.AccessToken
 }
 var file_comment_methods_get_proto_depIdxs = []int32{
-	6, // 0: comment.methods.InitalCommentsResponse.comments:type_name -> comment.messages.Comment
-	7, // 1: comment.methods.InitalCommentsResponse.comment_area:type_name -> comment.messages.CommentArea
-	8, // 2: comment.methods.InitalCommentsResponse.msg:type_name -> common.ApiResponse
-	9, // 3: comment.methods.GetReplyCommentsRequest.access_token:type_name -> common.AccessToken
-	6, // 4: comment.methods.GetCommentsResponse.comments:type_name -> comment.messages.Comment
-	8, // 5: comment.methods.GetCommentsResponse.msg:type_name -> common.ApiResponse
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	8,  // 0: comment.methods.InitalCommentsResponse.comments:type_name -> comment.messages.Comment
+	9,  // 1: comment.methods.InitalCommentsResponse.comment_area:type_name -> comment.messages.CommentArea
+	10, // 2: comment.methods.InitalCommentsResponse.msg:type_name -> common.ApiResponse
+	11, // 3: comment.methods.GetReplyCommentsRequest.access_token:type_name -> common.AccessToken
+	8,  // 4: comment.methods.GetCommentsResponse.comments:type_name -> comment.messages.Comment
+	10, // 5: comment.methods.GetCommentsResponse.msg:type_name -> common.ApiResponse
+	8,  // 6: comment.methods.GetCommentResponse.comment:type_name -> comment.messages.Comment
+	10, // 7: comment.methods.GetCommentResponse.msg:type_name -> common.ApiResponse
+	8,  // [8:8] is the sub-list for method output_type
+	8,  // [8:8] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_comment_methods_get_proto_init() }
@@ -460,7 +572,7 @@ func file_comment_methods_get_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_comment_methods_get_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

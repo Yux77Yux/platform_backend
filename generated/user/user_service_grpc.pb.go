@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -19,22 +20,38 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_Register_FullMethodName         = "/user.UserService/Register"
-	UserService_Login_FullMethodName            = "/user.UserService/Login"
-	UserService_GetUser_FullMethodName          = "/user.UserService/GetUser"
-	UserService_UpdateUserSpace_FullMethodName  = "/user.UserService/UpdateUserSpace"
-	UserService_UpdateUserAvatar_FullMethodName = "/user.UserService/UpdateUserAvatar"
-	UserService_UpdateUserStatus_FullMethodName = "/user.UserService/UpdateUserStatus"
-	UserService_UpdateUserBio_FullMethodName    = "/user.UserService/UpdateUserBio"
+	UserService_AddReviewer_FullMethodName         = "/user.UserService/AddReviewer"
+	UserService_Follow_FullMethodName              = "/user.UserService/Follow"
+	UserService_Register_FullMethodName            = "/user.UserService/Register"
+	UserService_CancelFollow_FullMethodName        = "/user.UserService/CancelFollow"
+	UserService_Login_FullMethodName               = "/user.UserService/Login"
+	UserService_GetFolloweesByTime_FullMethodName  = "/user.UserService/GetFolloweesByTime"
+	UserService_GetFolloweesByViews_FullMethodName = "/user.UserService/GetFolloweesByViews"
+	UserService_GetFollowers_FullMethodName        = "/user.UserService/GetFollowers"
+	UserService_GetUser_FullMethodName             = "/user.UserService/GetUser"
+	UserService_UpdateUserSpace_FullMethodName     = "/user.UserService/UpdateUserSpace"
+	UserService_UpdateUserAvatar_FullMethodName    = "/user.UserService/UpdateUserAvatar"
+	UserService_UpdateUserStatus_FullMethodName    = "/user.UserService/UpdateUserStatus"
+	UserService_UpdateUserBio_FullMethodName       = "/user.UserService/UpdateUserBio"
 )
 
 // UserServiceClient is the client API for UserService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UserServiceClient interface {
+	// POST
+	AddReviewer(ctx context.Context, in *AddReviewerRequest, opts ...grpc.CallOption) (*AddReviewerResponse, error)
+	Follow(ctx context.Context, in *FollowRequest, opts ...grpc.CallOption) (*FollowResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+	// DEL
+	CancelFollow(ctx context.Context, in *FollowRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// GET
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	GetFolloweesByTime(ctx context.Context, in *GetFollowRequest, opts ...grpc.CallOption) (*GetFollowResponse, error)
+	GetFolloweesByViews(ctx context.Context, in *GetFollowRequest, opts ...grpc.CallOption) (*GetFollowResponse, error)
+	GetFollowers(ctx context.Context, in *GetFollowRequest, opts ...grpc.CallOption) (*GetFollowResponse, error)
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	// UPDATE
 	// 批量字段
 	UpdateUserSpace(ctx context.Context, in *UpdateUserSpaceRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
 	// User Avatar
@@ -53,6 +70,26 @@ func NewUserServiceClient(cc grpc.ClientConnInterface) UserServiceClient {
 	return &userServiceClient{cc}
 }
 
+func (c *userServiceClient) AddReviewer(ctx context.Context, in *AddReviewerRequest, opts ...grpc.CallOption) (*AddReviewerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddReviewerResponse)
+	err := c.cc.Invoke(ctx, UserService_AddReviewer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) Follow(ctx context.Context, in *FollowRequest, opts ...grpc.CallOption) (*FollowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FollowResponse)
+	err := c.cc.Invoke(ctx, UserService_Follow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *userServiceClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RegisterResponse)
@@ -63,10 +100,50 @@ func (c *userServiceClient) Register(ctx context.Context, in *RegisterRequest, o
 	return out, nil
 }
 
+func (c *userServiceClient) CancelFollow(ctx context.Context, in *FollowRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, UserService_CancelFollow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *userServiceClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LoginResponse)
 	err := c.cc.Invoke(ctx, UserService_Login_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) GetFolloweesByTime(ctx context.Context, in *GetFollowRequest, opts ...grpc.CallOption) (*GetFollowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetFollowResponse)
+	err := c.cc.Invoke(ctx, UserService_GetFolloweesByTime_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) GetFolloweesByViews(ctx context.Context, in *GetFollowRequest, opts ...grpc.CallOption) (*GetFollowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetFollowResponse)
+	err := c.cc.Invoke(ctx, UserService_GetFolloweesByViews_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) GetFollowers(ctx context.Context, in *GetFollowRequest, opts ...grpc.CallOption) (*GetFollowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetFollowResponse)
+	err := c.cc.Invoke(ctx, UserService_GetFollowers_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -127,9 +204,19 @@ func (c *userServiceClient) UpdateUserBio(ctx context.Context, in *UpdateUserBio
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
 type UserServiceServer interface {
+	// POST
+	AddReviewer(context.Context, *AddReviewerRequest) (*AddReviewerResponse, error)
+	Follow(context.Context, *FollowRequest) (*FollowResponse, error)
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+	// DEL
+	CancelFollow(context.Context, *FollowRequest) (*emptypb.Empty, error)
+	// GET
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
+	GetFolloweesByTime(context.Context, *GetFollowRequest) (*GetFollowResponse, error)
+	GetFolloweesByViews(context.Context, *GetFollowRequest) (*GetFollowResponse, error)
+	GetFollowers(context.Context, *GetFollowRequest) (*GetFollowResponse, error)
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
+	// UPDATE
 	// 批量字段
 	UpdateUserSpace(context.Context, *UpdateUserSpaceRequest) (*UpdateUserResponse, error)
 	// User Avatar
@@ -148,11 +235,29 @@ type UserServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedUserServiceServer struct{}
 
+func (UnimplementedUserServiceServer) AddReviewer(context.Context, *AddReviewerRequest) (*AddReviewerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddReviewer not implemented")
+}
+func (UnimplementedUserServiceServer) Follow(context.Context, *FollowRequest) (*FollowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Follow not implemented")
+}
 func (UnimplementedUserServiceServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
+func (UnimplementedUserServiceServer) CancelFollow(context.Context, *FollowRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelFollow not implemented")
+}
 func (UnimplementedUserServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
+}
+func (UnimplementedUserServiceServer) GetFolloweesByTime(context.Context, *GetFollowRequest) (*GetFollowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFolloweesByTime not implemented")
+}
+func (UnimplementedUserServiceServer) GetFolloweesByViews(context.Context, *GetFollowRequest) (*GetFollowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFolloweesByViews not implemented")
+}
+func (UnimplementedUserServiceServer) GetFollowers(context.Context, *GetFollowRequest) (*GetFollowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFollowers not implemented")
 }
 func (UnimplementedUserServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
@@ -190,6 +295,42 @@ func RegisterUserServiceServer(s grpc.ServiceRegistrar, srv UserServiceServer) {
 	s.RegisterService(&UserService_ServiceDesc, srv)
 }
 
+func _UserService_AddReviewer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddReviewerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).AddReviewer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_AddReviewer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).AddReviewer(ctx, req.(*AddReviewerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_Follow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FollowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).Follow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_Follow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).Follow(ctx, req.(*FollowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UserService_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RegisterRequest)
 	if err := dec(in); err != nil {
@@ -208,6 +349,24 @@ func _UserService_Register_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_CancelFollow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FollowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).CancelFollow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_CancelFollow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).CancelFollow(ctx, req.(*FollowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UserService_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(LoginRequest)
 	if err := dec(in); err != nil {
@@ -222,6 +381,60 @@ func _UserService_Login_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServiceServer).Login(ctx, req.(*LoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_GetFolloweesByTime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFollowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetFolloweesByTime(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetFolloweesByTime_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetFolloweesByTime(ctx, req.(*GetFollowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_GetFolloweesByViews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFollowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetFolloweesByViews(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetFolloweesByViews_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetFolloweesByViews(ctx, req.(*GetFollowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_GetFollowers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFollowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetFollowers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetFollowers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetFollowers(ctx, req.(*GetFollowRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -324,12 +537,36 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*UserServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "AddReviewer",
+			Handler:    _UserService_AddReviewer_Handler,
+		},
+		{
+			MethodName: "Follow",
+			Handler:    _UserService_Follow_Handler,
+		},
+		{
 			MethodName: "Register",
 			Handler:    _UserService_Register_Handler,
 		},
 		{
+			MethodName: "CancelFollow",
+			Handler:    _UserService_CancelFollow_Handler,
+		},
+		{
 			MethodName: "Login",
 			Handler:    _UserService_Login_Handler,
+		},
+		{
+			MethodName: "GetFolloweesByTime",
+			Handler:    _UserService_GetFolloweesByTime_Handler,
+		},
+		{
+			MethodName: "GetFolloweesByViews",
+			Handler:    _UserService_GetFolloweesByViews_Handler,
+		},
+		{
+			MethodName: "GetFollowers",
+			Handler:    _UserService_GetFollowers_Handler,
 		},
 		{
 			MethodName: "GetUser",

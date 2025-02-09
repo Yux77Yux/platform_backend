@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package user.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/user";
+
+import "user/messages/user_credentials.proto";
+import "user/messages/follow.proto";
+import "common/api_response.proto";
+
+message FollowRequest {
+  user.messages.Follow follow = 1;
+}
+
+message FollowResponse {
+  common.ApiResponse msg = 1;
+}
+
+message RegisterRequest {
+  user.messages.UserCredentials user_credentials = 1;
+}
+
+message RegisterResponse {
+  common.ApiResponse msg = 1;
+}
+
+message AddReviewerRequest {
+  user.messages.UserCredentials user_credentials = 1;
+}
+
+message AddReviewerResponse {
+  common.ApiResponse msg = 1;
+}

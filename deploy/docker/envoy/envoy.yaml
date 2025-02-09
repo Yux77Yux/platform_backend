@@ -28,6 +28,9 @@ static_resources:
                   #       envoy_grpc:
                   #         cluster_name: auth_service
                   #     failure_mode_allow: false
+                  - name: envoy.filters.http.grpc_web  # 添加 gRPC-Web 过滤器，支持 gRPC-Web Streaming
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
                   - name: envoy.filters.http.grpc_json_transcoder # 转换过滤器
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder
@@ -99,6 +102,10 @@ static_resources:
                             prefix: "/interaction.InteractionService" # grpc 授权 路径
                           route:
                             cluster: interaction_service # 指定 gRPC interaction 集群
+                        - match:
+                            prefix: "/review.ReviewService" # grpc 授权 路径
+                          route:
+                            cluster: review_service # 指定 gRPC review 集群
   clusters:
     # 当需要组装多个服务返回的响应，会使用aggregator（聚合层）
     - name: aggregator_service # gRPC 聚合层 服务集群
@@ -228,7 +235,7 @@ static_resources:
             max_retries: 3
       per_connection_buffer_limit_bytes: 32768 # 每个连接的缓冲区限制，单位字节
 
-    - name: interaction_service # gRPC creation 服务集群
+    - name: interaction_service # gRPC interaction 服务集群
       connect_timeout: 5s
       lb_policy: ROUND_ROBIN
       type: LOGICAL_DNS
@@ -245,6 +252,32 @@ static_resources:
                     socket_address:
                       address: 172.28.96.1
                       port_value: 50040
+      circuit_breakers:
+        thresholds:
+          - priority: default
+            max_connections: 1000
+            max_pending_requests: 1000
+            max_requests: 1000
+            max_retries: 3
+      per_connection_buffer_limit_bytes: 32768 # 每个连接的缓冲区限制，单位字节
+
+    - name: review_service # gRPC review 服务集群
+      connect_timeout: 5s
+      lb_policy: ROUND_ROBIN
+      type: LOGICAL_DNS
+      http2_protocol_options: # 对于 HTTP/2 配置
+        initial_connection_window_size: 1048576 # 初始连接窗口大小
+        initial_stream_window_size: 1048576 # 初始流窗口大小
+        max_concurrent_streams: 1000
+      load_assignment:
+        cluster_name: review_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 172.28.96.1
+                      port_value: 50020
       circuit_breakers:
         thresholds:
           - priority: default

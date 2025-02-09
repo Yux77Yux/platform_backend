@@ -30,6 +30,9 @@ const (
 
 	UpdateUserBio      = "UpdateUserBio"
 	UpdateUserBioCache = "UpdateUserBioCache"
+
+	Follow      = "Follow"
+	FollowCache = "FollowCache"
 )
 
 var (
@@ -86,6 +89,15 @@ var (
 			return &slice
 		},
 	}
+
+	followChain      *FollowChain
+	followCacheChain *FollowCacheChain
+	followPool       = sync.Pool{
+		New: func() any {
+			slice := make([]*generated.Follow, 0, MAX_BATCH_SIZE)
+			return &slice
+		},
+	}
 )
 
 func init() {
@@ -109,6 +121,8 @@ func init() {
 	userStatusChain = InitialUserStatusChain()
 	userStatusCacheChain = InitialUserStatusCacheChain()
 
+	followChain = InitialFollowChain()
+	followCacheChain = InitialFollowCacheChain()
 }
 
 func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
@@ -143,5 +157,9 @@ func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 	case UpdateUserStatusCache:
 		userStatusCacheChain.HandleRequest(msg)
 
+	case Follow:
+		followChain.HandleRequest(msg)
+	case FollowCache:
+		followCacheChain.HandleRequest(msg)
 	}
 }

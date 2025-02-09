@@ -828,3 +828,7 @@ func (r *RedisClient) BitField(ctx context.Context, kind string, unique string, 
 func (r RedisClient) Pipeline() redis.Pipeliner {
 	return r.redisClient.Pipeline()
 }
+
+func (r RedisClient) TxPipeline() redis.Pipeliner {
+	return r.redisClient.TxPipeline()
+}

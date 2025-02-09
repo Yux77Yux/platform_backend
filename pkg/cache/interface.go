@@ -84,4 +84,5 @@ type RedisMethods interface {
 	BitField(ctx context.Context, kind string, unique string, command ...interface{}) ([]int64, error)
 
 	Pipeline() redis.Pipeliner
+	TxPipeline() redis.Pipeliner
 }

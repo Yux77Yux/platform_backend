@@ -9,6 +9,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
@@ -222,6 +223,38 @@ func UserRegisterInTransaction(user_credentials []*generated.UserCredentials) er
 	return nil
 }
 
+func Follow(subs []*generated.Follow) error {
+	const (
+		QM = "(?,?)"
+	)
+	count := len(subs)
+	if count <= 0 {
+		return nil
+	}
+	sqlStr := make([]string, count)
+	values := make([]interface{}, count*2)
+	for i, val := range subs {
+		sqlStr[i] = QM
+		values[i*2] = val.FollowerId
+		values[i*2+1] = val.FolloweeId
+	}
+
+	query := fmt.Sprintf(`
+		INSERT INTO db_user_1.Follow (follower_id, followee_id)
+		VALUES %s ;`, strings.Join(sqlStr, ","))
+
+	_, err := db.Exec(
+		query,
+		values...,
+	)
+	if err != nil {
+		err = fmt.Errorf("transaction exec failed because %v", err)
+
+		return err
+	}
+	return nil
+}
+
 // GET
 func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}, error) {
 	var query string
@@ -403,6 +436,174 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 		}
 	}
 	return result, nil
+}
+
+func GetFolloweers(userId int64, page int32) ([]*common.UserCreationComment, error) {
+	const LIMIT = 20
+	start := int64((page - 1) * LIMIT)
+
+	query := `
+		SELECT 
+			id,
+			name,
+			avatar,
+			bio
+		FROM 
+			db_user_1.User u
+		JOIN
+		(
+			SELECT follower_id
+			FROM db_user_1.Follow
+			WHERE followee_id = ?
+			ORDER BY created_at DESC
+			LIMIT ? 
+			OFFSET ?
+		) f
+		ON u.id = f.follower_id;`
+
+	results := make([]*common.UserCreationComment, 0, 20)
+	rows, err := db.Query(query, userId, LIMIT, start)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		var name, avatar, bio string
+		if err := rows.Scan(&id, &name, &avatar, &bio); err != nil {
+			log.Printf("error: row Scan %v", err) // 处理扫描错误
+			return nil, err
+		}
+		results = append(results, &common.UserCreationComment{
+			UserDefault: &common.UserDefault{
+				UserId:   id,
+				UserName: name,
+			},
+			UserAvatar: avatar,
+			UserBio:    bio,
+		})
+	}
+
+	// 检查是否有错误发生在遍历过程中
+	if err := rows.Err(); err != nil {
+		log.Printf("error: rows iteration %v", err)
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func GetFolloweesByTime(userId int64, page int32) ([]*common.UserCreationComment, error) {
+	const LIMIT = 20
+	start := int64((page - 1) * LIMIT)
+
+	query := `
+		SELECT 
+			id,
+			name,
+			avatar,
+			bio
+		FROM 
+			db_user_1.User u
+		JOIN
+		(
+			SELECT followee_id
+			FROM db_user_1.Follow
+			WHERE follower_id = ?
+			ORDER BY created_at DESC
+			LIMIT ? 
+			OFFSET ?
+		) f
+		ON u.id = f.followee_id;`
+
+	results := make([]*common.UserCreationComment, 0, 20)
+	rows, err := db.Query(query, userId, LIMIT, start)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		var name, avatar, bio string
+		if err := rows.Scan(&id, &name, &avatar, &bio); err != nil {
+			log.Printf("error: row Scan %v", err) // 处理扫描错误
+			return nil, err
+		}
+		results = append(results, &common.UserCreationComment{
+			UserDefault: &common.UserDefault{
+				UserId:   id,
+				UserName: name,
+			},
+			UserAvatar: avatar,
+			UserBio:    bio,
+		})
+	}
+
+	// 检查是否有错误发生在遍历过程中
+	if err := rows.Err(); err != nil {
+		log.Printf("error: rows iteration %v", err)
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func GetFolloweesByViews(userId int64, page int32) ([]*common.UserCreationComment, error) {
+	const LIMIT = 20
+	start := int64((page - 1) * LIMIT)
+
+	query := `
+		SELECT 
+			id,
+			name,
+			avatar,
+			bio
+		FROM 
+			db_user_1.User u
+		JOIN
+		(
+			SELECT followee_id
+			FROM db_user_1.Follow
+			WHERE follower_id = ?
+			ORDER BY views DESC
+			LIMIT ? 
+			OFFSET ?
+		) f
+		ON u.id = f.followee_id;`
+
+	results := make([]*common.UserCreationComment, 0, 20)
+	rows, err := db.Query(query, userId, LIMIT, start)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		var name, avatar, bio string
+		if err := rows.Scan(&id, &name, &avatar, &bio); err != nil {
+			log.Printf("error: row Scan %v", err) // 处理扫描错误
+			return nil, err
+		}
+		results = append(results, &common.UserCreationComment{
+			UserDefault: &common.UserDefault{
+				UserId:   id,
+				UserName: name,
+			},
+			UserAvatar: avatar,
+			UserBio:    bio,
+		})
+	}
+
+	// 检查是否有错误发生在遍历过程中
+	if err := rows.Err(); err != nil {
+		log.Printf("error: rows iteration %v", err)
+		return nil, err
+	}
+
+	return results, nil
 }
 
 // Verify
@@ -925,6 +1126,107 @@ func UserUpdateBioInTransaction(users []*generated.UserUpdateBio) error {
 		if err = db.CommitTransaction(tx); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func DelReviewer(reviewerId int64) error {
+	query := `UPDATE db_user_credentials_1.UserCredentials 
+		SET role = USER
+		WHERE id = ?`
+
+	_, err := db.Exec(
+		query,
+		reviewerId,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ViewFollowee(subs []*generated.Follow) error {
+	const (
+		QM = "(?,?)"
+	)
+	count := len(subs)
+	if count <= 0 {
+		return nil
+	}
+	sqlStr := make([]string, count)
+	values := make([]interface{}, count*2)
+	for i, val := range subs {
+		sqlStr[i] = QM
+		values[i*2] = val.FollowerId
+		values[i*2+1] = val.FolloweeId
+	}
+
+	query := fmt.Sprintf(`
+		UPDATE db_user_1.Follow 
+		SET views = views + 1
+		WHERE (follower_id,followee_id) 
+		IN 
+			(%s);`, strings.Join(sqlStr, ","))
+
+	_, err := db.Exec(
+		query,
+		values...,
+	)
+	if err != nil {
+		err = fmt.Errorf("transaction exec failed because %v", err)
+
+		return err
+	}
+	return nil
+}
+
+// Del
+func CancelFollow(f *generated.Follow) error {
+	// const (
+	// 	QM = "(?,?)"
+	// )
+	// count := len(subs)
+	// if count <= 0 {
+	// 	return nil
+	// }
+	// sqlStr := make([]string, count)
+	// values := make([]interface{}, count*2)
+	// for i, val := range subs {
+	// 	sqlStr[i] = QM
+	// 	values[i*2] = val.FollowerId
+	// 	values[i*2+1] = val.FolloweeId
+	// }
+
+	// query := fmt.Sprintf(`
+	// 	DELETE FROM db_user_1.Follow
+	// 	WHERE (follower_id,followee_id)
+	// 	IN
+	// 		(%s);`, strings.Join(sqlStr, ","))
+
+	// _, err := db.Exec(
+	// 	query,
+	// 	values...,
+	// )
+	// if err != nil {
+	// 	err = fmt.Errorf("transaction exec failed because %v", err)
+
+	// 	return err
+	// }
+	query := `
+		DELETE FROM db_user_1.Follow 
+		WHERE follower_id = ?
+	 	AND followee_id = ?`
+	_, err := db.Exec(
+		query,
+		f.FollowerId,
+		f.FolloweeId,
+	)
+	if err != nil {
+		err = fmt.Errorf("transaction exec failed because %v", err)
+
+		return err
 	}
 
 	return nil

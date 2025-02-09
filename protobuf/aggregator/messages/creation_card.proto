@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package aggregator.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
+
+import "creation/messages/creation.proto";
+import "common/user_creation_comment.proto";
+
+message CreationInfo {
+  creation.messages.Creation creation = 1;
+  creation.messages.CreationEngagement creation_engagement = 2;
+}
+
+message CreationCard {
+  CreationInfo creation = 1;
+  common.UserCreationComment user = 2;
+}

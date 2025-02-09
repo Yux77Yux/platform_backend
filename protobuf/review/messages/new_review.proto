@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package review.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/review";
+
+import "review/messages/type.proto";
+import "google/protobuf/timestamp.proto";
+
+message NewReview {
+  int64 id = 1; // 审核信息id
+  int64 target_id = 2; // 审核目标id
+  review.messages.TargetType target_type = 3; // 对象类型 
+  google.protobuf.Timestamp created_at = 4;
+  string msg = 5; // 举报信息（可选）
+}

@@ -1,4 +1,4 @@
-syntax = "proto3";
+ syntax = "proto3";
 
 package comment;
 
@@ -49,5 +49,5 @@ service CommentService {
     };
   }
 
-  
+  rpc GetComment(comment.methods.GetCommentRequest) returns (comment.methods.GetCommentResponse);
 }

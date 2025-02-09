@@ -13,6 +13,7 @@ import "creation/methods/get.proto";
 import "creation/methods/delete.proto";
 
 service CreationService {
+  // POST
   rpc UploadCreation(creation.methods.UploadCreationRequest) returns (creation.methods.UploadCreationResponse) {
     option (google.api.http) = {
       post: "/api/creation"
@@ -20,6 +21,7 @@ service CreationService {
     };
   }
 
+  // GET
   rpc GetCreation(creation.methods.GetCreationRequest) returns (creation.methods.GetCreationResponse) {
     option (google.api.http) = {
       get: "/api/creation/{creation_id}/{access_token.value=*}"
@@ -27,39 +29,24 @@ service CreationService {
   }
 
   // 作者的作品
-  rpc GetSpaceCreationList(creation.methods.GetPublicCreationListRequest) returns (creation.methods.GetCreationListResponse) {
-    option (google.api.http) = {
-      get: "/api/creation/space/{user_id}"
-    };
-  }
+  rpc GetSpaceCreationList(creation.methods.GetPublicCreationListRequest) returns (creation.methods.GetCreationListResponse);
 
   // 收藏夹
-  rpc GetCollectionCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) {
-    option (google.api.http) = {
-      get: "/api/creation/collection/{user_id}"
-    };
-  }
-
+  rpc GetCollectionCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) ;
   // 主页
-  rpc GetHomeCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) {
-    option (google.api.http) = {
-      get: "/api/creation/home/{user_id}"
-    };
-  }
+  rpc GetHomeCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) ;
 
   // 作品的相似作品列表
-  rpc GetSimilarCreationList(creation.methods.GetPublicCreationListRequest) returns (creation.methods.GetCreationListResponse) {
-    option (google.api.http) = {
-      get: "/api/creation/similar/{creation_id}"
-    };
-  }
+  rpc GetSimilarCreationList(creation.methods.GetPublicCreationListRequest) returns (creation.methods.GetCreationListResponse);
 
+  // DELETE
   rpc DeleteCreation(creation.methods.DeleteCreationRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/api/creation/{creation_id}/{access_token.value=*}"
     };
   }
 
+  // UPDATE
   rpc UpdateCreation(creation.methods.UpdateCreationRequest) returns (creation.methods.UpdateCreationResponse) {
     option (google.api.http) = {
       patch: "/api/creation"

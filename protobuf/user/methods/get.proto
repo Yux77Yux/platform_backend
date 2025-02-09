@@ -5,8 +5,25 @@ package user.methods;
 option go_package = "github.com/Yux77Yux/platform_backend/generated/user";
 
 import "user/messages/user.proto";
+import "user/messages/user_login.proto";
+import "user/messages/user_credentials.proto";
+
+import "common/user_creation_comment.proto";
 import "common/access_token.proto";
 import "common/api_response.proto";
+
+
+message GetFollowRequest {
+  int64 user_id = 1;
+  common.AccessToken access_token = 2;
+  int32 page = 3;
+}
+
+message GetFollowResponse{
+  common.ApiResponse msg = 1;
+  repeated common.UserCreationComment users = 2;
+  bool master = 3;
+}
 
 message GetUserRequest {
   int64 user_id = 1;
@@ -17,4 +34,13 @@ message GetUserResponse {
   user.messages.User user = 1;
   common.ApiResponse msg = 2;
   bool block = 3;
+}
+
+message LoginRequest{
+    user.messages.UserCredentials user_credentials = 1;
+}
+
+message LoginResponse{
+    user.messages.UserLogin user_login = 1;
+    common.ApiResponse msg = 2;
 }

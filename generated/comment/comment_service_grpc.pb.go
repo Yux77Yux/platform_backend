@@ -26,6 +26,7 @@ const (
 	CommentService_GetTopComments_FullMethodName    = "/comment.CommentService/GetTopComments"
 	CommentService_GetSecondComments_FullMethodName = "/comment.CommentService/GetSecondComments"
 	CommentService_GetReplyComments_FullMethodName  = "/comment.CommentService/GetReplyComments"
+	CommentService_GetComment_FullMethodName        = "/comment.CommentService/GetComment"
 )
 
 // CommentServiceClient is the client API for CommentService service.
@@ -38,6 +39,7 @@ type CommentServiceClient interface {
 	GetTopComments(ctx context.Context, in *GetTopCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
 	GetSecondComments(ctx context.Context, in *GetSecondCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
 	GetReplyComments(ctx context.Context, in *GetReplyCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
+	GetComment(ctx context.Context, in *GetCommentRequest, opts ...grpc.CallOption) (*GetCommentResponse, error)
 }
 
 type commentServiceClient struct {
@@ -108,6 +110,16 @@ func (c *commentServiceClient) GetReplyComments(ctx context.Context, in *GetRepl
 	return out, nil
 }
 
+func (c *commentServiceClient) GetComment(ctx context.Context, in *GetCommentRequest, opts ...grpc.CallOption) (*GetCommentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCommentResponse)
+	err := c.cc.Invoke(ctx, CommentService_GetComment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CommentServiceServer is the server API for CommentService service.
 // All implementations must embed UnimplementedCommentServiceServer
 // for forward compatibility.
@@ -118,6 +130,7 @@ type CommentServiceServer interface {
 	GetTopComments(context.Context, *GetTopCommentsRequest) (*GetCommentsResponse, error)
 	GetSecondComments(context.Context, *GetSecondCommentsRequest) (*GetCommentsResponse, error)
 	GetReplyComments(context.Context, *GetReplyCommentsRequest) (*GetCommentsResponse, error)
+	GetComment(context.Context, *GetCommentRequest) (*GetCommentResponse, error)
 	mustEmbedUnimplementedCommentServiceServer()
 }
 
@@ -145,6 +158,9 @@ func (UnimplementedCommentServiceServer) GetSecondComments(context.Context, *Get
 }
 func (UnimplementedCommentServiceServer) GetReplyComments(context.Context, *GetReplyCommentsRequest) (*GetCommentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetReplyComments not implemented")
+}
+func (UnimplementedCommentServiceServer) GetComment(context.Context, *GetCommentRequest) (*GetCommentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetComment not implemented")
 }
 func (UnimplementedCommentServiceServer) mustEmbedUnimplementedCommentServiceServer() {}
 func (UnimplementedCommentServiceServer) testEmbeddedByValue()                        {}
@@ -275,6 +291,24 @@ func _CommentService_GetReplyComments_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CommentService_GetComment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCommentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentServiceServer).GetComment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CommentService_GetComment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentServiceServer).GetComment(ctx, req.(*GetCommentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CommentService_ServiceDesc is the grpc.ServiceDesc for CommentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -305,6 +339,10 @@ var CommentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetReplyComments",
 			Handler:    _CommentService_GetReplyComments_Handler,
+		},
+		{
+			MethodName: "GetComment",
+			Handler:    _CommentService_GetComment_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

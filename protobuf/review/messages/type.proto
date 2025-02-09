@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package review.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/review";
+
+enum TargetType {
+  CREATION = 0;
+  USER = 1;
+  COMMENT = 2;
+}

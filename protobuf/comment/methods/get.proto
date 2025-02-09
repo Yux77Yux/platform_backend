@@ -43,3 +43,13 @@ message GetCommentsResponse {
   repeated comment.messages.Comment comments = 1;
   common.ApiResponse msg = 2;
 }
+
+message GetCommentRequest {
+  int64 creation_id = 1;
+}
+
+
+message GetCommentResponse {
+  comment.messages.Comment comment = 1;
+  common.ApiResponse msg = 2;
+}

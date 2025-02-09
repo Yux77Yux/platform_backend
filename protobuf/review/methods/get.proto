@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package review.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/review";
+
+import "review/messages/status.proto";
+import "review/messages/type.proto";
+import "review/messages/new_review.proto";
+import "common/api_response.proto";
+
+message  GetReviewsRequest {
+  review.messages.ReviewStatus status = 1;// 获取需要审核的，或已被审核的
+  review.messages.TargetType type = 2;// 获取类型，评论，用户，作品
+}
+
+message GetReviewsResponse {
+  common.ApiResponse msg = 1;
+  repeated review.messages.NewReview reviews = 2;
+}

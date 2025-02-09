@@ -22,15 +22,29 @@ const (
 	AggregatorService_Login_FullMethodName         = "/aggregator.AggregatorService/Login"
 	AggregatorService_Space_FullMethodName         = "/aggregator.AggregatorService/Space"
 	AggregatorService_WatchCreation_FullMethodName = "/aggregator.AggregatorService/WatchCreation"
+	AggregatorService_GetReviews_FullMethodName    = "/aggregator.AggregatorService/GetReviews"
+	AggregatorService_HomePage_FullMethodName      = "/aggregator.AggregatorService/HomePage"
+	AggregatorService_Collections_FullMethodName   = "/aggregator.AggregatorService/Collections"
+	AggregatorService_History_FullMethodName       = "/aggregator.AggregatorService/History"
 )
 
 // AggregatorServiceClient is the client API for AggregatorService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AggregatorServiceClient interface {
+	// User
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	Space(ctx context.Context, in *SpaceRequest, opts ...grpc.CallOption) (*SpaceResponse, error)
+	// Creation
 	WatchCreation(ctx context.Context, in *WatchCreationRequest, opts ...grpc.CallOption) (*WatchCreationResponse, error)
+	// Review
+	GetReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetReviewsUserResponse, error)
+	// 主页
+	HomePage(ctx context.Context, in *HomeRequest, opts ...grpc.CallOption) (*GetCardsResponse, error)
+	// 收藏夹
+	Collections(ctx context.Context, in *CollectionsRequest, opts ...grpc.CallOption) (*GetCardsResponse, error)
+	// 历史
+	History(ctx context.Context, in *HistoryRequest, opts ...grpc.CallOption) (*GetCardsResponse, error)
 }
 
 type aggregatorServiceClient struct {
@@ -71,13 +85,63 @@ func (c *aggregatorServiceClient) WatchCreation(ctx context.Context, in *WatchCr
 	return out, nil
 }
 
+func (c *aggregatorServiceClient) GetReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetReviewsUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetReviewsUserResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_GetReviews_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) HomePage(ctx context.Context, in *HomeRequest, opts ...grpc.CallOption) (*GetCardsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCardsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_HomePage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) Collections(ctx context.Context, in *CollectionsRequest, opts ...grpc.CallOption) (*GetCardsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCardsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_Collections_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) History(ctx context.Context, in *HistoryRequest, opts ...grpc.CallOption) (*GetCardsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCardsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_History_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AggregatorServiceServer is the server API for AggregatorService service.
 // All implementations must embed UnimplementedAggregatorServiceServer
 // for forward compatibility.
 type AggregatorServiceServer interface {
+	// User
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	Space(context.Context, *SpaceRequest) (*SpaceResponse, error)
+	// Creation
 	WatchCreation(context.Context, *WatchCreationRequest) (*WatchCreationResponse, error)
+	// Review
+	GetReviews(context.Context, *GetReviewsRequest) (*GetReviewsUserResponse, error)
+	// 主页
+	HomePage(context.Context, *HomeRequest) (*GetCardsResponse, error)
+	// 收藏夹
+	Collections(context.Context, *CollectionsRequest) (*GetCardsResponse, error)
+	// 历史
+	History(context.Context, *HistoryRequest) (*GetCardsResponse, error)
 	mustEmbedUnimplementedAggregatorServiceServer()
 }
 
@@ -96,6 +160,18 @@ func (UnimplementedAggregatorServiceServer) Space(context.Context, *SpaceRequest
 }
 func (UnimplementedAggregatorServiceServer) WatchCreation(context.Context, *WatchCreationRequest) (*WatchCreationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WatchCreation not implemented")
+}
+func (UnimplementedAggregatorServiceServer) GetReviews(context.Context, *GetReviewsRequest) (*GetReviewsUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReviews not implemented")
+}
+func (UnimplementedAggregatorServiceServer) HomePage(context.Context, *HomeRequest) (*GetCardsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method HomePage not implemented")
+}
+func (UnimplementedAggregatorServiceServer) Collections(context.Context, *CollectionsRequest) (*GetCardsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Collections not implemented")
+}
+func (UnimplementedAggregatorServiceServer) History(context.Context, *HistoryRequest) (*GetCardsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method History not implemented")
 }
 func (UnimplementedAggregatorServiceServer) mustEmbedUnimplementedAggregatorServiceServer() {}
 func (UnimplementedAggregatorServiceServer) testEmbeddedByValue()                           {}
@@ -172,6 +248,78 @@ func _AggregatorService_WatchCreation_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AggregatorService_GetReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReviewsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).GetReviews(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_GetReviews_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).GetReviews(ctx, req.(*GetReviewsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_HomePage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HomeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).HomePage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_HomePage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).HomePage(ctx, req.(*HomeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_Collections_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CollectionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).Collections(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_Collections_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).Collections(ctx, req.(*CollectionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_History_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).History(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_History_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).History(ctx, req.(*HistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AggregatorService_ServiceDesc is the grpc.ServiceDesc for AggregatorService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +338,22 @@ var AggregatorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "WatchCreation",
 			Handler:    _AggregatorService_WatchCreation_Handler,
+		},
+		{
+			MethodName: "GetReviews",
+			Handler:    _AggregatorService_GetReviews_Handler,
+		},
+		{
+			MethodName: "HomePage",
+			Handler:    _AggregatorService_HomePage_Handler,
+		},
+		{
+			MethodName: "Collections",
+			Handler:    _AggregatorService_Collections_Handler,
+		},
+		{
+			MethodName: "History",
+			Handler:    _AggregatorService_History_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

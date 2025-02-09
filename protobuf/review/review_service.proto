@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package review;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/review";
+
+import "google/api/annotations.proto";
+
+import "review/methods/update.proto";
+import "review/methods/get.proto";
+import "review/methods/post.proto";
+
+service ReviewService {
+  // UPDATE
+  rpc UpdateReview(review.methods.UpdateReviewRequest) returns (review.methods.UpdateReviewResponse) {
+    option (google.api.http) = {
+      patch: "/api/review/update"
+    };
+  }
+
+  // POST
+  rpc NewReview(review.methods.NewReviewRequest) returns (review.methods.UpdateReviewResponse) {
+    option (google.api.http) = {
+      post: "/api/review"
+    };
+  }
+
+  // GET
+  rpc GetReview(review.methods.GetReviewsRequest) returns (review.methods.GetReviewsResponse);
+
+}

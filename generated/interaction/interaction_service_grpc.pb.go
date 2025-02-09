@@ -36,9 +36,11 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type InteractionServiceClient interface {
 	// POST
+	// 这个为展示完视频信息之后再查看是否登录，判断是否发送事件
 	PostInteraction(ctx context.Context, in *PostInteractionRequest, opts ...grpc.CallOption) (*PostInteractionResponse, error)
 	// Get
 	GetRecommend(ctx context.Context, in *GetRecommendRequest, opts ...grpc.CallOption) (*GetRecommendResponse, error)
+	// 这个为展示完视频信息之后再查看是否登录，再盘点是否已经点赞过
 	GetActionTag(ctx context.Context, in *GetCreationInteractionRequest, opts ...grpc.CallOption) (*GetCreationInteractionResponse, error)
 	GetHistories(ctx context.Context, in *GetHistoriesRequest, opts ...grpc.CallOption) (*GetInteractionsResponse, error)
 	GetCollections(ctx context.Context, in *GetCollectionsRequest, opts ...grpc.CallOption) (*GetInteractionsResponse, error)
@@ -162,9 +164,11 @@ func (c *interactionServiceClient) CancelLike(ctx context.Context, in *UpdateInt
 // for forward compatibility.
 type InteractionServiceServer interface {
 	// POST
+	// 这个为展示完视频信息之后再查看是否登录，判断是否发送事件
 	PostInteraction(context.Context, *PostInteractionRequest) (*PostInteractionResponse, error)
 	// Get
 	GetRecommend(context.Context, *GetRecommendRequest) (*GetRecommendResponse, error)
+	// 这个为展示完视频信息之后再查看是否登录，再盘点是否已经点赞过
 	GetActionTag(context.Context, *GetCreationInteractionRequest) (*GetCreationInteractionResponse, error)
 	GetHistories(context.Context, *GetHistoriesRequest) (*GetInteractionsResponse, error)
 	GetCollections(context.Context, *GetCollectionsRequest) (*GetInteractionsResponse, error)

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package review.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/review";
+
+import "review/messages/review.proto";
+import "common/access_token.proto";
+import "common/api_response.proto";
+
+message DelReviewerRequest {
+  int64 reviewer_id = 1;
+  common.AccessToken access_token = 2;
+}
+
+message DelReviewerResponse {
+  common.ApiResponse msg = 1;
+}
+
+message UpdateReviewRequest{
+    review.messages.Review review = 1;
+    common.AccessToken access_token = 2;
+}
+
+message UpdateReviewResponse{
+    common.ApiResponse msg = 1;
+}  

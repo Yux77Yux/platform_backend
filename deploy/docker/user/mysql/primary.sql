@@ -1,12 +1,10 @@
 CREATE DATABASE IF NOT EXISTS db_user_credentials_1;
 CREATE DATABASE IF NOT EXISTS db_user_1;
-CREATE DATABASE IF NOT EXISTS db_user_follow_1;
 
 CREATE USER 'yuxyuxx'@'%' IDENTIFIED WITH mysql_native_password BY 'yuxyuxx';
 
 GRANT ALL PRIVILEGES ON db_user_1.* TO 'yuxyuxx'@'%';
 GRANT ALL PRIVILEGES ON db_user_credentials_1.* TO 'yuxyuxx'@'%';
-GRANT ALL PRIVILEGES ON db_user_follow_1.* TO 'yuxyuxx'@'%';
 
 FLUSH PRIVILEGES;
 
@@ -43,8 +41,6 @@ CREATE TABLE IF NOT EXISTS User (
     
     PRIMARY KEY (id)                     -- 使用 id 作为主键
 );
-
-USE db_user_follow_1;
 
 CREATE TABLE IF NOT EXISTS Follow (
     follower_id BIGINT,                             -- 粉丝follower_id

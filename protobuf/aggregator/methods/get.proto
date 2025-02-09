@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package aggregator.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
+
+import "aggregator/messages/creation_card.proto";
+
+import "common/access_token.proto";
+import "common/api_response.proto";
+
+message HistoryRequest {
+  common.AccessToken access_token = 1;
+  int32 page = 2;
+}
+
+message HomeRequest {
+  common.AccessToken access_token = 1;
+}
+
+message CollectionsRequest {
+  common.AccessToken access_token = 1;
+  int32 page = 2;
+}
+
+message GetCardsResponse {
+  common.ApiResponse msg = 1;
+  repeated aggregator.messages.CreationCard cards = 2;
+}

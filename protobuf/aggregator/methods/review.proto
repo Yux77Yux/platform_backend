@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package aggregator.methods;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
+
+import "review/messages/review.proto";
+import "creation/messages/creation.proto";
+import "user/messages/user.proto";
+
+import "comment/messages/comment.proto";
+import "common/access_token.proto";
+import "common/api_response.proto";
+
+
+message GetReviewsRequest{
+  common.AccessToken access_token = 1;
+}
+
+message GetReviewsCreationResponse{
+  common.ApiResponse msg = 1;
+  review.messages.Review review = 2;
+  creation.messages.Creation creation = 3;
+}
+
+message GetReviewsUserResponse{
+  common.ApiResponse msg = 1;
+  review.messages.Review review = 2;
+  user.messages.User user = 3;
+}
+
+message GetReviewsCommentResponse{
+  common.ApiResponse msg = 1;
+  review.messages.Review review = 2;
+  comment.messages.Comment comment = 3;
+}

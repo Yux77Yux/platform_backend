@@ -34,7 +34,9 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CreationServiceClient interface {
+	// POST
 	UploadCreation(ctx context.Context, in *UploadCreationRequest, opts ...grpc.CallOption) (*UploadCreationResponse, error)
+	// GET
 	GetCreation(ctx context.Context, in *GetCreationRequest, opts ...grpc.CallOption) (*GetCreationResponse, error)
 	// 作者的作品
 	GetSpaceCreationList(ctx context.Context, in *GetPublicCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
@@ -44,7 +46,9 @@ type CreationServiceClient interface {
 	GetHomeCreationList(ctx context.Context, in *GetSpecificCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
 	// 作品的相似作品列表
 	GetSimilarCreationList(ctx context.Context, in *GetPublicCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
+	// DELETE
 	DeleteCreation(ctx context.Context, in *DeleteCreationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// UPDATE
 	UpdateCreation(ctx context.Context, in *UpdateCreationRequest, opts ...grpc.CallOption) (*UpdateCreationResponse, error)
 }
 
@@ -140,7 +144,9 @@ func (c *creationServiceClient) UpdateCreation(ctx context.Context, in *UpdateCr
 // All implementations must embed UnimplementedCreationServiceServer
 // for forward compatibility.
 type CreationServiceServer interface {
+	// POST
 	UploadCreation(context.Context, *UploadCreationRequest) (*UploadCreationResponse, error)
+	// GET
 	GetCreation(context.Context, *GetCreationRequest) (*GetCreationResponse, error)
 	// 作者的作品
 	GetSpaceCreationList(context.Context, *GetPublicCreationListRequest) (*GetCreationListResponse, error)
@@ -150,7 +156,9 @@ type CreationServiceServer interface {
 	GetHomeCreationList(context.Context, *GetSpecificCreationListRequest) (*GetCreationListResponse, error)
 	// 作品的相似作品列表
 	GetSimilarCreationList(context.Context, *GetPublicCreationListRequest) (*GetCreationListResponse, error)
+	// DELETE
 	DeleteCreation(context.Context, *DeleteCreationRequest) (*emptypb.Empty, error)
+	// UPDATE
 	UpdateCreation(context.Context, *UpdateCreationRequest) (*UpdateCreationResponse, error)
 	mustEmbedUnimplementedCreationServiceServer()
 }

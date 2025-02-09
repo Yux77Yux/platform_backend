@@ -1,8 +1,10 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -62,6 +64,11 @@ func (dbs *MysqlClass) QueryRow(query string, args ...interface{}) *sql.Row {
 	// return dbs.replicaDB.QueryRow(query, args...)
 }
 
+func (dbs *MysqlClass) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return dbs.mainDB.QueryRowContext(ctx, query, args...)
+	// return dbs.replicaDB.QueryRow(query, args...)
+}
+
 // 执行查询返回多个结果
 func (dbs *MysqlClass) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	result, err := dbs.mainDB.Query(query, args...)
@@ -72,9 +79,26 @@ func (dbs *MysqlClass) Query(query string, args ...interface{}) (*sql.Rows, erro
 	return result, nil
 }
 
+func (dbs *MysqlClass) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	result, err := dbs.mainDB.QueryContext(ctx, query, args...)
+	// result, err := dbs.replicaDB.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query failed because %w", err)
+	}
+	return result, nil
+}
+
 // 执行插入、更新或删除操作
 func (dbs *MysqlClass) Exec(query string, args ...interface{}) (sql.Result, error) {
 	result, err := dbs.mainDB.Exec(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("exec failed because %w", err)
+	}
+	return result, nil
+}
+
+func (dbs *MysqlClass) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	result, err := dbs.mainDB.ExecContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("exec failed because %w", err)
 	}

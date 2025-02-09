@@ -89,3 +89,7 @@ func (s *Server) UpdateUserStatus(ctx context.Context, req *generated.UpdateUser
 		return response, nil
 	}
 }
+
+func (s *Server) UpdateUserBio(ctx context.Context, req *generated.UpdateUserBioRequest) (*generated.UpdateUserResponse, error) {
+	return nil, nil
+}

@@ -6,11 +6,14 @@ option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
 
 import "google/api/annotations.proto";
 
+import "aggregator/methods/get.proto";
+import "aggregator/methods/review.proto";
 import "aggregator/methods/login.proto";
 import "aggregator/methods/space.proto";
 import "aggregator/methods/watch.proto";
 
 service AggregatorService {
+  // User
   rpc Login(aggregator.methods.LoginRequest) returns (aggregator.methods.LoginResponse) {
     option (google.api.http) = {
       post: "/api/user/login"
@@ -24,9 +27,38 @@ service AggregatorService {
     };
   }
 
+  //  Creation
   rpc WatchCreation(aggregator.methods.WatchCreationRequest) returns (aggregator.methods.WatchCreationResponse) {
     option (google.api.http) = {
       get: "/api/watch/{creation_id}/{access_token.value=*}"
+    };
+  }
+
+  // Review
+  rpc GetReviews(aggregator.methods.GetReviewsRequest) returns (aggregator.methods.GetReviewsUserResponse) {
+    option (google.api.http) = {
+      get: "/api/aggregator/{access_token.value=*}"
+    };
+  }
+
+  // 主页
+  rpc HomePage(aggregator.methods.HomeRequest) returns (aggregator.methods.GetCardsResponse){
+    option (google.api.http) = {
+      get: "/api/aggregator/home/{access_token.value=*}"
+    };
+  }
+
+  // 收藏夹
+  rpc Collections(aggregator.methods.CollectionsRequest) returns (aggregator.methods.GetCardsResponse){
+    option (google.api.http) = {
+      get: "/api/aggregator/collections/{access_token.value=*}/{page}"
+    };
+  }
+
+  // 历史
+  rpc History(aggregator.methods.HistoryRequest) returns (aggregator.methods.GetCardsResponse){
+    option (google.api.http) = {
+      get: "/api/aggregator/history/{access_token.value=*}/{page}"
     };
   }
 }

@@ -8,9 +8,12 @@ import (
 	"time"
 
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
+	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
+	"github.com/go-redis/redis/v8"
 )
 
 func ExistsUsername(username string) (bool, error) {
@@ -261,6 +264,33 @@ func StoreUserInfo(users []*generated.User) error {
 		}
 		return nil
 	}
+}
+
+func Follow(subs []*generated.Follow) error {
+	ctx := context.Background()
+	now := float64(timestamppb.Now().Seconds)
+	for _, follow := range subs {
+		pipe := CacheClient.TxPipeline()
+		pipe.ZAdd(ctx, fmt.Sprintf("ZSet_Time_Followees_%d", follow.FollowerId), &redis.Z{
+			Score:  now,
+			Member: follow.FolloweeId,
+		})
+
+		pipe.ZAdd(ctx, fmt.Sprintf("ZSet_View_Followees_%d", follow.FollowerId), &redis.Z{
+			Score:  0,
+			Member: follow.FolloweeId,
+		})
+
+		pipe.ZAdd(ctx, fmt.Sprintf("ZSet_Followers_%d", follow.FolloweeId), &redis.Z{
+			Score:  now,
+			Member: follow.FollowerId,
+		})
+		_, err := pipe.Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("error: StoreFollowee %v : %w", follow, err)
+		}
+	}
+	return nil
 }
 
 // UPDATE
@@ -530,4 +560,122 @@ func GetUserCredentials(userCrdentials *generated.UserCredentials) (*generated.U
 
 		return credentials, nil
 	}
+}
+
+// Follow methods
+
+func GetUserCards(userIds []int64) ([]*common.UserCreationComment, error) {
+	length := len(userIds)
+	users := make([]*common.UserCreationComment, length)
+
+	pipe := CacheClient.Pipeline()
+	ctx := context.Background()
+	// 用来存储 pipeline 请求的结果
+	cmds := make([]*redis.SliceCmd, length)
+	for i, userId := range userIds {
+		cmds[i] = pipe.HMGet(ctx, fmt.Sprintf("Hash_UserInfo_%d", userId), "user_name", "user_bio", "user_avatar")
+	}
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, userId := range userIds {
+		results, err := cmds[i].Result()
+		if err != nil {
+			return nil, err
+		}
+		users[i] = &common.UserCreationComment{
+			UserDefault: &common.UserDefault{
+				UserId:   userId,
+				UserName: results[0].(string),
+			},
+			UserBio:    results[1].(string),
+			UserAvatar: results[2].(string),
+		}
+	}
+	return users, nil
+}
+
+func GetFolloweesByTime(userId int64, page int32) ([]int64, error) {
+	const LIMIT = 20
+	start := int64((page - 1) * LIMIT)
+	end := start + 19
+	ctx := context.Background()
+	strs, err := CacheClient.RevRangeZSet(ctx, "Time_Followees", strconv.FormatInt(userId, 10), start, end)
+	if err != nil {
+		return nil, err
+	}
+	length := len(strs)
+	ids := make([]int64, length)
+	for i, str := range strs {
+		id, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		ids[i] = id
+	}
+
+	return ids, nil
+}
+
+func GetFolloweesByView(userId int64, page int32) ([]int64, error) {
+	const LIMIT = 20
+	start := int64((page - 1) * LIMIT)
+	end := start + 19
+	ctx := context.Background()
+	strs, err := CacheClient.RevRangeZSet(ctx, "View_Followees", strconv.FormatInt(userId, 10), start, end)
+	if err != nil {
+		return nil, err
+	}
+	length := len(strs)
+	ids := make([]int64, length)
+	for i, str := range strs {
+		id, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		ids[i] = id
+	}
+
+	return ids, nil
+}
+
+func GetFollowers(userId int64, page int32) ([]int64, error) {
+	const LIMIT = 20
+	start := int64((page - 1) * LIMIT)
+	end := start + 19
+	ctx := context.Background()
+	strs, err := CacheClient.RevRangeZSet(ctx, "Followers", strconv.FormatInt(userId, 10), start, end)
+	if err != nil {
+		return nil, err
+	}
+	length := len(strs)
+	ids := make([]int64, length)
+	for i, str := range strs {
+		id, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		ids[i] = id
+	}
+
+	return ids, nil
+}
+
+// Del
+func CancelFollow(follow *generated.Follow) error {
+	pipe := CacheClient.TxPipeline()
+	ctx := context.Background()
+
+	pipe.ZRem(ctx, fmt.Sprintf("ZSet_Time_Followees_%d", follow.FollowerId), follow.FolloweeId)
+	pipe.ZRem(ctx, fmt.Sprintf("ZSet_View_Followees_%d", follow.FollowerId), follow.FolloweeId)
+	pipe.ZRem(ctx, fmt.Sprintf("ZSet_Followers_%d", follow.FolloweeId), follow.FollowerId)
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("error: StoreFollowee %w", err)
+	}
+
+	return nil
 }

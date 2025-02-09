@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package review.messages;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/review";
+
+enum ReviewStatus {
+  PENDING = 0;
+  APPROVED = 1;
+  REJECTED = 2;
+  DELETE = 3;
+}

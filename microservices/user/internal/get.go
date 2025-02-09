@@ -9,6 +9,7 @@ import (
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
+	jwt "github.com/Yux77Yux/platform_backend/pkg/jwt"
 )
 
 func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) {
@@ -86,4 +87,151 @@ func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) 
 			Code:   "200",
 		},
 	}, nil
+}
+
+func GetFolloweesByTime(req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
+	response := new(generated.GetFollowResponse)
+
+	master := false
+	userId := req.GetUserId()
+	page := req.GetPage()
+	accessToken := req.GetAccessToken()
+	if accessToken.Value != "none" {
+		accessClaims, err := jwt.ParseJWT(accessToken.GetValue())
+		if err != nil {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    "500",
+				Message: "access token error",
+				Details: err.Error(),
+			}
+			return response, fmt.Errorf("error: %v", err)
+		}
+
+		// 是否为登录用户
+		master = accessClaims.UserID == userId
+	} else {
+		page = 1
+	}
+
+	if !master {
+		page = 1
+	}
+
+	cards, err := db.GetFolloweesByTime(userId, page)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Message: "database error",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
+	response.Master = master
+	response.Users = cards
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
+}
+
+func GetFolloweesByViews(req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
+	response := new(generated.GetFollowResponse)
+
+	master := false
+	userId := req.GetUserId()
+	page := req.GetPage()
+	accessToken := req.GetAccessToken()
+	if accessToken.Value != "none" {
+		accessClaims, err := jwt.ParseJWT(accessToken.GetValue())
+		if err != nil {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    "500",
+				Message: "access token error",
+				Details: err.Error(),
+			}
+			return response, fmt.Errorf("error: %v", err)
+		}
+
+		// 是否为登录用户
+		master = accessClaims.UserID == userId
+	} else {
+		page = 1
+	}
+
+	if !master {
+		page = 1
+	}
+
+	cards, err := db.GetFolloweesByViews(userId, page)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Message: "database error",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
+	response.Master = master
+	response.Users = cards
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
+}
+
+func GetFollowers(req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
+	response := new(generated.GetFollowResponse)
+
+	master := false
+	userId := req.GetUserId()
+	page := req.GetPage()
+	accessToken := req.GetAccessToken()
+	if accessToken.Value != "none" {
+		accessClaims, err := jwt.ParseJWT(accessToken.GetValue())
+		if err != nil {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    "500",
+				Message: "access token error",
+				Details: err.Error(),
+			}
+			return response, fmt.Errorf("error: %v", err)
+		}
+
+		// 是否为登录用户
+		master = accessClaims.UserID == userId
+	} else {
+		page = 1
+	}
+
+	if !master {
+		page = 1
+	}
+
+	cards, err := db.GetFolloweers(userId, page)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Message: "database error",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
+	response.Master = master
+	response.Users = cards
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
 }
