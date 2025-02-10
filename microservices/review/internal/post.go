@@ -8,3 +8,6 @@ import (
 	messaging "github.com/Yux77Yux/platform_backend/microservices/review/messaging"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
+
+func NewReview(req *generated.NewReviewRequest) (*generated.NewReviewResponse, error) {
+}

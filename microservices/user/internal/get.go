@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
@@ -12,14 +13,14 @@ import (
 	jwt "github.com/Yux77Yux/platform_backend/pkg/jwt"
 )
 
-func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) {
+func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.GetUserResponse, error) {
 	user_id := req.GetUserId()
 	// 用于后来的黑名单,尚未开发
 	// accessToken := req.GetAccessToken()
 	block := false
 
 	// 判断redis有无存有
-	exist, err := cache.ExistsUserInfo(user_id)
+	exist, err := cache.ExistsUserInfo(ctx, user_id)
 	if err != nil {
 		return &generated.GetUserResponse{
 			Msg: &common.ApiResponse{
@@ -34,7 +35,7 @@ func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) 
 	var user_info *generated.User
 	if exist {
 		// 先从redis取信息
-		result, err := cache.GetUserInfo(user_id, nil)
+		result, err := cache.GetUserInfo(ctx, user_id, nil)
 		if err != nil {
 			return &generated.GetUserResponse{
 				Msg: &common.ApiResponse{
@@ -50,7 +51,7 @@ func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) 
 		user_info = tools.MapUserByString(result)
 	} else {
 		// redis未存有，则从数据库取信息
-		result, err := db.UserGetInfoInTransaction(user_id, nil)
+		result, err := db.UserGetInfoInTransaction(ctx, user_id, nil)
 		if err != nil {
 			return &generated.GetUserResponse{
 				Msg: &common.ApiResponse{
@@ -89,7 +90,7 @@ func GetUser(req *generated.GetUserRequest) (*generated.GetUserResponse, error) 
 	}, nil
 }
 
-func GetFolloweesByTime(req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
+func GetFolloweesByTime(ctx context.Context, req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
 	response := new(generated.GetFollowResponse)
 
 	master := false
@@ -118,7 +119,7 @@ func GetFolloweesByTime(req *generated.GetFollowRequest) (*generated.GetFollowRe
 		page = 1
 	}
 
-	cards, err := db.GetFolloweesByTime(userId, page)
+	cards, err := db.GetFolloweesByTime(ctx, userId, page)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -138,7 +139,7 @@ func GetFolloweesByTime(req *generated.GetFollowRequest) (*generated.GetFollowRe
 	return response, nil
 }
 
-func GetFolloweesByViews(req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
+func GetFolloweesByViews(ctx context.Context, req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
 	response := new(generated.GetFollowResponse)
 
 	master := false
@@ -167,7 +168,7 @@ func GetFolloweesByViews(req *generated.GetFollowRequest) (*generated.GetFollowR
 		page = 1
 	}
 
-	cards, err := db.GetFolloweesByViews(userId, page)
+	cards, err := db.GetFolloweesByViews(ctx, userId, page)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -187,7 +188,7 @@ func GetFolloweesByViews(req *generated.GetFollowRequest) (*generated.GetFollowR
 	return response, nil
 }
 
-func GetFollowers(req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
+func GetFollowers(ctx context.Context, req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
 	response := new(generated.GetFollowResponse)
 
 	master := false
@@ -216,7 +217,7 @@ func GetFollowers(req *generated.GetFollowRequest) (*generated.GetFollowResponse
 		page = 1
 	}
 
-	cards, err := db.GetFolloweers(userId, page)
+	cards, err := db.GetFolloweers(ctx, userId, page)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,

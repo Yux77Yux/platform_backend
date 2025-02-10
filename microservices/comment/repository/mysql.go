@@ -25,7 +25,7 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 	}
 	var (
 		queryComment = fmt.Sprintf(`
-				INSERT INTO db_comment_1.comment (
+				INSERT INTO db_comment_1.Comment (
 					root,
 					parent,
 					dialog,
@@ -33,7 +33,7 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 					user_id)
 				VALUES%s`, strings.Join(queryCommentCount, ","))
 		queryContent = fmt.Sprintf(`
-				INSERT INTO db_comment_1.comment (
+				INSERT INTO db_comment_1.CommentContent (
 					comment_id,
 					content,
 					media)
@@ -174,7 +174,7 @@ func GetPublisherIdInTransaction(comment_id int32) (int64, error) {
 			SELECT 
 				user_id
 			FROM
-				db_comments_1.Comments
+				db_comment_1.Comment
 			WHERE
 				id = ?
 		`
@@ -182,54 +182,26 @@ func GetPublisherIdInTransaction(comment_id int32) (int64, error) {
 
 	ctx := context.Background()
 
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return -1, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	var userId int64 = -1
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return -1, err
+		return -1, ctx.Err()
 	default:
 		// 查统计
-		err = tx.QueryRowContext(ctx,
+		err := db.QueryRowContext(ctx,
 			query,
 			comment_id,
 		).Scan(&userId)
 
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-			return -1, err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
 			return -1, err
 		}
 	}
 	return userId, nil
 }
 
-func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, []*generated.Comment, error) {
+func GetFirstCommentsInTransaction(ctx context.Context, creation_id int64) (*generated.CommentArea, []*generated.Comment, error) {
 	const (
 		query = `
 			SELECT 
@@ -242,9 +214,9 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
     			cc.content,
     			cc.media
 			FROM 
-    			db_comments_1.Comments c
+    			db_comment_1.Comment c
 			LEFT JOIN 
-    			db_comments_1.CommentContent cc 
+    			db_comment_1.CommentContent cc 
 			ON 
 				c.id = cc.comment_id
 			WHERE 
@@ -265,23 +237,6 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 		`
 	)
 
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	var (
 		total  int32  = -1
 		status string = ""
@@ -291,24 +246,14 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, nil, err
+		return nil, nil, ctx.Err()
 	default:
 		// 查统计
-		err = tx.QueryRowContext(ctx,
+		err := db.QueryRowContext(ctx,
 			queryArea,
 			creation_id,
 		).Scan(&total, &status)
 		if err != nil {
-			err = fmt.Errorf("getFirstCommentInTransaction transaction exec failed during queryArea because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, nil, err
 		}
 
@@ -320,18 +265,15 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 		}
 
 		// 查评论
-		rows, err := tx.QueryContext(ctx,
+		rows, err := db.QueryContext(
+			ctx,
 			query,
 			creation_id,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed during Comments because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, nil, err
 		}
+		defer rows.Close()
 
 		for rows.Next() {
 			var (
@@ -347,11 +289,6 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 
 			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
 			if err != nil {
-				// 如果读取行数据失败，处理错误
-				err = fmt.Errorf("failed to scan row because %v", err)
-				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-					err = fmt.Errorf("%w and %w", err, errSecond)
-				}
 				return nil, nil, err
 			}
 			comments = append(comments, &generated.Comment{
@@ -366,10 +303,6 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 				Media:      media,
 			})
 		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return nil, nil, err
-		}
 	}
 
 	return &generated.CommentArea{
@@ -378,7 +311,7 @@ func GetFirstCommentsInTransaction(creation_id int64) (*generated.CommentArea, [
 	}, comments, nil
 }
 
-func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*generated.Comment, error) {
+func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNumber int32) ([]*generated.Comment, error) {
 	offset := (pageNumber - 1) * 50
 	const (
 		query = `
@@ -392,9 +325,9 @@ func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*genera
     			cc.content,
     			cc.media
 			FROM 
-    			db_comments_1.Comments c
+    			db_comment_1.Comment c
 			LEFT JOIN 
-    			db_comments_1.CommentContent cc 
+    			db_comment_1.CommentContent cc 
 			ON 
 				c.id = cc.comment_id
 			WHERE 
@@ -405,50 +338,24 @@ func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*genera
 		`
 	)
 
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	var (
 		comments []*generated.Comment
 	)
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, err
+		return nil, ctx.Err()
 	default:
 		// 查评论
-		rows, err := tx.QueryContext(ctx,
+		rows, err := db.QueryContext(ctx,
 			query,
 			creation_id,
 			offset,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
+		defer rows.Close()
 
 		for rows.Next() {
 			var (
@@ -464,11 +371,6 @@ func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*genera
 
 			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
 			if err != nil {
-				// 如果读取行数据失败，处理错误
-				err = fmt.Errorf("failed to scan row because %v", err)
-				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-					err = fmt.Errorf("%w and %w", err, errSecond)
-				}
 				return nil, err
 			}
 			comments = append(comments, &generated.Comment{
@@ -483,16 +385,12 @@ func GetTopCommentsInTransaction(creation_id int64, pageNumber int32) ([]*genera
 				Media:      media,
 			})
 		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return nil, err
-		}
 	}
 
 	return comments, nil
 }
 
-func GetSecondCommentsInTransaction(creation_id int64, root, pageNumber int32) ([]*generated.Comment, error) {
+func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root, pageNumber int32) ([]*generated.Comment, error) {
 	offset := (pageNumber - 1) * 50
 	const (
 		query = `
@@ -506,35 +404,17 @@ func GetSecondCommentsInTransaction(creation_id int64, root, pageNumber int32) (
     			cc.content,
     			cc.media
 			FROM 
-    			db_comments_1.Comments c
+    			db_comment_1.Comment c
 			LEFT JOIN 
-    			db_comments_1.CommentContent cc 
+    			db_comment_1.CommentContent cc 
 			ON 
 				c.id = cc.comment_id
 			WHERE 
     			c.creation_id = ?
 			AND 
 				c.root = ?
-			LIMIT 10 OFFSET ?
-		`
+			LIMIT 10 OFFSET ?`
 	)
-
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
 
 	var (
 		comments []*generated.Comment
@@ -542,28 +422,19 @@ func GetSecondCommentsInTransaction(creation_id int64, root, pageNumber int32) (
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, err
+		return nil, ctx.Err()
 	default:
 		// 查评论
-		rows, err := tx.QueryContext(ctx,
+		rows, err := db.QueryContext(ctx,
 			query,
 			creation_id,
 			root,
 			offset,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
+		defer rows.Close()
 
 		for rows.Next() {
 			var (
@@ -590,16 +461,12 @@ func GetSecondCommentsInTransaction(creation_id int64, root, pageNumber int32) (
 				Media:      media,
 			})
 		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return nil, err
-		}
 	}
 
 	return comments, nil
 }
 
-func GetReplyCommentsInTransaction(user_id int64, page int32) ([]*generated.Comment, error) {
+func GetReplyCommentsInTransaction(ctx context.Context, user_id int64, page int32) ([]*generated.Comment, error) {
 	var (
 		offset = (page - 1) * 50
 		query  = `
@@ -613,9 +480,9 @@ func GetReplyCommentsInTransaction(user_id int64, page int32) ([]*generated.Comm
     			cc.content,
     			cc.media
 			FROM 
-    			db_comments_1.Comments c
+    			db_comment_1.Comment c
 			LEFT JOIN 
-    			db_comments_1.CommentContent cc 
+    			db_comment_1.CommentContent cc 
 			ON
 				c.id = cc.comment_id
 			WHERE 
@@ -625,50 +492,24 @@ func GetReplyCommentsInTransaction(user_id int64, page int32) ([]*generated.Comm
 			OFFSET ?`
 	)
 
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	var (
 		comments []*generated.Comment
 	)
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, err
+		return nil, ctx.Err()
 	default:
 		// 查评论
-		rows, err := tx.QueryContext(ctx,
+		rows, err := db.QueryContext(ctx,
 			query,
 			user_id,
 			offset,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
+		defer rows.Close()
 
 		for rows.Next() {
 			var (
@@ -696,10 +537,6 @@ func GetReplyCommentsInTransaction(user_id int64, page int32) ([]*generated.Comm
 				Media:      media,
 			})
 		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return nil, err
-		}
 	}
 
 	return comments, nil
@@ -720,7 +557,7 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 				SELECT 
 					id,
 					creation_id
-				FROM db_comment_1.comment
+				FROM db_comment_1.CommentContent
 				WHERE (id,user_id) 
 				IN (%s)`, strings.Join(queryCount, ","))
 		values = make([]interface{}, 0, count*2)
@@ -731,44 +568,20 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 		values = append(values, comment.GetCommentId(), comment.GetUserId())
 	}
 
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, err
+		return nil, ctx.Err()
 	default:
 		// 查评论
-		rows, err := tx.QueryContext(
+		rows, err := db.QueryContext(
 			ctx,
 			queryComment,
 			values...,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
+		defer rows.Close()
 
 		for rows.Next() {
 			var (
@@ -781,10 +594,6 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 				CommentId:  id,
 				CreationId: creationId,
 			})
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return nil, err
 		}
 	}
 
@@ -805,7 +614,7 @@ func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) (int64, error) {
 
 	var (
 		queryComment = fmt.Sprintf(`
-				UPDATE db_comment_1.comment 
+				UPDATE db_comment_1.Comment 
 				SET status = "DELETE"
 				WHERE id 
 				IN (%s)`, strings.Join(queryCount, ","))
@@ -823,69 +632,30 @@ func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) (int64, error) {
 		values = append(values, comment.GetCommentId())
 	}
 
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return -1, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return -1, err
+		return -1, ctx.Err()
 	default:
-		result, err := tx.ExecContext(
+		result, err := db.ExecContext(
 			ctx,
 			queryComment,
 			values...,
 		)
 		if err != nil {
-			err = fmt.Errorf("batchInsert transaction exec failed during queryComment because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return -1, err
 		}
 
 		rowsAffected, err = result.RowsAffected()
 		if err != nil {
-			err = fmt.Errorf("batchInsert transaction exec failed during queryComment because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return -1, err
 		}
-		_, err = tx.ExecContext(
+		_, err = db.ExecContext(
 			ctx,
 			queryArea,
 			rowsAffected,
 			creationId,
 		)
 		if err != nil {
-			err = fmt.Errorf("batchInsert transaction exec failed during queryArea because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
-			return -1, err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
 			return -1, err
 		}
 	}

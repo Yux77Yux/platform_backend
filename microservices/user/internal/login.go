@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -14,7 +15,7 @@ import (
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 )
 
-func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
+func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	user_credentials := req.GetUserCredentials()
 	// 检查空值
 	if (user_credentials.GetUsername() == "" && user_credentials.GetUserEmail() == "") || user_credentials.GetPassword() == "" {
@@ -32,7 +33,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 
 	// 验证密码
 	var user_part_info *generated.UserCredentials
-	user_part_info, err := cache.GetUserCredentials(user_credentials)
+	user_part_info, err := cache.GetUserCredentials(ctx, user_credentials)
 	if err != nil {
 		return &generated.LoginResponse{
 			Msg: &common.ApiResponse{
@@ -44,7 +45,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 		}, err
 	}
 	if user_part_info == nil {
-		user_part_info, err = db.UserVerifyInTranscation(user_credentials)
+		user_part_info, err = db.UserVerifyInTranscation(ctx, user_credentials)
 		if err != nil {
 			return &generated.LoginResponse{
 				Msg: &common.ApiResponse{
@@ -69,7 +70,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 
 	user_id := user_part_info.GetUserId()
 	// 判断redis有无存有
-	exist, err := cache.ExistsUserInfo(user_id)
+	exist, err := cache.ExistsUserInfo(ctx, user_id)
 	if err != nil {
 		return &generated.LoginResponse{
 			Msg: &common.ApiResponse{
@@ -85,7 +86,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	fields := []string{"user_name", "user_avatar"}
 	if exist {
 		// 先从redis取信息
-		result, err := cache.GetUserInfo(user_id, fields)
+		result, err := cache.GetUserInfo(ctx, user_id, fields)
 		if err != nil {
 			return &generated.LoginResponse{
 				Msg: &common.ApiResponse{
@@ -107,7 +108,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 		}
 	} else {
 		// redis未存有，则从数据库取信息
-		result, err := db.UserGetInfoInTransaction(user_id, nil)
+		result, err := db.UserGetInfoInTransaction(ctx, user_id, nil)
 		if err != nil {
 			return &generated.LoginResponse{
 				Msg: &common.ApiResponse{

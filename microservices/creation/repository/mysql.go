@@ -27,10 +27,10 @@ func CreationAddInTransaction(creation *generated.Creation) error {
 	)
 	values(?,?,?,?,?,?,?,?,?,?)`
 
-	// queryCreationEngagement := `insert into db_creation_engagment_1.CreationEngagement
-	// (creation_id
-	// )
-	// values(?)`
+	queryCreationEngagement := `insert into db_creation_engagment_1.CreationEngagement
+	(creation_id
+	)
+	values(?)`
 
 	ctx := context.Background()
 
@@ -93,18 +93,18 @@ func CreationAddInTransaction(creation *generated.Creation) error {
 			return err
 		}
 
-		// _, err = tx.Exec(
-		// 	queryCreationEngagement,
-		// 	id,
-		// )
-		// if err != nil {
-		// 	err = fmt.Errorf("queryCreationEngagement transaction exec failed because %v", err)
-		// 	if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-		// 		err = fmt.Errorf("%w and %w", err, errSecond)
-		// 	}
+		_, err = tx.Exec(
+			queryCreationEngagement,
+			id,
+		)
+		if err != nil {
+			err = fmt.Errorf("queryCreationEngagement transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
 
-		// 	return err
-		// }
+			return err
+		}
 
 		if err = db.CommitTransaction(tx); err != nil {
 			return err
@@ -117,7 +117,7 @@ func CreationAddInTransaction(creation *generated.Creation) error {
 // GET
 
 // 详细页
-func GetDetailInTransaction(creationId int64) (*generated.CreationInfo, error) {
+func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.CreationInfo, error) {
 	queryCreation :=
 		`SELECT
 		author_id,
@@ -150,23 +150,6 @@ func GetDetailInTransaction(creationId int64) (*generated.CreationInfo, error) {
 	WHERE creation_id = ?
 	`
 
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	var (
 		author_id   int64
 		src         string
@@ -190,15 +173,11 @@ func GetDetailInTransaction(creationId int64) (*generated.CreationInfo, error) {
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, err
+		return nil, ctx.Err()
 	default:
 		// 查作品信息
-		err := tx.QueryRow(
+		err := db.QueryRowContext(
+			ctx,
 			queryCreation,
 			creationId,
 		).Scan(
@@ -214,16 +193,12 @@ func GetDetailInTransaction(creationId int64) (*generated.CreationInfo, error) {
 			&upload_time,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
 
 		// 查 统计数
-		err = tx.QueryRow(
+		err = db.QueryRowContext(
+			ctx,
 			queryCreationEngagement,
 			creationId,
 		).Scan(
@@ -234,16 +209,12 @@ func GetDetailInTransaction(creationId int64) (*generated.CreationInfo, error) {
 			&publish_time,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreationEngagement transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
 
 		// 查 分区
-		err = tx.QueryRow(
+		err = db.QueryRowContext(
+			ctx,
 			queryCategory,
 			category_id,
 		).Scan(
@@ -253,15 +224,6 @@ func GetDetailInTransaction(creationId int64) (*generated.CreationInfo, error) {
 			&description,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreationEngagement transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
-			return nil, err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
 			return nil, err
 		}
 	}
@@ -300,29 +262,11 @@ func GetDetailInTransaction(creationId int64) (*generated.CreationInfo, error) {
 }
 
 // 返回作者ID
-func GetAuthorIdInTransaction(creationId int64) (int64, error) {
+func GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, error) {
 	queryCreation := `
 		SELECT author_id
 		FROM db_creation_1.Creation 
-		WHERE id = ?
-	`
-
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return -1, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
+		WHERE id = ?`
 
 	var (
 		author_id int64
@@ -330,15 +274,11 @@ func GetAuthorIdInTransaction(creationId int64) (int64, error) {
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return -1, err
+		return -1, ctx.Err()
 	default:
 		// 查作品信息
-		err := tx.QueryRow(
+		err := db.QueryRowContext(
+			ctx,
 			queryCreation,
 			creationId,
 		).Scan(
@@ -346,15 +286,6 @@ func GetAuthorIdInTransaction(creationId int64) (int64, error) {
 			&author_id,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
-			return -1, err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
 			return -1, err
 		}
 	}
@@ -363,7 +294,7 @@ func GetAuthorIdInTransaction(creationId int64) (int64, error) {
 
 // 卡片型
 
-func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
+func GetCardInTransaction(ctx context.Context, ids []int64) ([]*generated.CreationInfo, error) {
 	const (
 		queryCardCategory = `SELECT
 			parent,
@@ -394,24 +325,6 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 		WHERE id IN (?)
 		`
 	)
-
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	// 返回的卡片信息
 	cards := make([]*generated.Creation, 0, len(ids))
 	// 返回的卡片统计信息
@@ -421,12 +334,7 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, err
+		return nil, ctx.Err()
 	default:
 		// 查作品信息
 		// []int64 转 []string
@@ -440,18 +348,15 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 		// 查询的分区id
 		categoriesIds := make([]int32, len(ids))
 
-		rows, err := tx.QueryContext(ctx,
+		rows, err := db.QueryContext(
+			ctx,
 			query,
 			str,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
+		defer rows.Close()
 
 		for rows.Next() {
 			var (
@@ -467,11 +372,6 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 			// 从当前行读取值，依次填充到变量中
 			err := rows.Scan(&author_id, &src, &thumbnail, &title, &status, &duration, &category_id, &upload_time)
 			if err != nil {
-				// 如果读取行数据失败，处理错误
-				err = fmt.Errorf("failed to scan row because %v", err)
-				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-					err = fmt.Errorf("%w and %w", err, errSecond)
-				}
 				return nil, err
 			}
 
@@ -496,10 +396,6 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 
 		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
 		if err = rows.Err(); err != nil {
-			err = fmt.Errorf("rows iteration failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
 			return nil, err
 		}
 
@@ -507,18 +403,15 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 		rows.Close()
 
 		// 查 统计数
-		rows, err = tx.QueryContext(ctx,
+		rows, err = db.QueryContext(
+			ctx,
 			queryCardEngagement,
 			str,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
+		defer rows.Close()
 
 		for rows.Next() {
 			var (
@@ -528,11 +421,6 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 			// 从当前行读取值，依次填充到变量中
 			err := rows.Scan(&views, &publish_time)
 			if err != nil {
-				// 如果读取行数据失败，处理错误
-				err = fmt.Errorf("failed to scan row because %v", err)
-				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-					err = fmt.Errorf("%w and %w", err, errSecond)
-				}
 				return nil, err
 			}
 
@@ -547,9 +435,6 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
 		if err = rows.Err(); err != nil {
 			err = fmt.Errorf("rows iteration failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
 			return nil, err
 		}
 
@@ -565,18 +450,15 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 		// 拼接
 		str = strings.Join(categorys, ",")
 
-		rows, err = tx.QueryContext(ctx,
+		rows, err = db.QueryContext(
+			ctx,
 			queryCardCategory,
 			str,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
+		defer rows.Close()
 
 		for rows.Next() {
 			var (
@@ -588,9 +470,6 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 			if err != nil {
 				// 如果读取行数据失败，处理错误
 				err = fmt.Errorf("failed to scan row because %v", err)
-				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-					err = fmt.Errorf("%w and %w", err, errSecond)
-				}
 				return nil, err
 			}
 
@@ -605,18 +484,11 @@ func GetCardInTransaction(ids []int64) ([]*generated.CreationInfo, error) {
 		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
 		if err = rows.Err(); err != nil {
 			err = fmt.Errorf("rows iteration failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
 			return nil, err
 		}
 
 		// 结束第三次查询
 		rows.Close()
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return nil, err
-		}
 	}
 
 	creationInfos := make([]*generated.CreationInfo, 0, len(ids))
@@ -640,45 +512,16 @@ func DeleteCreationInTransaction(id int64) error {
 	`
 
 	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return err
+		return ctx.Err()
 	default:
-		_, err := tx.Exec(
+		_, err := db.ExecContext(
+			ctx,
 			query,
 			id,
 		)
 		if err != nil {
-			err = fmt.Errorf("delete creation in transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
-			return err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
 			return err
 		}
 	}
@@ -700,7 +543,8 @@ func UpdateViewsInTransaction(creationId int64, changingNum int) error {
 		err := fmt.Errorf("exec timeout :%w", ctx.Err())
 		return err
 	default:
-		_, err := db.Exec(
+		_, err := db.ExecContext(
+			ctx,
 			query,
 			changingNum,
 			creationId,
@@ -727,7 +571,8 @@ func UpdateLikesInTransaction(creationId int64, changingNum int) error {
 		err := fmt.Errorf("exec timeout :%w", ctx.Err())
 		return err
 	default:
-		_, err := db.Exec(
+		_, err := db.ExecContext(
+			ctx,
 			query,
 			changingNum,
 			creationId,
@@ -754,7 +599,8 @@ func UpdateSavesInTransaction(creationId int64, changingNum int) error {
 		err := fmt.Errorf("exec timeout :%w", ctx.Err())
 		return err
 	default:
-		_, err := db.Exec(
+		_, err := db.ExecContext(
+			ctx,
 			query,
 			changingNum,
 			creationId,

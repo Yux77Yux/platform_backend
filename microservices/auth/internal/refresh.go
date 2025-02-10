@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -17,7 +16,7 @@ type ContextKey string
 
 const RefreshTokenKey ContextKey = "refreshToken"
 
-func Refresh(ctx context.Context, req *generated.RefreshRequest) (*generated.RefreshResponse, error) {
+func Refresh(req *generated.RefreshRequest) (*generated.RefreshResponse, error) {
 	refreshToken := req.GetRefreshToken().GetValue()
 	// 检测refreshToken是否过期或无效
 	claims, err := jwt.ParseJWT(refreshToken)

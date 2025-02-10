@@ -16,6 +16,33 @@ import (
 	jwt "github.com/Yux77Yux/platform_backend/pkg/jwt"
 )
 
+func DelReviewer(req *generated.DelReviewerRequest) (*generated.DelReviewerResponse, error) {
+	reqIdCh := make(chan string, 1)
+	requestChannel <- func(reqID string) error {
+		reqIdCh <- reqID
+		log.Printf("info: handling updateUser request with ID: %s\n", reqID)
+
+		err := userMQ.SendMessage("delReviewer", "delReviewer", req)
+		if err != nil {
+			return fmt.Errorf("err: request_id: %s ,message: %w", reqID, err)
+		}
+
+		log.Printf("info: send to messaging queue updateUser request with ID: %s\n", reqID)
+
+		return nil
+	}
+	reqId := <-reqIdCh
+
+	return &generated.DelReviewerResponse{
+		Msg: &common.ApiResponse{
+			Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
+			Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
+			Details: "DelReviewer processing",   // 更详细的成功信息
+			TraceId: reqId,
+		},
+	}, nil
+}
+
 func UpdateUserSpace(req *generated.UpdateUserSpaceRequest) (*generated.UpdateUserResponse, error) {
 	space := req.GetUserUpdateSpace()
 

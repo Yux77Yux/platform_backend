@@ -31,7 +31,7 @@ type ReviewServiceClient interface {
 	// UPDATE
 	UpdateReview(ctx context.Context, in *UpdateReviewRequest, opts ...grpc.CallOption) (*UpdateReviewResponse, error)
 	// POST
-	NewReview(ctx context.Context, in *NewReviewRequest, opts ...grpc.CallOption) (*UpdateReviewResponse, error)
+	NewReview(ctx context.Context, in *NewReviewRequest, opts ...grpc.CallOption) (*NewReviewResponse, error)
 	// GET
 	GetReview(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetReviewsResponse, error)
 }
@@ -54,9 +54,9 @@ func (c *reviewServiceClient) UpdateReview(ctx context.Context, in *UpdateReview
 	return out, nil
 }
 
-func (c *reviewServiceClient) NewReview(ctx context.Context, in *NewReviewRequest, opts ...grpc.CallOption) (*UpdateReviewResponse, error) {
+func (c *reviewServiceClient) NewReview(ctx context.Context, in *NewReviewRequest, opts ...grpc.CallOption) (*NewReviewResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateReviewResponse)
+	out := new(NewReviewResponse)
 	err := c.cc.Invoke(ctx, ReviewService_NewReview_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ type ReviewServiceServer interface {
 	// UPDATE
 	UpdateReview(context.Context, *UpdateReviewRequest) (*UpdateReviewResponse, error)
 	// POST
-	NewReview(context.Context, *NewReviewRequest) (*UpdateReviewResponse, error)
+	NewReview(context.Context, *NewReviewRequest) (*NewReviewResponse, error)
 	// GET
 	GetReview(context.Context, *GetReviewsRequest) (*GetReviewsResponse, error)
 	mustEmbedUnimplementedReviewServiceServer()
@@ -97,7 +97,7 @@ type UnimplementedReviewServiceServer struct{}
 func (UnimplementedReviewServiceServer) UpdateReview(context.Context, *UpdateReviewRequest) (*UpdateReviewResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateReview not implemented")
 }
-func (UnimplementedReviewServiceServer) NewReview(context.Context, *NewReviewRequest) (*UpdateReviewResponse, error) {
+func (UnimplementedReviewServiceServer) NewReview(context.Context, *NewReviewRequest) (*NewReviewResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NewReview not implemented")
 }
 func (UnimplementedReviewServiceServer) GetReview(context.Context, *GetReviewsRequest) (*GetReviewsResponse, error) {

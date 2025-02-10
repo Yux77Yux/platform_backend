@@ -41,7 +41,7 @@ type CacheInterface interface {
 	GetFieldsHash(ctx context.Context, kind string, unique string) ([]string, error)
 	GetValuesHash(ctx context.Context, kind string, unique string) ([]string, error)
 	ExistsHashField(ctx context.Context, kind string, unique string, field string) (bool, error)
-	DelHash(ctx context.Context, kind string, unique string, fields ...string) (int64, error)
+	DelHashField(ctx context.Context, kind string, unique string, fields ...string) (int64, error)
 
 	Pipeline() redis.Pipeliner
 }

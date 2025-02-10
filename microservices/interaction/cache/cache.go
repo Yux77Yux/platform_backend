@@ -46,11 +46,10 @@ func ToBaseInteraction(results []redis.Z) ([]*generated.Interaction, error) {
 }
 
 // 历史记录
-func GetHistories(userId int64, page int32) ([]*generated.Interaction, error) {
+func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
 	const scope = 30
 	start := int64((page - 1) * scope)
 	stop := start + scope
-	ctx := context.Background()
 
 	userIdStr := strconv.FormatInt(userId, 10)
 	resultCh := make(chan *Result, 1)
@@ -84,11 +83,10 @@ func GetHistories(userId int64, page int32) ([]*generated.Interaction, error) {
 }
 
 // 收藏夹
-func GetCollections(userId int64, page int32) ([]*generated.Interaction, error) {
+func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
 	const scope = 30
 	start := int64((page - 1) * scope)
 	stop := start + scope
-	ctx := context.Background()
 	userIdStr := strconv.FormatInt(userId, 10)
 	resultCh := make(chan *Result, 1)
 
@@ -202,8 +200,7 @@ type ActionResult struct {
 }
 
 // 展示页·点赞收藏情况
-func GetInteraction(interaction *generated.BaseInteraction) (*generated.Interaction, error) {
-	ctx := context.Background()
+func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction) (*generated.Interaction, error) {
 	userId := interaction.GetUserId()
 	creationId := interaction.GetCreationId()
 

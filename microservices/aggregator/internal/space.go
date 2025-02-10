@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -28,7 +29,7 @@ import (
 // 	return response, nil
 // }
 
-func Space(req *generated.SpaceRequest) (*generated.SpaceResponse, error) {
+func Space(ctx context.Context, req *generated.SpaceRequest) (*generated.SpaceResponse, error) {
 	// 等待所有异步服务返回
 	var wg sync.WaitGroup
 
@@ -71,7 +72,7 @@ func Space(req *generated.SpaceRequest) (*generated.SpaceResponse, error) {
 			return
 		}
 
-		result, err := user_client.GetUser(userId, accessToken)
+		result, err := user_client.GetUser(ctx, userId, accessToken)
 		if err != nil {
 			err = fmt.Errorf("error: user client during GetUser, %w", err)
 			userResultCh <- struct {

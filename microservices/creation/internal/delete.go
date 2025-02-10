@@ -3,11 +3,13 @@ package internal
 import (
 	// "fmt"
 
+	"context"
 	"fmt"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
+
 	// messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 )
@@ -39,7 +41,7 @@ func DeleteCreation(req *generated.DeleteCreationRequest) error {
 	}
 
 	if str["author_id"] == "" {
-		author_id, err = db.GetAuthorIdInTransaction(creationId)
+		author_id, err = db.GetAuthorIdInTransaction(context.Background(), creationId)
 		if err != nil {
 			return err
 		}

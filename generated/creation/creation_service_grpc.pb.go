@@ -42,8 +42,10 @@ type CreationServiceClient interface {
 	GetSpaceCreationList(ctx context.Context, in *GetPublicCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
 	// 收藏夹
 	GetCollectionCreationList(ctx context.Context, in *GetSpecificCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
+	// 推荐列表在creation处获取，但写入由interaction负责，不够则发布事件进行重新计算
 	// 主页
 	GetHomeCreationList(ctx context.Context, in *GetSpecificCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
+	// 相似列表在creation处获取，但写入由interaction负责，不存在则直接调取api然后直接返回，同时存入redis
 	// 作品的相似作品列表
 	GetSimilarCreationList(ctx context.Context, in *GetPublicCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
 	// DELETE
@@ -152,8 +154,10 @@ type CreationServiceServer interface {
 	GetSpaceCreationList(context.Context, *GetPublicCreationListRequest) (*GetCreationListResponse, error)
 	// 收藏夹
 	GetCollectionCreationList(context.Context, *GetSpecificCreationListRequest) (*GetCreationListResponse, error)
+	// 推荐列表在creation处获取，但写入由interaction负责，不够则发布事件进行重新计算
 	// 主页
 	GetHomeCreationList(context.Context, *GetSpecificCreationListRequest) (*GetCreationListResponse, error)
+	// 相似列表在creation处获取，但写入由interaction负责，不存在则直接调取api然后直接返回，同时存入redis
 	// 作品的相似作品列表
 	GetSimilarCreationList(context.Context, *GetPublicCreationListRequest) (*GetCreationListResponse, error)
 	// DELETE

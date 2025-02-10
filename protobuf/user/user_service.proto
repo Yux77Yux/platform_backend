@@ -100,4 +100,11 @@ service UserService {
       body: "*"
     };
   }
+  
+  rpc DelReviewer(user.methods.DelReviewerRequest) returns (user.methods.DelReviewerResponse) {
+    option (google.api.http) = {
+      patch: "/api/reviewer/auth"
+      body: "*"
+    };
+  }
 }

@@ -31,7 +31,7 @@ type RedisMethods interface {
 	GetValuesHash(ctx context.Context, kind string, unique string) ([]string, error)
 	ExistsHashField(ctx context.Context, kind string, unique string, field string) (bool, error)
 	GetLenHash(ctx context.Context, kind string, unique string, field string) (int64, error)
-	DelHash(ctx context.Context, kind string, unique string, fields ...string) (int64, error)
+	DelHashField(ctx context.Context, kind string, unique string, fields ...string) (int64, error)
 
 	LPushList(ctx context.Context, kind string, unique string, value ...interface{}) error
 	RPushList(ctx context.Context, kind string, unique string, value ...interface{}) error

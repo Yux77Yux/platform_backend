@@ -89,8 +89,7 @@ func ExistsEmail(email string) (bool, error) {
 	}
 }
 
-func ExistsUserInfo(user_id int64) (bool, error) {
-	ctx := context.Background()
+func ExistsUserInfo(ctx context.Context, user_id int64) (bool, error) {
 	resultCh := make(chan struct {
 		exist bool
 		err   error
@@ -447,9 +446,7 @@ func UpdateUserStatus(users []*generated.UserUpdateStatus) error {
 }
 
 // GET
-func GetUserInfo(user_id int64, fields []string) (map[string]string, error) {
-	ctx := context.Background()
-
+func GetUserInfo(ctx context.Context, user_id int64, fields []string) (map[string]string, error) {
 	resultCh := make(chan struct {
 		user map[string]string
 		err  error
@@ -503,10 +500,7 @@ func GetUserInfo(user_id int64, fields []string) (map[string]string, error) {
 	}
 }
 
-func GetUserCredentials(userCrdentials *generated.UserCredentials) (*generated.UserCredentials, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	defer cancel()
-
+func GetUserCredentials(ctx context.Context, userCrdentials *generated.UserCredentials) (*generated.UserCredentials, error) {
 	email := userCrdentials.GetUserEmail()
 	field := userCrdentials.GetUsername()
 	if email != "" {
@@ -678,4 +672,10 @@ func CancelFollow(follow *generated.Follow) error {
 	}
 
 	return nil
+}
+
+func DelCredentials(username string) error {
+	ctx := context.Background()
+	_, err := CacheClient.DelHashField(ctx, "User", "Credentials", username)
+	return err
 }

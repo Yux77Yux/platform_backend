@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -30,17 +29,13 @@ func NewUserClient() (*UserClient, error) {
 	return client, nil
 }
 
-func (c *UserClient) Login(credentials *generated.UserCredentials) (*generated.LoginResponse, error) {
+func (c *UserClient) Login(ctx context.Context, credentials *generated.UserCredentials) (*generated.LoginResponse, error) {
 	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewUserServiceClient(c.connection)
 
 	// 创建请求
 	req := &generated.LoginRequest{UserCredentials: credentials}
-
-	// 调用 gRPC 方法
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
 
 	response, err := client.Login(ctx, req)
 	if err != nil {
@@ -50,17 +45,13 @@ func (c *UserClient) Login(credentials *generated.UserCredentials) (*generated.L
 	return response, nil
 }
 
-func (c *UserClient) GetUser(userId int64, accessToken *common.AccessToken) (*generated.GetUserResponse, error) {
+func (c *UserClient) GetUser(ctx context.Context, userId int64, accessToken *common.AccessToken) (*generated.GetUserResponse, error) {
 	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewUserServiceClient(c.connection)
 
 	// 创建请求
 	req := &generated.GetUserRequest{UserId: userId, AccessToken: accessToken}
-
-	// 调用 gRPC 方法
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*8)
-	defer cancel()
 
 	response, err := client.GetUser(ctx, req)
 	if err != nil {

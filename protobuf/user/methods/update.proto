@@ -11,6 +11,15 @@ import "user/messages/user_update_bio.proto";
 import "common/access_token.proto";
 import "common/api_response.proto";
 
+message DelReviewerRequest {
+  int64 reviewer_id = 1;
+  common.AccessToken access_token = 2;
+}
+
+message DelReviewerResponse {
+  common.ApiResponse msg = 1;
+}
+
 message UpdateUserSpaceRequest {
   user.messages.UserUpdateSpace user_update_space = 1;
   common.AccessToken access_token = 2;

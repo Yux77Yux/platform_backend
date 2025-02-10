@@ -33,6 +33,7 @@ const (
 	UserService_UpdateUserAvatar_FullMethodName    = "/user.UserService/UpdateUserAvatar"
 	UserService_UpdateUserStatus_FullMethodName    = "/user.UserService/UpdateUserStatus"
 	UserService_UpdateUserBio_FullMethodName       = "/user.UserService/UpdateUserBio"
+	UserService_DelReviewer_FullMethodName         = "/user.UserService/DelReviewer"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -60,6 +61,7 @@ type UserServiceClient interface {
 	UpdateUserStatus(ctx context.Context, in *UpdateUserStatusRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
 	// User Bio
 	UpdateUserBio(ctx context.Context, in *UpdateUserBioRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
+	DelReviewer(ctx context.Context, in *DelReviewerRequest, opts ...grpc.CallOption) (*DelReviewerResponse, error)
 }
 
 type userServiceClient struct {
@@ -200,6 +202,16 @@ func (c *userServiceClient) UpdateUserBio(ctx context.Context, in *UpdateUserBio
 	return out, nil
 }
 
+func (c *userServiceClient) DelReviewer(ctx context.Context, in *DelReviewerRequest, opts ...grpc.CallOption) (*DelReviewerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DelReviewerResponse)
+	err := c.cc.Invoke(ctx, UserService_DelReviewer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -225,6 +237,7 @@ type UserServiceServer interface {
 	UpdateUserStatus(context.Context, *UpdateUserStatusRequest) (*UpdateUserResponse, error)
 	// User Bio
 	UpdateUserBio(context.Context, *UpdateUserBioRequest) (*UpdateUserResponse, error)
+	DelReviewer(context.Context, *DelReviewerRequest) (*DelReviewerResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -273,6 +286,9 @@ func (UnimplementedUserServiceServer) UpdateUserStatus(context.Context, *UpdateU
 }
 func (UnimplementedUserServiceServer) UpdateUserBio(context.Context, *UpdateUserBioRequest) (*UpdateUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateUserBio not implemented")
+}
+func (UnimplementedUserServiceServer) DelReviewer(context.Context, *DelReviewerRequest) (*DelReviewerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DelReviewer not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -529,6 +545,24 @@ func _UserService_UpdateUserBio_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_DelReviewer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DelReviewerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).DelReviewer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_DelReviewer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).DelReviewer(ctx, req.(*DelReviewerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -587,6 +621,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateUserBio",
 			Handler:    _UserService_UpdateUserBio_Handler,
+		},
+		{
+			MethodName: "DelReviewer",
+			Handler:    _UserService_DelReviewer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

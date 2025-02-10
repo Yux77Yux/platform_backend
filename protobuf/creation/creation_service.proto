@@ -33,9 +33,11 @@ service CreationService {
 
   // 收藏夹
   rpc GetCollectionCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) ;
+  
+  // 推荐列表在creation处获取，但写入由interaction负责，不够则发布事件进行重新计算
   // 主页
   rpc GetHomeCreationList(creation.methods.GetSpecificCreationListRequest) returns (creation.methods.GetCreationListResponse) ;
-
+  // 相似列表在creation处获取，但写入由interaction负责，不存在则直接调取api然后直接返回，同时存入redis
   // 作品的相似作品列表
   rpc GetSimilarCreationList(creation.methods.GetPublicCreationListRequest) returns (creation.methods.GetCreationListResponse);
 

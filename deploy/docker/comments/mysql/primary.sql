@@ -1,12 +1,10 @@
 CREATE DATABASE IF NOT EXISTS db_comment_areas_1;
-CREATE DATABASE IF NOT EXISTS db_comments_1;
-CREATE DATABASE IF NOT EXISTS db_comment_content_1;
+CREATE DATABASE IF NOT EXISTS db_comment_1;
 
 CREATE USER 'yuxyuxx'@'%' IDENTIFIED WITH mysql_native_password BY 'yuxyuxx';
 
 GRANT ALL PRIVILEGES ON db_comment_areas_1.* TO 'yuxyuxx'@'%';
-GRANT ALL PRIVILEGES ON db_comments_1.* TO 'yuxyuxx'@'%';
-GRANT ALL PRIVILEGES ON db_comment_content_1.* TO 'yuxyuxx'@'%';
+GRANT ALL PRIVILEGES ON db_comment_1.* TO 'yuxyuxx'@'%';
 
 FLUSH PRIVILEGES;
 
@@ -23,11 +21,11 @@ CREATE TABLE IF NOT EXISTS CommentAreas (
     areas_status ENUM('ACTIVE','INACTIVE','HIDE') DEFAULT 'ACTIVE'
 );
 
--- 使用 db_comments_1 数据库
-USE db_comments_1;
+-- 使用 db_comment_1 数据库
+USE db_comment_1;
 
 -- 评论表
-CREATE TABLE IF NOT EXISTS Comments (
+CREATE TABLE IF NOT EXISTS Comment (
     id INT AUTO_INCREMENT PRIMARY KEY,            -- 评论ID
     root INT DEFAULT 0,                           -- 一级评论ID
     parent INT DEFAULT 0,                         -- 回复对象所在ID

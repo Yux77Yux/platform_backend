@@ -19,7 +19,7 @@ service ReviewService {
   }
 
   // POST
-  rpc NewReview(review.methods.NewReviewRequest) returns (review.methods.UpdateReviewResponse) {
+  rpc NewReview(review.methods.NewReviewRequest) returns (review.methods.NewReviewResponse) {
     option (google.api.http) = {
       post: "/api/review"
     };

@@ -256,7 +256,7 @@ func Follow(subs []*generated.Follow) error {
 }
 
 // GET
-func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}, error) {
+func UserGetInfoInTransaction(ctx context.Context, id int64, fields []string) (map[string]interface{}, error) {
 	var query string
 	if len(fields) > 0 {
 		// 查询指定字段
@@ -266,40 +266,13 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 		query = "SELECT * FROM db_user_1.User WHERE id = ?"
 	}
 
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-	log.Println("url: ", query)
 	var result map[string]interface{}
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, err
+		return nil, ctx.Err()
 	default:
-		rows, err := tx.QueryContext(ctx, query, id)
+		rows, err := db.QueryContext(ctx, query, id)
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
 		defer rows.Close()
@@ -308,19 +281,12 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 		cols, err := rows.Columns()
 		if err != nil {
 			err = fmt.Errorf("failed to get columns: %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
 
-		// 确保有结果
+		// 确保有结果,无结果直接返回
 		if !rows.Next() {
-			// 无结果直接结束事务
-			if err = db.CommitTransaction(tx); err != nil {
-				return nil, err
-			}
+			return nil, nil
 		}
 
 		// 创建一个存储列值的切片
@@ -332,10 +298,6 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 
 		// 扫描结果到指针数组
 		if err := rows.Scan(pointers...); err != nil {
-			err = fmt.Errorf("failed to scan row: %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
 			return nil, err
 		}
 
@@ -353,19 +315,11 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 						// 将字符串解析为 time.Time（假设格式是 "YYYY-MM-DD"）
 						parsedTime, err := time.Parse("2006-01-02", string(value))
 						if err != nil {
-							err = fmt.Errorf("failed to parse time: %v", err)
-							if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-								err = fmt.Errorf("%w and %w", err, errSecond)
-							}
 							return nil, err
 						}
 
 						result[colName] = timestamppb.New(parsedTime)
 					} else {
-						err = fmt.Errorf("assert %v timeType failed ", values[i])
-						if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-							err = fmt.Errorf("%w and %w", err, errSecond)
-						}
 						return nil, err
 					}
 				}
@@ -374,29 +328,17 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 					// 将字符串解析为 time.Time（假设格式是 "YYYY-MM-DD HH:MM:SS"）
 					parsedTime, err := time.Parse("2006-01-02 15:04:05", string(value))
 					if err != nil {
-						err = fmt.Errorf("failed to parse time %v: %v", string(value), err)
-						if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-							err = fmt.Errorf("%w and %w", err, errSecond)
-						}
 						return nil, err
 					}
 
 					result[colName] = timestamppb.New(parsedTime)
 				} else {
-					err = fmt.Errorf("assert %v timeType failed ", values[i])
-					if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-						err = fmt.Errorf("%w and %w", err, errSecond)
-					}
 					return nil, err
 				}
 			default:
 				if value, ok := values[i].([]byte); ok {
 					result[colName] = string(value)
 				} else {
-					err = fmt.Errorf("assert %v type failed ", values[i])
-					if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-						err = fmt.Errorf("%w and %w", err, errSecond)
-					}
 					return nil, err
 				}
 			}
@@ -408,10 +350,7 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 			role  string
 		)
 		query = "SELECT email,role FROM db_user_credentials_1.UserCredentials WHERE id = ?"
-		if err := tx.QueryRow(query, id).Scan(&email, &role); err != nil {
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
+		if err := db.QueryRow(query, id).Scan(&email, &role); err != nil {
 			return nil, err
 		}
 
@@ -423,22 +362,15 @@ func UserGetInfoInTransaction(id int64, fields []string) (map[string]interface{}
 				result["email"] = string(value)
 			} else {
 				err = fmt.Errorf("assert email type failed ")
-				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-					err = fmt.Errorf("%w and %w", err, errSecond)
-				}
 				return nil, err
 			}
 		}
 		result["role"] = role
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return nil, err
-		}
 	}
 	return result, nil
 }
 
-func GetFolloweers(userId int64, page int32) ([]*common.UserCreationComment, error) {
+func GetFolloweers(ctx context.Context, userId int64, page int32) ([]*common.UserCreationComment, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 
@@ -462,7 +394,7 @@ func GetFolloweers(userId int64, page int32) ([]*common.UserCreationComment, err
 		ON u.id = f.follower_id;`
 
 	results := make([]*common.UserCreationComment, 0, 20)
-	rows, err := db.Query(query, userId, LIMIT, start)
+	rows, err := db.QueryContext(ctx, query, userId, LIMIT, start)
 	if err != nil {
 		return nil, err
 	}
@@ -494,7 +426,7 @@ func GetFolloweers(userId int64, page int32) ([]*common.UserCreationComment, err
 	return results, nil
 }
 
-func GetFolloweesByTime(userId int64, page int32) ([]*common.UserCreationComment, error) {
+func GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]*common.UserCreationComment, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 
@@ -518,7 +450,7 @@ func GetFolloweesByTime(userId int64, page int32) ([]*common.UserCreationComment
 		ON u.id = f.followee_id;`
 
 	results := make([]*common.UserCreationComment, 0, 20)
-	rows, err := db.Query(query, userId, LIMIT, start)
+	rows, err := db.QueryContext(ctx, query, userId, LIMIT, start)
 	if err != nil {
 		return nil, err
 	}
@@ -550,7 +482,7 @@ func GetFolloweesByTime(userId int64, page int32) ([]*common.UserCreationComment
 	return results, nil
 }
 
-func GetFolloweesByViews(userId int64, page int32) ([]*common.UserCreationComment, error) {
+func GetFolloweesByViews(ctx context.Context, userId int64, page int32) ([]*common.UserCreationComment, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 
@@ -574,7 +506,7 @@ func GetFolloweesByViews(userId int64, page int32) ([]*common.UserCreationCommen
 		ON u.id = f.followee_id;`
 
 	results := make([]*common.UserCreationComment, 0, 20)
-	rows, err := db.Query(query, userId, LIMIT, start)
+	rows, err := db.QueryContext(ctx, query, userId, LIMIT, start)
 	if err != nil {
 		return nil, err
 	}
@@ -607,7 +539,7 @@ func GetFolloweesByViews(userId int64, page int32) ([]*common.UserCreationCommen
 }
 
 // Verify
-func UserVerifyInTranscation(user_credential *generated.UserCredentials) (*generated.UserCredentials, error) {
+func UserVerifyInTranscation(ctx context.Context, user_credential *generated.UserCredentials) (*generated.UserCredentials, error) {
 	identifier := "username = ?"
 	value := user_credential.GetUsername()
 	if user_credential.GetUserEmail() != "" {
@@ -623,8 +555,6 @@ func UserVerifyInTranscation(user_credential *generated.UserCredentials) (*gener
 		FROM db_user_credentials_1.UserCredentials 
 		WHERE %s`, identifier)
 
-	ctx := context.Background()
-
 	var (
 		passwordHash string
 		id           int64
@@ -632,41 +562,12 @@ func UserVerifyInTranscation(user_credential *generated.UserCredentials) (*gener
 		role         string
 	)
 
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, err
+		return nil, ctx.Err()
 	default:
-		err := tx.QueryRow(query, value).Scan(&id, &passwordHash, &email, &role)
+		err := db.QueryRow(query, value).Scan(&id, &passwordHash, &email, &role)
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
-			return nil, err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
 			return nil, err
 		}
 	}
@@ -677,10 +578,6 @@ func UserVerifyInTranscation(user_credential *generated.UserCredentials) (*gener
 	}
 	if !match {
 		return nil, nil
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("not the database error but the others occurred :%w", err)
 	}
 
 	user_email := ""
@@ -1131,20 +1028,52 @@ func UserUpdateBioInTransaction(users []*generated.UserUpdateBio) error {
 	return nil
 }
 
-func DelReviewer(reviewerId int64) error {
-	query := `UPDATE db_user_credentials_1.UserCredentials 
-		SET role = USER
+func DelReviewer(reviewerId int64) (string, error) {
+	querySELECT := `
+		SELECT username 
+		FROM db_user_credentials_1.UserCredentials 
+		WHERE id = ?
+		FOR UPDATE`
+	queryUpdate := `
+		UPDATE db_user_credentials_1.UserCredentials 
+		SET role = USER 
 		WHERE id = ?`
 
-	_, err := db.Exec(
-		query,
-		reviewerId,
-	)
+	var username string
+	ctx := context.Background()
+
+	// 开始事务
+	tx, err := db.BeginTransaction()
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	// 确保在错误时回滚事务
+	defer func() {
+		if err != nil {
+			_ = db.RollbackTransaction(tx) // 确保事务回滚
+		}
+	}()
+
+	// 查询 username 并加行锁
+	err = tx.QueryRowContext(ctx, querySELECT, reviewerId).Scan(&username)
+	if err != nil {
+		return "", fmt.Errorf("failed to query username: %w", err)
+	}
+
+	// 更新角色
+	_, err = tx.ExecContext(ctx, queryUpdate, reviewerId)
+	if err != nil {
+		return "", fmt.Errorf("failed to update role: %w", err)
+	}
+
+	// 提交事务
+	err = db.CommitTransaction(tx)
+	if err != nil {
+		return "", fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return username, nil
 }
 
 func ViewFollowee(subs []*generated.Follow) error {

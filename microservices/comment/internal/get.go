@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"context"
+
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
@@ -8,10 +10,10 @@ import (
 )
 
 // 第一次请求
-func InitalComments(req *generated.InitalCommentsRequest) (*generated.InitalCommentsResponse, error) {
+func InitalComments(ctx context.Context, req *generated.InitalCommentsRequest) (*generated.InitalCommentsResponse, error) {
 	creationId := req.GetCreationId()
 
-	area, comments, err := db.GetFirstCommentsInTransaction(creationId)
+	area, comments, err := db.GetFirstCommentsInTransaction(ctx, creationId)
 	if err != nil {
 		return &generated.InitalCommentsResponse{
 			Msg: &common.ApiResponse{
@@ -34,11 +36,11 @@ func InitalComments(req *generated.InitalCommentsRequest) (*generated.InitalComm
 }
 
 // 一级评论
-func GetTopComments(req *generated.GetTopCommentsRequest) (*generated.GetCommentsResponse, error) {
+func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetCommentsResponse, error) {
 	creationId := req.GetCreationId()
 	page := req.GetPage()
 
-	comments, err := db.GetTopCommentsInTransaction(creationId, page)
+	comments, err := db.GetTopCommentsInTransaction(ctx, creationId, page)
 	if err != nil {
 		return &generated.GetCommentsResponse{
 			Msg: &common.ApiResponse{
@@ -60,12 +62,12 @@ func GetTopComments(req *generated.GetTopCommentsRequest) (*generated.GetComment
 }
 
 // 查看二级评论
-func GetSecondComments(req *generated.GetSecondCommentsRequest) (*generated.GetCommentsResponse, error) {
+func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequest) (*generated.GetCommentsResponse, error) {
 	creationId := req.GetCreationId()
 	root := req.GetRoot()
 	page := req.GetPage()
 
-	comments, err := db.GetSecondCommentsInTransaction(creationId, root, page)
+	comments, err := db.GetSecondCommentsInTransaction(ctx, creationId, root, page)
 	if err != nil {
 		return &generated.GetCommentsResponse{
 			Msg: &common.ApiResponse{
@@ -87,7 +89,7 @@ func GetSecondComments(req *generated.GetSecondCommentsRequest) (*generated.GetC
 }
 
 // 登录用户查看回复自己的评论
-func GetReplyComments(req *generated.GetReplyCommentsRequest) (*generated.GetCommentsResponse, error) {
+func GetReplyComments(ctx context.Context, req *generated.GetReplyCommentsRequest) (*generated.GetCommentsResponse, error) {
 	response := &generated.GetCommentsResponse{}
 	pass, user_id, err := auth.Auth("post", "comment", req.GetAccessToken().GetValue())
 	if err != nil {
@@ -105,7 +107,7 @@ func GetReplyComments(req *generated.GetReplyCommentsRequest) (*generated.GetCom
 		return response, nil
 	}
 
-	comments, err := db.GetReplyCommentsInTransaction(user_id, req.GetPage())
+	comments, err := db.GetReplyCommentsInTransaction(ctx, user_id, req.GetPage())
 	if err != nil {
 		return &generated.GetCommentsResponse{
 			Msg: &common.ApiResponse{

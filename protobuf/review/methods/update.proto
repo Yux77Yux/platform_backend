@@ -17,11 +17,11 @@ message DelReviewerResponse {
   common.ApiResponse msg = 1;
 }
 
-message UpdateReviewRequest{
-    review.messages.Review review = 1;
-    common.AccessToken access_token = 2;
+message UpdateReviewRequest {
+  review.messages.Review review = 1;
+  common.AccessToken access_token = 2;
 }
 
-message UpdateReviewResponse{
-    common.ApiResponse msg = 1;
-}  
+message UpdateReviewResponse {
+  common.ApiResponse msg = 1;
+}

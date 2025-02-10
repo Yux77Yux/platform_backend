@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
@@ -10,9 +11,9 @@ import (
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 )
 
-func GetCreation(req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {
+func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {
 	// 取数据
-	data, err := db.GetDetailInTransaction(req.GetCreationId())
+	data, err := db.GetDetailInTransaction(ctx, req.GetCreationId())
 	if err != nil {
 		return &generated.GetCreationResponse{
 			Msg: &common.ApiResponse{
@@ -33,8 +34,8 @@ func GetCreation(req *generated.GetCreationRequest) (*generated.GetCreationRespo
 	}, nil
 }
 
-func GetCreations(ids []int64) ([]*generated.CreationInfo, error) {
-	data, err := db.GetCardInTransaction(ids)
+func GetCreations(ctx context.Context, ids []int64) ([]*generated.CreationInfo, error) {
+	data, err := db.GetCardInTransaction(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("error: get creation in db error :%w", err)
 	}
@@ -44,7 +45,7 @@ func GetCreations(ids []int64) ([]*generated.CreationInfo, error) {
 // 此处先使用分区进行相似推荐，
 // 拿到此作品的分区，然后到ms或es查相同标签个数的作品id，
 // 拿到id在redis取热度分值，然后排序，返回前十六个视频作品相似作品
-func GetSimilarCreationList(req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
+func GetSimilarCreationList(ctx context.Context, req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
 	response := &generated.GetCreationListResponse{}
 	// id := req.GetId()
 
@@ -68,7 +69,7 @@ func GetSimilarCreationList(req *generated.GetPublicCreationListRequest) (*gener
 }
 
 // 拿用户id，然后author_id = id 作为筛选条件
-func GetSpaceCreationList(req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
+func GetSpaceCreationList(ctx context.Context, req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
 	response := &generated.GetCreationListResponse{}
 	// id := req.GetId()
 
@@ -93,7 +94,7 @@ func GetSpaceCreationList(req *generated.GetPublicCreationListRequest) (*generat
 }
 
 // 收藏夹
-func GetCollectionCreationList(req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
+func GetCollectionCreationList(ctx context.Context, req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
 	response := &generated.GetCreationListResponse{}
 	// token := req.GetAccessToken().GetValue()
 
@@ -118,10 +119,8 @@ func GetCollectionCreationList(req *generated.GetSpecificCreationListRequest) (*
 
 // 主页，打开网页，请求id，取视频推荐的计算结果，拿热度和个性化混合的creation_id数量，请求获取信息
 // 此处需要推荐系统配合
-func GetHomeCreationList(req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
+func GetHomeCreationList(ctx context.Context, req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
 	response := &generated.GetCreationListResponse{}
-
-	// token := req.GetAccessToken().GetValue()
 
 	var err error = nil
 	if err != nil {

@@ -13,7 +13,7 @@ import (
 
 // GET
 
-func GetActionTag(req *generated.BaseInteraction) (*generated.Interaction, error) {
+func GetActionTag(ctx context.Context, req *generated.BaseInteraction) (*generated.Interaction, error) {
 	query := `
 		SELECT 
 			action_tag
@@ -26,46 +26,18 @@ func GetActionTag(req *generated.BaseInteraction) (*generated.Interaction, error
 
 	var actionTag int32
 
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
+		err := fmt.Errorf("exec timeout :%w", ctx.Err())
 
 		return nil, err
 	default:
-		err := tx.QueryRowContext(ctx,
+		err := db.QueryRowContext(
+			ctx,
 			query,
 			userId,
 			creationId).Scan(&actionTag)
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
-			return nil, err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
 			return nil, err
 		}
 	}
@@ -76,7 +48,7 @@ func GetActionTag(req *generated.BaseInteraction) (*generated.Interaction, error
 	}, nil
 }
 
-func GetCollections(userId int64, page int32) ([]*generated.Interaction, error) {
+func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
 	offset := (page - 1) * 30
 	query := `
 		SELECT 
@@ -90,39 +62,12 @@ func GetCollections(userId int64, page int32) ([]*generated.Interaction, error) 
 
 	var interactions []*generated.Interaction
 
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, err
+		return nil, ctx.Err()
 	default:
-		rows, err := tx.QueryContext(ctx, query, userId, offset)
+		rows, err := db.QueryContext(ctx, query, userId, offset)
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
 		defer rows.Close()
@@ -134,10 +79,6 @@ func GetCollections(userId int64, page int32) ([]*generated.Interaction, error) 
 			)
 			err := rows.Scan(&creation_id, &save_at)
 			if err != nil {
-				err = fmt.Errorf("error: GetCollections rows.Scan error %v", err)
-				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-					err = fmt.Errorf("%w and %w", err, errSecond)
-				}
 				return nil, err
 			}
 			interactions = append(interactions, &generated.Interaction{
@@ -145,16 +86,12 @@ func GetCollections(userId int64, page int32) ([]*generated.Interaction, error) 
 				SaveAt: timestamppb.New(save_at),
 			})
 		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return nil, err
-		}
 	}
 
 	return interactions, nil
 }
 
-func GetHistories(userId int64, page int32) ([]*generated.Interaction, error) {
+func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
 	offset := (page - 1) * 30
 	query := `
 		SELECT 
@@ -168,39 +105,12 @@ func GetHistories(userId int64, page int32) ([]*generated.Interaction, error) {
 
 	var interactions []*generated.Interaction
 
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, err
+		return nil, ctx.Err()
 	default:
-		rows, err := tx.QueryContext(ctx, query, userId, offset)
+		rows, err := db.QueryContext(ctx, query, userId, offset)
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
 		defer rows.Close()
@@ -212,10 +122,6 @@ func GetHistories(userId int64, page int32) ([]*generated.Interaction, error) {
 			)
 			err := rows.Scan(&creation_id, &updated_at)
 			if err != nil {
-				err = fmt.Errorf("error: GetHistories rows.Scan error %v", err)
-				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-					err = fmt.Errorf("%w and %w", err, errSecond)
-				}
 				return nil, err
 			}
 			interactions = append(interactions, &generated.Interaction{
@@ -223,17 +129,13 @@ func GetHistories(userId int64, page int32) ([]*generated.Interaction, error) {
 				UpdatedAt: timestamppb.New(updated_at),
 			})
 		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return nil, err
-		}
 	}
 
 	return interactions, nil
 }
 
 // 用于推荐系统返回
-func GetOtherUserHistories(userId int64, page int32) ([]*generated.Interaction, error) {
+func GetOtherUserHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
 	const limit = 5000
 	offset := (page - 1) * limit
 	query := `
@@ -249,39 +151,12 @@ func GetOtherUserHistories(userId int64, page int32) ([]*generated.Interaction, 
 
 	var interactions []*generated.Interaction
 
-	ctx := context.Background()
-
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return nil, err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return nil, err
+		return nil, ctx.Err()
 	default:
-		rows, err := tx.QueryContext(ctx, query, userId, userId, offset)
+		rows, err := db.QueryContext(ctx, query, userId, userId, offset)
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
 			return nil, err
 		}
 		defer rows.Close()
@@ -295,9 +170,6 @@ func GetOtherUserHistories(userId int64, page int32) ([]*generated.Interaction, 
 			err := rows.Scan(&creation_id, &action_tag, &updated_at)
 			if err != nil {
 				err = fmt.Errorf("error: GetHistories rows.Scan error %v", err)
-				if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-					err = fmt.Errorf("%w and %w", err, errSecond)
-				}
 				return nil, err
 			}
 			interactions = append(interactions, &generated.Interaction{
@@ -305,10 +177,6 @@ func GetOtherUserHistories(userId int64, page int32) ([]*generated.Interaction, 
 				ActionTag: action_tag,
 				UpdatedAt: timestamppb.New(updated_at),
 			})
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return nil, err
 		}
 	}
 
@@ -346,44 +214,17 @@ func UpdateInteractions(req []*generated.Interaction) error {
         END;`, strings.Join(sqlStr, ","))
 
 	ctx := context.Background()
-	tx, err := db.BeginTransaction()
-	if err != nil {
-		return err
-	}
 
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return err
+		return ctx.Err()
 	default:
-		_, err := tx.ExecContext(
+		_, err := db.ExecContext(
 			ctx,
 			query,
 			values...,
 		)
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
-			return err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
 			return err
 		}
 	}

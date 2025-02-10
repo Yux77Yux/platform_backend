@@ -249,7 +249,7 @@ func (r *RedisClient) GetLenHash(ctx context.Context, kind string, unique string
 }
 
 // 删除哈希表中的某些字段
-func (r *RedisClient) DelHash(ctx context.Context, kind string, unique string, fields ...string) (int64, error) {
+func (r *RedisClient) DelHashField(ctx context.Context, kind string, unique string, fields ...string) (int64, error) {
 	key := fmt.Sprintf("Hash_%s_%s", kind, unique)
 	num, err := r.redisClient.HDel(ctx, key, fields...).Result()
 	if err != nil {

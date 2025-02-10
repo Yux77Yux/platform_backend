@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"time"
 
 	auth "github.com/Yux77Yux/platform_backend/generated/auth" // 你生成的 package 名字
 	user "github.com/Yux77Yux/platform_backend/generated/user" // 你生成的 package 名字
@@ -29,7 +28,7 @@ func NewAuthClient() (*AuthClient, error) {
 	return client, nil
 }
 
-func (c *AuthClient) Login(userLogin *user.UserLogin) (*auth.LoginResponse, error) {
+func (c *AuthClient) Login(ctx context.Context, userLogin *user.UserLogin) (*auth.LoginResponse, error) {
 	defer c.connection.Close()
 	// 创建客户端
 	client := auth.NewAuthServiceClient(c.connection)
@@ -39,10 +38,6 @@ func (c *AuthClient) Login(userLogin *user.UserLogin) (*auth.LoginResponse, erro
 		UserId:   userLogin.GetUserDefault().GetUserId(),
 		UserRole: userLogin.GetUserRole(),
 	}}
-
-	// 调用 gRPC 方法
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
 
 	response, err := client.Login(ctx, req)
 	if err != nil {

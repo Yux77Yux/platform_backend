@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/aggregator"
@@ -8,7 +9,7 @@ import (
 	client "github.com/Yux77Yux/platform_backend/microservices/aggregator/client"
 )
 
-func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
+func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	auth_client, err := client.NewAuthClient()
 	if err != nil {
 		return nil, fmt.Errorf("error: auth client %v", err)
@@ -19,7 +20,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	}
 
 	// 登录服务，拿用户信息
-	user_response, err := user_client.Login(req.GetUserCredentials())
+	user_response, err := user_client.Login(ctx, req.GetUserCredentials())
 	if err != nil {
 		return &generated.LoginResponse{
 			Msg: user_response.GetMsg(),
@@ -33,7 +34,7 @@ func Login(req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	}
 
 	// 传递user_id至Auth Service 生成token并返回
-	auth_response, err := auth_client.Login(user_response.GetUserLogin())
+	auth_response, err := auth_client.Login(ctx, user_response.GetUserLogin())
 	if err != nil {
 		return &generated.LoginResponse{Msg: auth_response.GetMsg()}, fmt.Errorf("error: auth client %v", err)
 	}

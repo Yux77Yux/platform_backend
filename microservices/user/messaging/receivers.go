@@ -3,6 +3,7 @@ package messaging
 // 由于不同的exchange，需要不同的接收者，事实上需要被调度，统一开关
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -17,6 +18,7 @@ import (
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/user/messaging/dispatch"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
+	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
 // 补缓存
@@ -26,7 +28,7 @@ func storeUserProcessor(msg amqp.Delivery) error {
 	err := proto.Unmarshal(msg.Body, user_info)
 	if err != nil {
 		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("register processor error: %w", err)
+		return fmt.Errorf("storeUser processor error: %w", err)
 	}
 
 	// 写入缓存
@@ -43,7 +45,7 @@ func storeCredentialsProcessor(msg amqp.Delivery) error {
 	err := proto.Unmarshal(msg.Body, credentials)
 	if err != nil {
 		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("register processor error: %w", err)
+		return fmt.Errorf("storeCredentials processor error: %w", err)
 	}
 
 	go dispatch.HandleRequest(credentials, dispatch.RegisterCache)
@@ -135,7 +137,7 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 				Message: "cache client error occur",
 				Details: err.Error(),
 			},
-		}, fmt.Errorf("register processor error: %w", err)
+		}, fmt.Errorf("getUser processor error: %w", err)
 	}
 
 	user_id := req.GetUserId()
@@ -144,7 +146,8 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 	block := false
 
 	// 判断redis有无存有
-	exist, err := cache.ExistsUserInfo(user_id)
+	ctx := context.Background()
+	exist, err := cache.ExistsUserInfo(ctx, user_id)
 	if err != nil {
 		return &generated.GetUserResponse{
 			Msg: &common.ApiResponse{
@@ -159,7 +162,7 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 	var user_info *generated.User
 	if exist {
 		// 先从redis取信息
-		result, err := cache.GetUserInfo(user_id, nil)
+		result, err := cache.GetUserInfo(ctx, user_id, nil)
 		if err != nil {
 			return &generated.GetUserResponse{
 				Msg: &common.ApiResponse{
@@ -176,7 +179,7 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 		user_info = tools.MapUserByString(result)
 	} else {
 		// redis未存有，则从数据库取信息
-		result, err := db.UserGetInfoInTransaction(user_id, nil)
+		result, err := db.UserGetInfoInTransaction(ctx, user_id, nil)
 		if err != nil {
 			return &generated.GetUserResponse{
 				Msg: &common.ApiResponse{
@@ -213,4 +216,38 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 			Code:   "200",
 		},
 	}, nil
+}
+
+func delReviewerProcessor(msg amqp.Delivery) error {
+	req := new(generated.DelReviewerRequest)
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, req)
+	if err != nil {
+		log.Printf("error: Unmarshal %v", err)
+		return err
+	}
+
+	token := req.GetAccessToken().GetValue()
+	pass, _, err := auth.Auth("update", "user", token)
+	if err != nil {
+		return err
+	}
+	if !pass {
+		return nil
+	}
+
+	// 删除审核员身份
+	username, err := db.DelReviewer(req.GetReviewerId())
+	if err != nil {
+		log.Printf("error: %v", err)
+		return err
+	}
+
+	err = cache.DelCredentials(username)
+	if err != nil {
+		log.Printf("error: %v", err)
+		return err
+	}
+
+	return nil
 }

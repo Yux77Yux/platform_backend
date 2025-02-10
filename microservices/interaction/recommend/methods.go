@@ -1,8 +1,10 @@
 package recommend
 
 import (
-	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
+	"context"
 	"log"
+
+	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 )
 
 // 行为数据类型
@@ -19,7 +21,8 @@ func GetUserBehavior(userID int64) *Behavior {
 		viewWeight = 1
 	)
 
-	history, err := cache.GetHistories(userID, 1)
+	ctx := context.Background()
+	history, err := cache.GetHistories(ctx, userID, 1)
 	if err != nil {
 		log.Printf("GetHistories err %v", err)
 	}

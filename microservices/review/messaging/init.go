@@ -10,8 +10,7 @@ import (
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
-		"PublishComment": "direct",
-		"DeleteComment":  "direct",
+		// "PublishComment": "direct",
 		// Add more exchanges here
 	}
 )
@@ -49,10 +48,9 @@ func Init() {
 
 		switch exchange {
 		// 不同的exchange使用不同函数
-		case "PublishComment":
-			go ListenToQueue(exchange, "PublishComment", "PublishComment", JoinCommentProcessor)
-		case "DeleteComment":
-			go ListenToQueue(exchange, "DeleteComment", "DeleteComment", DeleteCommentProcessor)
+		// case "PublishComment":
+		// 	go ListenToQueue(exchange, "PublishComment", "PublishComment", JoinCommentProcessor)
+
 		}
 	}
 }
