@@ -5,12 +5,12 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/comment"
+	generated "github.com/Yux77Yux/platform_backend/generated/review"
 )
 
 const (
 	Insert = "Insert"
-	Delete = "Delete"
+	Update = "Update"
 
 	LISTENER_CHANNEL_COUNT = 120
 	MAX_BATCH_SIZE         = 50
@@ -18,18 +18,18 @@ const (
 )
 
 var (
-	deleteChain     *DeleteChain
-	delCommentsPool = sync.Pool{
+	insertChain *InsertChain
+	insertPool  = sync.Pool{
 		New: func() any {
-			slice := make([]*generated.AfterAuth, 0, MAX_BATCH_SIZE)
+			slice := make([]*generated.NewReview, 0, MAX_BATCH_SIZE)
 			return &slice
 		},
 	}
 
-	insertChain        *InsertChain
-	insertCommentsPool = sync.Pool{
+	updateChain *UpdateChain
+	updatePool  = sync.Pool{
 		New: func() any {
-			slice := make([]*generated.Comment, 0, MAX_BATCH_SIZE)
+			slice := make([]*generated.Review, 0, MAX_BATCH_SIZE)
 			return &slice
 		},
 	}
@@ -38,14 +38,14 @@ var (
 func init() {
 	// 初始化责任链
 	insertChain = InitialInsertChain()
-	deleteChain = InitialDeleteChain()
+	updateChain = InitialUpdateChain()
 }
 
 func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 	switch typeName {
-	case "insert":
+	case Insert:
 		insertChain.HandleRequest(msg)
-	case "delete":
-		deleteChain.HandleRequest(msg)
+	case Update:
+		updateChain.HandleRequest(msg)
 	}
 }

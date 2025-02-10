@@ -7,10 +7,20 @@ import (
 	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue"
 )
 
+const (
+	New_review      = "New_review"
+	Comment_review  = "Comment_review"
+	User_review     = "User_review"
+	Creation_review = "Creation_review"
+)
+
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
-		// "PublishComment": "direct",
+		New_review:      "direct",
+		Comment_review:  "direct",
+		User_review:     "direct",
+		Creation_review: "direct",
 		// Add more exchanges here
 	}
 )
@@ -48,9 +58,8 @@ func Init() {
 
 		switch exchange {
 		// 不同的exchange使用不同函数
-		// case "PublishComment":
-		// 	go ListenToQueue(exchange, "PublishComment", "PublishComment", JoinCommentProcessor)
-
+		case New_review:
+			go ListenToQueue(exchange, New_review, New_review, NewReviewProcessor)
 		}
 	}
 }

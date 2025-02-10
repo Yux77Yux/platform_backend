@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS Review (
     id BIGINT,                -- 审核信息ID，使用 BIGINT
     target_id BIGINT NOT NULL,    -- 审核对象的ID
     target_type ENUM('USER','COMMENT','CREATION') NOT NULL,          -- 审核类型
+    detail varchar(128),                                     -- 举报理由
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    
     status ENUM('PENDING', 'APPROVED', 'REJECTED','DELETE') NOT NULL DEFAULT 'PENDING', -- 审核状态，

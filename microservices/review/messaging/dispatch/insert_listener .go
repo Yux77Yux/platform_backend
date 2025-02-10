@@ -6,15 +6,14 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/comment"
+	generated "github.com/Yux77Yux/platform_backend/generated/review"
 )
 
 // 监听者结构体
 type InsertListener struct {
-	creationId     int64
-	exeChannel     chan *[]*generated.Comment // 批量发送评论的通道
-	commentChannel chan *generated.Comment    // 用于接收评论的通道
-	count          uint32
+	exeChannel   chan *[]*generated.NewReview // 批量发送评论的通道
+	datasChannel chan *generated.NewReview    // 用于接收评论的通道
+	count        uint32
 
 	timeoutDuration     time.Duration   // 超时持续时间（触发销毁）
 	timeoutTimer        *time.Timer     // 用于刷新存活时间
@@ -25,7 +24,7 @@ type InsertListener struct {
 }
 
 func (listener *InsertListener) GetId() int64 {
-	return listener.creationId
+	return 0
 }
 
 // 启动监听者
@@ -39,12 +38,11 @@ func (listener *InsertListener) Dispatch(data protoreflect.ProtoMessage) {
 	// 长度加1
 	count := atomic.AddUint32(&listener.count, 1)
 
-	comment := data.(*generated.Comment)
+	_data := data.(*generated.NewReview)
 	// 处理评论的逻辑
-	listener.commentChannel <- comment
+	listener.datasChannel <- _data
 
 	if count%MAX_BATCH_SIZE == 0 {
-		// 主动触发
 		go listener.SendBatch()
 		listener.RestartUpdateIntervalTimer()
 	}
@@ -60,22 +58,20 @@ func (listener *InsertListener) SendBatch() {
 		return
 	}
 
-	insertCommentsPtr := insertCommentsPool.Get().(*[]*generated.Comment)
-	*insertCommentsPtr = (*insertCommentsPtr)[:count]
-	insertComments := *insertCommentsPtr
+	datasPtr := insertPool.Get().(*[]*generated.NewReview)
+	*datasPtr = (*datasPtr)[:count]
+	insertUsers := *datasPtr
 	for i := 0; uint32(i) < count; i++ {
-		insertComments[i] = <-listener.commentChannel
+		insertUsers[i] = <-listener.datasChannel
 	}
 	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
 
-	listener.exeChannel <- insertCommentsPtr // 送去批量执行,可能被阻塞
+	listener.exeChannel <- datasPtr // 送去批量执行,可能被阻塞
 }
 
 // 启动周期执行批量更新的定时器
 func (listener *InsertListener) RestartUpdateIntervalTimer() {
-	// 先重置
 	if listener.updateIntervalTimer != nil {
-		// 如果 timer 已存在，确保安全地重置
 		if !listener.updateIntervalTimer.Stop() {
 			<-listener.updateIntervalTimer.C // 清理可能遗留的信号
 		}
@@ -85,10 +81,9 @@ func (listener *InsertListener) RestartUpdateIntervalTimer() {
 	listener.updateIntervalTimer = time.AfterFunc(listener.updateInterval, func() {
 		count := atomic.LoadUint32(&listener.count)
 
-		// 大于零则发送，不大于0说明目前没有数据
 		if count > 0 {
-			go listener.SendBatch()        // 执行批量更新
-			listener.RestartTimeoutTimer() // 重启定时器
+			go listener.SendBatch() // 执行批量更新
+			listener.RestartTimeoutTimer()
 		}
 		listener.RestartUpdateIntervalTimer() // 重启定时器
 	})
@@ -108,18 +103,19 @@ func (listener *InsertListener) RestartTimeoutTimer() {
 		count := atomic.LoadUint32(&listener.count)
 
 		if count == 0 {
-			listener.Cleanup()
 			// 超时后销毁监听者
-			deleteChain.DestroyListener(listener)
+			listener.Cleanup()
+			insertChain.DestroyListener(listener)
+		} else {
+			listener.RestartTimeoutTimer() // 重启定时器
 		}
-		listener.RestartTimeoutTimer() // 重启定时器
 	})
 }
 
 // 清理监听者资源
 func (listener *InsertListener) Cleanup() {
 	// 关闭评论通道
-	close(listener.commentChannel)
+	close(listener.datasChannel)
 
 	// 清理其他资源（例如定时器、缓存等）
 	if listener.timeoutTimer != nil {

@@ -10,21 +10,13 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func SendMessage(exchange string, routeKey string, req proto.Message) error {
+func SendProtoMessage(exchange string, routeKey string, body []byte) error {
 	log.Printf("info: start send message to exchange %s with routeKey %s", exchange, routeKey)
 	const retries = 3
-	var (
-		err  error
-		body []byte
-	)
+	var err error
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
-	body, err = proto.Marshal(req)
-	if err != nil {
-		return fmt.Errorf("failed to marshal request: %w", err)
-	}
 
 	rabbitMQ := GetRabbitMQ()
 	defer rabbitMQ.Close()
@@ -51,6 +43,74 @@ func SendMessage(exchange string, routeKey string, req proto.Message) error {
 		time.Sleep(time.Second * 2) // Wait before retrying
 	}
 	return fmt.Errorf("failed to publish request: %w", err)
+}
+
+func SendMessage(exchange string, routeKey string, req proto.Message) error {
+	body, err := proto.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	return SendProtoMessage(exchange, routeKey, body)
+}
+
+func GetMsgs(exchange, queueName, routeKey string, count int) []amqp.Delivery {
+	var (
+		queue *amqp.Queue
+		msgs  <-chan amqp.Delivery
+		err   error
+	)
+
+	rabbitMQ := GetRabbitMQ()
+	defer rabbitMQ.Close()
+
+	// 队列声明
+	queue, err = rabbitMQ.QueueDeclare(queueName, true, false, false, false, nil)
+	if err != nil {
+		log.Printf("rabbitMQ QueueDeclare error: %v", err)
+		return nil
+	}
+
+	// 在init中已经声明好交换机了
+	// 队列绑定交换机
+	err = rabbitMQ.QueueBind(queue.Name, routeKey, exchange, false, nil)
+	if err != nil {
+		log.Printf("rabbitMQ QueueBind error: %v", err)
+		return nil
+	}
+
+	msgs, err = rabbitMQ.Consume(
+		queue.Name, // queue
+		"",         // consumer
+		false,      // auto ack
+		true,       // exclusive
+		false,      // no local
+		false,      // no wait
+		nil,        // args
+	)
+	if err != nil {
+		log.Printf("rabbitMQ Consume error: %v", err)
+		return nil
+	}
+
+	values := make([]amqp.Delivery, 0, count)
+	for i := 0; i < count; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+		select {
+		case msg, ok := <-msgs:
+			if !ok { // 如果通道关闭，提前退出
+				cancel()
+				return values
+			}
+			msg.Ack(false)
+			values = append(values, msg)
+			cancel()
+		case <-ctx.Done():
+			cancel()
+			return values
+		}
+	}
+	return values
 }
 
 func ListenToQueue(exchange, queueName, routeKey string, handler func(amqp.Delivery) error) {

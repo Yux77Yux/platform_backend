@@ -5,12 +5,10 @@ package review.methods;
 option go_package = "github.com/Yux77Yux/platform_backend/generated/review";
 
 import "review/messages/new_review.proto";
-import "common/access_token.proto";
 import "common/api_response.proto";
 
 message NewReviewRequest{
     review.messages.NewReview new = 1;
-    common.AccessToken access_token = 2;
 }
 
 message NewReviewResponse{
