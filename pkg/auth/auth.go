@@ -43,6 +43,38 @@ func Auth(method, object string, token string) (bool, int64, error) {
 	return includes(scope, power), id, nil
 }
 
+// return (pass，isADMIN，userId，error)
+func AuthRole(method, object string, token string) (bool, bool, int64, error) {
+	accessToken := token
+	owner := "public"
+	scope := GUEST
+	var id int64
+
+	if accessToken != "" {
+		accessClaims, err := jwt.ParseJWT(accessToken)
+		if err != nil {
+			return false, false, -1, fmt.Errorf("parseJWT err %w", err)
+		}
+
+		owner = "own"
+
+		if accessClaims.Role == "ADMIN" {
+			owner = "manage"
+		}
+		if accessClaims.Role == "SUPER_ADMIN" {
+			owner = "super"
+		}
+
+		scope = accessClaims.Scope
+		id = accessClaims.UserID
+	}
+
+	// 拼接权限
+	power := fmt.Sprintf("%s:%s:%s", method, object, owner)
+
+	return includes(scope, power), owner == "manage", id, nil
+}
+
 func includes(slice []string, item string) bool {
 	for _, element := range slice {
 		if element == item {

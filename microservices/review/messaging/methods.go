@@ -7,8 +7,8 @@ import (
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/review/messaging/dispatch"
 )
 
-// 这里拿取请求之后，立马将reviewerId填充至NewReview,使其责任化
-func GetReviews(reviewerId int64, reviewType generated.TargetType) ([]*generated.Review, error) {
+// 这里拿取新的审核请求
+func GetPendingReviews(reviewerId int64, reviewType generated.TargetType) ([]*generated.Review, error) {
 	typeName := reviewType.String()
 
 	news := GetMsgs(typeName, typeName, typeName, 8)

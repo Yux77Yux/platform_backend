@@ -1,191 +1,103 @@
 package internal
 
-// import (
-// 	"bytes"
-// 	"encoding/base64"
-// 	"fmt"
-// 	"log"
+import (
+	common "github.com/Yux77Yux/platform_backend/generated/common"
+	generated "github.com/Yux77Yux/platform_backend/generated/creation"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
+	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
+)
 
-// 	"google.golang.org/protobuf/types/known/timestamppb"
+func UpdateCreation(req *generated.UpdateCreationRequest) (*generated.UpdateCreationResponse, error) {
+	response := new(generated.UpdateCreationResponse)
 
-// 	common "github.com/Yux77Yux/platform_backend/generated/common"
-// 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
-// 	cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
-// 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
-// 	oss "github.com/Yux77Yux/platform_backend/microservices/creation/oss"
-// 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
-// 	jwt "github.com/Yux77Yux/platform_backend/pkg/jwt"
-// )
+	pass, user_id, err := auth.Auth("update", "creation", req.GetAccessToken().GetValue())
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_FAILED,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if !pass {
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "403",
+		}
+		return response, nil
+	}
 
-// func UpdateUser(req *generated.UpdateUserRequest) (*generated.UpdateUserResponse, error) {
-// 	space := req.GetUserUpdateSpace()
+	UpdateInfo := req.GetUpdateInfo()
+	UpdateInfo.AuthorId = user_id
+	err = messaging.SendMessage(messaging.UpdateCreation, messaging.UpdateCreation, UpdateInfo)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, nil
+	}
 
-// 	accessToken := req.GetAccessToken().GetValue()
-// 	accessClaims, err := jwt.ParseJWT(accessToken)
-// 	if err != nil {
-// 		return &generated.UpdateUserResponse{
-// 			Msg: &common.ApiResponse{
-// 				Status:  common.ApiResponse_ERROR,
-// 				Code:    "401",
-// 				Message: "Unauthorized",
-// 				Details: err.Error(),
-// 			},
-// 		}, nil
-// 	}
-// 	token_userId := accessClaims.UserID
-// 	if token_userId != space.GetUserDefault().GetUserId() {
-// 		return &generated.UpdateUserResponse{
-// 			Msg: &common.ApiResponse{
-// 				Status:  common.ApiResponse_ERROR,
-// 				Code:    "400",
-// 				Message: "the userId different between token and request",
-// 			},
-// 		}, nil
-// 	}
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "202",
+	}
+	return response, nil
+}
 
-// 	reqId := make(chan string, 1)
-// 	select {
-// 	// 闭包传递
-// 	case requestChannel <- func(reqID string) error {
-// 		reqId <- reqID
-// 		log.Printf("info: handling updateUser request with ID: %s\n", reqID)
+func UpdateCreationStatus(req *generated.UpdateCreationStatusRequest) (*generated.UpdateCreationResponse, error) {
+	response := new(generated.UpdateCreationResponse)
 
-// 		err = messaging.SendMessage("updateUser", "updateUser", space)
-// 		if err != nil {
-// 			return fmt.Errorf("err: request_id: %s ,message: %w", reqID, err)
-// 		}
+	pass, isADMIN, user_id, err := auth.AuthRole("update", "creation", req.GetAccessToken().GetValue())
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_FAILED,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if !pass {
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "403",
+		}
+		return response, nil
+	}
 
-// 		log.Printf("info: send to messaging queue updateUser request with ID: %s\n", reqID)
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "202",
+	}
 
-// 		return nil
-// 	}:
-// 		log.Println("info: handler completely sent to UserRequestChan")
-// 		return &generated.UpdateUserResponse{
-// 			Msg: &common.ApiResponse{
-// 				Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-// 				Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-// 				Message: "OK",                       // 标识完成
-// 				Details: "UpdateUser success",       // 更详细的成功信息
-// 			},
-// 		}, nil
-// 	default:
-// 		log.Println("warning: userChan is full or closed, registration may not complete")
-// 		return &generated.UpdateUserResponse{
-// 			Msg: &common.ApiResponse{
-// 				Status:  common.ApiResponse_ERROR,                             // 使用 ERROR 而不是 SUCCESS，因为发生了错误
-// 				Code:    "503",                                                // HTTP 状态码 503，表示服务不可用
-// 				Message: "Service Unavailable",                                // 提供用户友好的消息
-// 				Details: "User request queue is full, please try again later", // 更详细的错误信息
-// 				TraceId: <-reqId,                                              // 跟踪码
-// 			},
-// 		}, nil
-// 	}
-// }
+	if isADMIN {
+		// 如果是则不用加userId，这里已经验证为审核员
+		UpdateInfo := req.GetUpdateInfo()
+		UpdateInfo.AuthorId = -403
+		err = messaging.SendMessage(messaging.UpdateCreationStatus, messaging.UpdateCreationStatus, UpdateInfo)
+		if err != nil {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    "500",
+				Details: err.Error(),
+			}
+			return response, nil
+		}
+		return response, nil
+	}
 
-// func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.UpdateUserResponse, error) {
-// 	accessToken := req.GetAccessToken().GetValue()
-// 	accessClaims, err := jwt.ParseJWT(accessToken)
-// 	if err != nil {
-// 		return &generated.UpdateUserResponse{
-// 			Msg: &common.ApiResponse{
-// 				Status:  common.ApiResponse_ERROR,
-// 				Code:    "401",
-// 				Message: "Unauthorized",
-// 				Details: err.Error(),
-// 			},
-// 		}, nil
-// 	}
-// 	token_userId := accessClaims.UserID
-// 	if token_userId != req.GetUserUpdateAvatar().GetUserId() {
-// 		return &generated.UpdateUserResponse{
-// 			Msg: &common.ApiResponse{
-// 				Status:  common.ApiResponse_ERROR,
-// 				Code:    "400",
-// 				Message: "the userId different between token and request",
-// 			},
-// 		}, nil
-// 	}
-
-// 	// 操作oss上传
-// 	fileBytesStr := req.GetUserUpdateAvatar().GetUserAvatar()
-// 	fileName := fmt.Sprintf("user_avatar_%v_%v.png", req.GetUserUpdateAvatar().GetUserId(), timestamppb.Now())
-// 	fileBytes, err := base64.StdEncoding.DecodeString(fileBytesStr)
-// 	if err != nil {
-// 		log.Fatal("Error decoding Base64 string: ", err)
-// 	}
-// 	file := bytes.NewReader(fileBytes)
-// 	userAvatar, err := oss.Client.UploadFile(file, fileName)
-// 	if err != nil {
-// 		return &generated.UpdateUserResponse{
-// 			Msg: &common.ApiResponse{
-// 				Status:  common.ApiResponse_ERROR,
-// 				Code:    "500",
-// 				Message: "Falied to upload to oss",
-// 				Details: err.Error(),
-// 			},
-// 		}, nil
-// 	}
-// 	log.Printf("avatar url: %s over", userAvatar)
-// 	updateAvatar := &generated.UserUpdateAvatar{
-// 		UserId:     req.GetUserUpdateAvatar().GetUserId(),
-// 		UserAvatar: userAvatar,
-// 	}
-
-// 	go func() {
-// 		db.UserUpdateAvatarInTransaction(updateAvatar)
-// 	}()
-// 	go func() {
-// 		cache.UpdateUserAvatar(updateAvatar)
-// 	}()
-
-// 	return &generated.UpdateUserResponse{
-// 		Msg: &common.ApiResponse{
-// 			Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-// 			Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-// 			Message: "OK",                       // 标识完成
-// 			Details: "UpdateUser success",       // 更详细的成功信息
-// 		},
-// 	}, nil
-// }
-
-// func UpdateUserStatus(req *generated.UpdateUserStatusRequest) (*generated.UpdateUserResponse, error) {
-// 	accessToken := req.GetAccessToken().GetValue()
-// 	accessClaims, err := jwt.ParseJWT(accessToken)
-// 	if err != nil {
-// 		return &generated.UpdateUserResponse{
-// 			Msg: &common.ApiResponse{
-// 				Status:  common.ApiResponse_ERROR,
-// 				Code:    "401",
-// 				Message: "Unauthorized",
-// 				Details: err.Error(),
-// 			},
-// 		}, nil
-// 	}
-// 	token_userId := accessClaims.UserID
-// 	if token_userId != req.GetUserUpdateStatus().GetUserId() {
-// 		return &generated.UpdateUserResponse{
-// 			Msg: &common.ApiResponse{
-// 				Status:  common.ApiResponse_ERROR,
-// 				Code:    "400",
-// 				Message: "the userId different between token and request",
-// 			},
-// 		}, nil
-// 	}
-
-// 	updateStatus := req.GetUserUpdateStatus()
-// 	go func() {
-// 		db.UserUpdateStatusInTransaction(updateStatus)
-// 	}()
-// 	go func() {
-// 		cache.UpdateUserStatus(updateStatus)
-// 	}()
-
-// 	return &generated.UpdateUserResponse{
-// 		Msg: &common.ApiResponse{
-// 			Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-// 			Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-// 			Message: "OK",                       // 标识完成
-// 			Details: "UpdateUser success",       // 更详细的成功信息
-// 		},
-// 	}, nil
-// }
+	// 如果不是审核员，则一定加user_id
+	UpdateInfo := req.GetUpdateInfo()
+	UpdateInfo.AuthorId = user_id // 此处的user_id为token中，难被更改
+	err = messaging.SendMessage(messaging.UpdateCreation, messaging.UpdateCreation, UpdateInfo)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, nil
+	}
+	return response, nil
+}

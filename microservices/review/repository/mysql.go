@@ -4,10 +4,89 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
 	snow "github.com/Yux77Yux/platform_backend/pkg/snow"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+// GET
+func GetReviews(
+	ctx context.Context,
+	reviewId int64,
+	reviewType generated.TargetType,
+	status generated.ReviewStatus,
+	page int32,
+) ([]*generated.Review, error) {
+	const Limit = 50
+	offset := (page - 1) * Limit
+	query := `
+		SELECT 
+			id,
+			target_id,
+			detail,
+			updated_at,
+			created_at,
+			remark
+		FROM db_review_1.Review
+		WHERE reviewer_id = ? 
+		AND 
+			target_type = ?
+		AND 
+			status = ?
+		ORDER BY created_at
+		LIMIT ? 
+		OFFSET ?`
+
+	rows, err := db.QueryContext(
+		ctx,
+		query,
+		reviewId,
+		reviewType.String(),
+		status.String(),
+		Limit,
+		offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	reviews := make([]*generated.Review, 0, Limit)
+	for rows.Next() {
+		var (
+			id         int64
+			target_id  int64
+			detail     string
+			updated_at time.Time
+			created_at time.Time
+			remark     string
+		)
+
+		err := rows.Scan(&id, &target_id, &detail, &updated_at, &created_at, &remark)
+		if err != nil {
+			return nil, err
+		}
+
+		review := &generated.Review{
+			New: &generated.NewReview{
+				Id:         id,
+				TargetId:   target_id,
+				TargetType: reviewType,
+				CreatedAt:  timestamppb.New(created_at),
+				Msg:        detail,
+			},
+			ReviewerId: reviewId,
+			Status:     status,
+			Remark:     remark,
+			UpdatedAt:  timestamppb.New(updated_at),
+		}
+		reviews = append(reviews, review)
+	}
+
+	return reviews, nil
+}
 
 // POST
 func PostReviews(reviews []*generated.NewReview) error {

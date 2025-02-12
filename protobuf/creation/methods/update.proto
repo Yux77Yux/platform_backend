@@ -13,6 +13,11 @@ message UpdateCreationRequest {
   common.AccessToken access_token = 2;
 }
 
+message UpdateCreationStatusRequest {
+  creation.messages.CreationUpdateStatus update_info = 1;
+  common.AccessToken access_token = 2;
+}
+
 message UpdateCreationResponse {
   common.ApiResponse msg = 1;
 }

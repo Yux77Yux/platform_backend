@@ -4,9 +4,20 @@ package creation.messages;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/creation";
 
+import "creation/messages/creation_status.proto";
+
 message CreationUpdated {
   int64 creation_id = 1;
   string thumbnail = 2;
   string title = 3;
   string bio = 4;
+  int64 author_id = 5;
+  string src = 6;
+  int32 duration = 7;
+}
+
+message CreationUpdateStatus {
+  int64 creation_id = 1;
+  int64 author_id = 2;
+  creation.messages.CreationStatus status = 3;
 }

@@ -6,15 +6,32 @@ option go_package = "github.com/Yux77Yux/platform_backend/generated/review";
 
 import "review/messages/status.proto";
 import "review/messages/type.proto";
-import "review/messages/new_review.proto";
+import "review/messages/review.proto";
 import "common/api_response.proto";
+import "common/access_token.proto";
 
-message  GetReviewsRequest {
-  review.messages.ReviewStatus status = 1;// 获取需要审核的，或已被审核的
+message GetReviewsRequest {
+  common.AccessToken access_token = 1;
   review.messages.TargetType type = 2;// 获取类型，评论，用户，作品
+  review.messages.ReviewStatus status = 3;// 获取需要审核的，或已被审核的
+  int32 page = 4;
+}
+
+message GetNewReviewsRequest {
+  common.AccessToken access_token = 1;
+  review.messages.TargetType type = 2;
 }
 
 message GetReviewsResponse {
   common.ApiResponse msg = 1;
-  repeated review.messages.NewReview reviews = 2;
+  repeated review.messages.Review reviews = 2;
+}
+
+message GetReviewDetailRequest {
+  int64 id = 1;
+}
+
+message GetReviewDetailResponse {
+  common.ApiResponse msg = 1;
+  review.messages.Review review = 2;
 }

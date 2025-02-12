@@ -77,3 +77,53 @@ func pendingCreationProcessor(msg amqp.Delivery) error {
 
 	return nil
 }
+
+func updateCreationProcessor(msg amqp.Delivery) error {
+	creation := new(generated.CreationUpdated)
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, creation)
+	if err != nil {
+		log.Printf("Error unmarshaling message: %v", err)
+		return fmt.Errorf("register processor error: %w", err)
+	}
+
+	// 更新数据库
+	err = db.UpdateCreationInTransaction(creation)
+	if err != nil {
+		log.Printf("db CreationAddInTransaction occur error: %v", err)
+		return err
+	}
+
+	// 更新缓存
+	err = cache.UpdateCreation(creation)
+	if err != nil {
+		log.Printf("cache CreationAddInCache occur error: %v", err)
+	}
+
+	return nil
+}
+
+func updateCreationStatusProcessor(msg amqp.Delivery) error {
+	creation := new(generated.CreationUpdateStatus)
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, creation)
+	if err != nil {
+		log.Printf("Error unmarshaling message: %v", err)
+		return fmt.Errorf("register processor error: %w", err)
+	}
+
+	// 更新数据库
+	err = db.UpdateCreationStatusInTransaction(creation)
+	if err != nil {
+		log.Printf("db UpdateCreationStatusInTransaction occur error: %v", err)
+		return err
+	}
+
+	// 更新缓存
+	err = cache.UpdateCreationStatus(creation)
+	if err != nil {
+		log.Printf("cache UpdateCreationStatus occur error: %v", err)
+	}
+
+	return nil
+}

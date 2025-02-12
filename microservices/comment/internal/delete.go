@@ -10,7 +10,7 @@ import (
 
 func DeleteComment(req *generated.DeleteCommentRequest) error {
 	accessToken := req.GetAccessToken().GetValue()
-	pass, user_id, err := auth.Auth("delete", "creation", accessToken)
+	pass, user_id, err := auth.Auth("delete", "comment", accessToken)
 	if err != nil {
 		return fmt.Errorf("error: %w", err)
 	}

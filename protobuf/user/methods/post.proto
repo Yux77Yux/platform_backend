@@ -7,6 +7,7 @@ option go_package = "github.com/Yux77Yux/platform_backend/generated/user";
 import "user/messages/user_credentials.proto";
 import "user/messages/follow.proto";
 import "common/api_response.proto";
+import "common/access_token.proto";
 
 message FollowRequest {
   user.messages.Follow follow = 1;
@@ -26,6 +27,7 @@ message RegisterResponse {
 
 message AddReviewerRequest {
   user.messages.UserCredentials user_credentials = 1;
+  common.AccessToken access_token = 2;
 }
 
 message AddReviewerResponse {

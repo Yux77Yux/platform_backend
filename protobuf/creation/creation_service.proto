@@ -55,4 +55,11 @@ service CreationService {
       body: "*"
     };
   }
+
+  rpc UpdateCreationStatus(creation.methods.UpdateCreationStatusRequest) returns (creation.methods.UpdateCreationResponse) {
+    option (google.api.http) = {
+      patch: "/api/creation/status"
+      body: "*"
+    };
+  }
 }

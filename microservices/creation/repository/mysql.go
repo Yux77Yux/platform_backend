@@ -613,3 +613,111 @@ func UpdateSavesInTransaction(creationId int64, changingNum int) error {
 
 	return nil
 }
+
+func UpdateCreationInTransaction(creation *generated.CreationUpdated) error {
+	var (
+		thumbnail = creation.GetThumbnail()
+		title     = creation.GetTitle()
+		bio       = creation.GetBio()
+		src       = creation.GetSrc()
+		duration  = creation.GetDuration()
+		userId    = creation.GetAuthorId()
+		AND       = " "
+	)
+	const (
+		setThumbnail = "thumbnail = ?"
+		setTitle     = "title = ?"
+		setBio       = "bio = ?"
+		setSrc       = "src = ?"
+		setDuration  = "duration = ?"
+	)
+
+	values := make([]any, 0, 8)
+	sqlStr := make([]string, 0, 5)
+	if thumbnail != "" {
+		sqlStr = append(sqlStr, setThumbnail)
+		values = append(values, thumbnail)
+	}
+	if title != "" {
+		sqlStr = append(sqlStr, setTitle)
+		values = append(values, title)
+	}
+	if bio != "" {
+		sqlStr = append(sqlStr, setBio)
+		values = append(values, bio)
+	}
+	if src != "" {
+		sqlStr = append(sqlStr, setSrc)
+		values = append(values, src)
+	}
+	if duration != 0 {
+		sqlStr = append(sqlStr, setDuration)
+		values = append(values, duration)
+	}
+
+	values = append(values, creation.GetCreationId())
+	if userId != -403 {
+		AND = " AND user_id = ? "
+		values = append(values, userId)
+	}
+
+	if len(sqlStr) <= 0 {
+		return nil
+	}
+
+	query := fmt.Sprintf(`
+		UPDATE db_creation_1.Creation
+		SET 
+			%s
+		WHERE 
+			id = ? 
+		%s`, strings.Join(sqlStr, ","), AND)
+	affected, err := db.Exec(query, values...)
+	if err != nil {
+		return err
+	}
+	num, err := affected.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if num <= 0 {
+		return fmt.Errorf("not match the author")
+	}
+	return nil
+}
+
+func UpdateCreationStatusInTransaction(creation *generated.CreationUpdateStatus) error {
+	var (
+		status = creation.GetStatus()
+		userId = creation.GetAuthorId()
+		AND    = " "
+	)
+
+	values := make([]any, 0, 8)
+
+	values = append(values, status.String(), creation.GetCreationId())
+	if userId != -403 {
+		AND = " AND user_id = ? "
+		values = append(values, userId)
+	}
+
+	query := fmt.Sprintf(`
+		UPDATE db_creation_1.Creation
+		SET 
+			status = ?
+		WHERE 
+			id = ? 
+		%s`, AND)
+	affected, err := db.Exec(query, values...)
+	if err != nil {
+		return err
+	}
+	num, err := affected.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if num <= 0 {
+		return fmt.Errorf("not match the author")
+	}
+	return nil
+}

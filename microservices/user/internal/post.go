@@ -12,9 +12,31 @@ import (
 	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/user/messaging/dispatch"
+	"github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
 func AddReviewer(req *generated.AddReviewerRequest) (*generated.AddReviewerResponse, error) {
+	token := req.GetAccessToken().GetValue()
+	pass, _, err := auth.Auth("post", "user_credentials", token)
+	if err != nil {
+		return &generated.AddReviewerResponse{
+			Msg: &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			},
+		}, err
+	}
+	if !pass {
+		return &generated.AddReviewerResponse{
+			Msg: &common.ApiResponse{
+				Code:    "403",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			},
+		}, err
+	}
+
 	user_credentials := req.GetUserCredentials()
 	// 检查空值
 	if user_credentials.GetUsername() == "" || user_credentials.GetPassword() == "" {

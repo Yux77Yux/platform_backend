@@ -7,13 +7,16 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 
-	// cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
+	cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 )
 
 func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {
 	// 取数据
-	data, err := db.GetDetailInTransaction(ctx, req.GetCreationId())
+	creationId := req.GetCreationId()
+	cache.GetCreationInfo(creationId)
+
+	data, err := db.GetDetailInTransaction(ctx, creationId)
 	if err != nil {
 		return &generated.GetCreationResponse{
 			Msg: &common.ApiResponse{

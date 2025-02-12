@@ -9,6 +9,7 @@ import (
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 )
 
+// POST
 func CreationAddInCache(creationInfo *generated.CreationInfo) error {
 	ctx := context.Background()
 
@@ -23,7 +24,7 @@ func CreationAddInCache(creationInfo *generated.CreationInfo) error {
 	reqFunc := func(CacheClient CacheInterface) {
 		err := CacheClient.SetFieldsHash(ctx, "CreationInfo", id,
 			"author_id", creation.GetBaseInfo().GetAuthorId(),
-			"arc", creation.GetBaseInfo().GetSrc(),
+			"src", creation.GetBaseInfo().GetSrc(),
 			"thumbnail", creation.GetBaseInfo().GetThumbnail(),
 			"title", creation.GetBaseInfo().GetTitle(),
 			"bio", creation.GetBaseInfo().GetBio(),
@@ -59,6 +60,7 @@ func CreationAddInCache(creationInfo *generated.CreationInfo) error {
 	}
 }
 
+// GET
 func GetCreationInfo(creation_id int64, fields []string) (map[string]string, error) {
 	ctx := context.Background()
 
@@ -115,6 +117,7 @@ func GetCreationInfo(creation_id int64, fields []string) (map[string]string, err
 	}
 }
 
+// DEL
 func DeleteCreation(creation_id int64) error {
 	idStr := strconv.FormatInt(creation_id, 10)
 	ctx := context.Background()
@@ -143,4 +146,54 @@ func DeleteCreation(creation_id int64) error {
 
 		return nil
 	}
+}
+
+// UPDATE
+func UpdateCreation(creation *generated.CreationUpdated) error {
+	var (
+		creationId = creation.GetCreationId()
+		thumbnail  = creation.GetThumbnail()
+		title      = creation.GetTitle()
+		bio        = creation.GetBio()
+		src        = creation.GetSrc()
+		duration   = creation.GetDuration()
+	)
+
+	values := make([]any, 0, 5*2)
+	if thumbnail != "" {
+		values = append(values, "thumbnail", thumbnail)
+	}
+	if title != "" {
+		values = append(values, "title", title)
+	}
+	if bio != "" {
+		values = append(values, "bio", bio)
+	}
+	if src != "" {
+		values = append(values, "src", src)
+	}
+	if duration != 0 {
+		values = append(values, "duration", duration)
+	}
+	if len(values) <= 0 {
+		return nil
+	}
+
+	ctx := context.Background()
+	err := CacheClient.SetFieldsHash(ctx, "CreationInfo", strconv.FormatInt(creationId, 10), values...)
+	return err
+}
+
+func UpdateCreationStatus(creation *generated.CreationUpdateStatus) error {
+	var (
+		creationId = creation.GetCreationId()
+		status     = creation.GetStatus()
+	)
+
+	values := make([]any, 0, 2)
+	values = append(values, "status", status.String())
+
+	ctx := context.Background()
+	err := CacheClient.SetFieldsHash(ctx, "CreationInfo", strconv.FormatInt(creationId, 10), values...)
+	return err
 }

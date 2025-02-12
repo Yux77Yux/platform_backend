@@ -7,12 +7,19 @@ import (
 	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue"
 )
 
+const (
+	DraftCreation        = "DraftCreation"
+	PendingCreation      = "PendingCreation"
+	UpdateCreation       = "UpdateCreation"
+	UpdateCreationStatus = "UpdateCreationStatus"
+)
+
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
-		"draftCreation":   "direct",
-		"pendingCreation": "direct",
-		// "updateCreation":  "direct",
+		DraftCreation:   "direct",
+		PendingCreation: "direct",
+		UpdateCreation:  "direct",
 		// Add more exchanges here
 	}
 )
@@ -49,12 +56,14 @@ func Init() {
 
 		switch exchange {
 		// 不同的exchange使用不同函数
-		case "pendingCreation":
-			go ListenToQueue(exchange, "pendingCreation", "pendingCreation", pendingCreationProcessor)
-		// case "updateCreation":
-		// 	go ListenToQueue(exchange, "updateCreation", "updateCreation", updateCreationProcessor)
-		case "draftCreation":
-			go ListenToQueue(exchange, "draftCreation", "draftCreation", draftCreationProcessor)
+		case PendingCreation:
+			go ListenToQueue(exchange, PendingCreation, PendingCreation, pendingCreationProcessor)
+		case DraftCreation:
+			go ListenToQueue(exchange, DraftCreation, DraftCreation, draftCreationProcessor)
+		case UpdateCreation:
+			go ListenToQueue(exchange, UpdateCreation, UpdateCreation, updateCreationProcessor)
+		case UpdateCreationStatus:
+			go ListenToQueue(exchange, UpdateCreationStatus, UpdateCreationStatus, updateCreationStatusProcessor)
 		}
 	}
 

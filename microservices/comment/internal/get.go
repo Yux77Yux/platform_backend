@@ -91,7 +91,7 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 // 登录用户查看回复自己的评论
 func GetReplyComments(ctx context.Context, req *generated.GetReplyCommentsRequest) (*generated.GetCommentsResponse, error) {
 	response := &generated.GetCommentsResponse{}
-	pass, user_id, err := auth.Auth("post", "comment", req.GetAccessToken().GetValue())
+	pass, user_id, err := auth.Auth("get", "comment", req.GetAccessToken().GetValue())
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status: common.ApiResponse_FAILED,

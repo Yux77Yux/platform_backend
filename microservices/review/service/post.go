@@ -10,7 +10,7 @@ import (
 
 func (s *Server) NewReview(ctx context.Context, req *generated.NewReviewRequest) (*generated.NewReviewResponse, error) {
 	log.Printf("info: NewReview start")
-	response, err := internal.NewReview(req)
+	response, err := internal.NewReview(ctx, req)
 	if err != nil {
 		log.Println("error: NewReview occur fail")
 		return response, nil

@@ -26,6 +26,6 @@ service ReviewService {
   }
 
   // GET
-  rpc GetReview(review.methods.GetReviewsRequest) returns (review.methods.GetReviewsResponse);
-
+  rpc GetReviews(review.methods.GetReviewsRequest) returns (review.methods.GetReviewsResponse);
+  rpc GetNewReviews(review.methods.GetNewReviewsRequest) returns (review.methods.GetReviewsResponse);
 }
