@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -294,72 +293,67 @@ func GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, err
 
 // 卡片型
 
-func GetCardInTransaction(ctx context.Context, ids []int64) ([]*generated.CreationInfo, error) {
-	const (
-		queryCardCategory = `SELECT
-			parent,
-			name
-		FROM db_creation_category_1.Category 
-		WHERE id IN (?)
-		`
+func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generated.CreationInfo, error) {
+	count := len(ids)
+	if count <= 0 {
+		return nil, nil
+	}
 
-		queryCardEngagement = `
+	// 返回的卡片信息
+	cards := make([]*generated.Creation, 0, count)
+	// 返回的卡片统计信息
+	creationEngagements := make([]*generated.CreationEngagement, 0, count)
+	// 查作品信息
+	// []int64 转 []string
+	sqlStrs := make([]string, count)
+	values := make([]any, count)
+	for i, val := range ids {
+		sqlStrs[i] = "?"
+		values[i] = val
+	}
+	// 拼接
+	str := strings.Join(sqlStrs, ",")
+
+	queryCardEngagement := fmt.Sprintf(`
 		SELECT
+			creation_id,
 			views,
 			publish_time
-		FROM db_creation_1.Creation 
-		WHERE creation_id IN (?)
-		`
+		FROM db_creation_category_1.Category 
+		WHERE creation_id IN (%s)`, str)
 
-		// 主页,相似列表,分区
-		query = `SELECT
+	// 主页,相似列表,分区
+	query := fmt.Sprintf(`SELECT
 			id,
 			author_id,
 			src,
 			thumbnail,
 			title,
+			status,
 			duration,
 			category_id,
 			upload_time
 		FROM db_creation_1.Creation 
-		WHERE id IN (?)
-		`
-	)
-	// 返回的卡片信息
-	cards := make([]*generated.Creation, 0, len(ids))
-	// 返回的卡片统计信息
-	creationEngagements := make([]*generated.CreationEngagement, 0, len(ids))
-	// 返回的卡片分区信息
-	categories := make([]*generated.Category, 0, len(ids))
+		WHERE id IN (%s)`, str)
 
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
-		// 查作品信息
-		// []int64 转 []string
-		strIDs := make([]string, len(ids))
-		for i, id := range ids {
-			strIDs[i] = strconv.FormatInt(id, 10)
-		}
-		// 拼接
-		str := strings.Join(strIDs, ",")
-
-		// 查询的分区id
-		categoriesIds := make([]int32, len(ids))
-
 		rows, err := db.QueryContext(
 			ctx,
 			query,
-			str,
+			values...,
 		)
 		if err != nil {
 			return nil, err
 		}
 		defer rows.Close()
 
+		valuesC := make([]any, 0, count)
 		for rows.Next() {
 			var (
+				id          int64
 				author_id   int64
 				src         string
 				thumbnail   string
@@ -370,28 +364,29 @@ func GetCardInTransaction(ctx context.Context, ids []int64) ([]*generated.Creati
 				upload_time time.Time
 			)
 			// 从当前行读取值，依次填充到变量中
-			err := rows.Scan(&author_id, &src, &thumbnail, &title, &status, &duration, &category_id, &upload_time)
+			err := rows.Scan(&id, &author_id, &src, &thumbnail, &title, &status, &duration, &category_id, &upload_time)
 			if err != nil {
 				return nil, err
 			}
 
+			c_status := generated.CreationStatus(generated.CreationStatus_value[status])
+
 			// 存储 卡片基本信息切片
 			creation := &generated.Creation{
+				CreationId: id,
 				BaseInfo: &generated.CreationUpload{
 					AuthorId:   author_id,
 					Src:        src,
 					Thumbnail:  thumbnail,
 					Title:      title,
-					Status:     generated.CreationStatus(generated.CreationStatus_value[status]),
+					Status:     c_status,
 					Duration:   duration,
 					CategoryId: category_id,
 				},
 				UploadTime: timestamppb.New(upload_time),
 			}
 			cards = append(cards, creation)
-
-			// 存储 分区id切片
-			categoriesIds = append(categoriesIds, category_id)
+			valuesC = append(valuesC, id)
 		}
 
 		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
@@ -400,13 +395,15 @@ func GetCardInTransaction(ctx context.Context, ids []int64) ([]*generated.Creati
 		}
 
 		// 结束第一次查询
-		rows.Close()
+		if err = rows.Close(); err != nil {
+			return nil, err
+		}
 
 		// 查 统计数
 		rows, err = db.QueryContext(
 			ctx,
 			queryCardEngagement,
-			str,
+			valuesC...,
 		)
 		if err != nil {
 			return nil, err
@@ -415,17 +412,19 @@ func GetCardInTransaction(ctx context.Context, ids []int64) ([]*generated.Creati
 
 		for rows.Next() {
 			var (
+				creation_id  int64
 				views        int32
 				publish_time time.Time
 			)
 			// 从当前行读取值，依次填充到变量中
-			err := rows.Scan(&views, &publish_time)
+			err := rows.Scan(&creation_id, &views, &publish_time)
 			if err != nil {
 				return nil, err
 			}
 
 			// 存储 作品卡片的统计信息
 			creationEngagement := &generated.CreationEngagement{
+				CreationId:  creation_id,
 				Views:       views,
 				PublishTime: timestamppb.New(publish_time),
 			}
@@ -437,58 +436,6 @@ func GetCardInTransaction(ctx context.Context, ids []int64) ([]*generated.Creati
 			err = fmt.Errorf("rows iteration failed because %v", err)
 			return nil, err
 		}
-
-		// 结束第二次查询
-		rows.Close()
-
-		// 查 分区信息
-		// []int32 转 []string
-		categorys := make([]string, len(categoriesIds))
-		for i, id := range categoriesIds {
-			categorys[i] = strconv.Itoa(int(id))
-		}
-		// 拼接
-		str = strings.Join(categorys, ",")
-
-		rows, err = db.QueryContext(
-			ctx,
-			queryCardCategory,
-			str,
-		)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var (
-				parent int32
-				name   string
-			)
-			// 从当前行读取值，依次填充到变量中
-			err := rows.Scan(&parent, &name)
-			if err != nil {
-				// 如果读取行数据失败，处理错误
-				err = fmt.Errorf("failed to scan row because %v", err)
-				return nil, err
-			}
-
-			// 存储 作品卡片的统计信息
-			category := &generated.Category{
-				Parent: parent,
-				Name:   name,
-			}
-			categories = append(categories, category)
-		}
-
-		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
-		if err = rows.Err(); err != nil {
-			err = fmt.Errorf("rows iteration failed because %v", err)
-			return nil, err
-		}
-
-		// 结束第三次查询
-		rows.Close()
 	}
 
 	creationInfos := make([]*generated.CreationInfo, 0, len(ids))
@@ -497,7 +444,6 @@ func GetCardInTransaction(ctx context.Context, ids []int64) ([]*generated.Creati
 		creationInfo := &generated.CreationInfo{
 			Creation:           cards[i],
 			CreationEngagement: creationEngagements[i],
-			Category:           categories[i],
 		}
 		creationInfo.Creation.CreationId = ids[i]
 		creationInfos = append(creationInfos, creationInfo)
@@ -508,8 +454,7 @@ func GetCardInTransaction(ctx context.Context, ids []int64) ([]*generated.Creati
 // DELETE
 func DeleteCreationInTransaction(id int64) error {
 	query := `DELETE FROM db_creation_1.Creation 
-		WHERE id = ?
-	`
+		WHERE id = ?`
 
 	ctx := context.Background()
 	select {

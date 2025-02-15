@@ -19,16 +19,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	InteractionService_PostInteraction_FullMethodName   = "/interaction.InteractionService/PostInteraction"
-	InteractionService_GetRecommend_FullMethodName      = "/interaction.InteractionService/GetRecommend"
-	InteractionService_GetActionTag_FullMethodName      = "/interaction.InteractionService/GetActionTag"
-	InteractionService_GetHistories_FullMethodName      = "/interaction.InteractionService/GetHistories"
-	InteractionService_GetCollections_FullMethodName    = "/interaction.InteractionService/GetCollections"
-	InteractionService_ClickCollection_FullMethodName   = "/interaction.InteractionService/ClickCollection"
-	InteractionService_ClickLike_FullMethodName         = "/interaction.InteractionService/ClickLike"
-	InteractionService_CancelCollections_FullMethodName = "/interaction.InteractionService/CancelCollections"
-	InteractionService_DelHistories_FullMethodName      = "/interaction.InteractionService/DelHistories"
-	InteractionService_CancelLike_FullMethodName        = "/interaction.InteractionService/CancelLike"
+	InteractionService_PostInteraction_FullMethodName          = "/interaction.InteractionService/PostInteraction"
+	InteractionService_GetRecommendBaseUser_FullMethodName     = "/interaction.InteractionService/GetRecommendBaseUser"
+	InteractionService_GetRecommendBaseCreation_FullMethodName = "/interaction.InteractionService/GetRecommendBaseCreation"
+	InteractionService_GetActionTag_FullMethodName             = "/interaction.InteractionService/GetActionTag"
+	InteractionService_GetHistories_FullMethodName             = "/interaction.InteractionService/GetHistories"
+	InteractionService_GetCollections_FullMethodName           = "/interaction.InteractionService/GetCollections"
+	InteractionService_ClickCollection_FullMethodName          = "/interaction.InteractionService/ClickCollection"
+	InteractionService_ClickLike_FullMethodName                = "/interaction.InteractionService/ClickLike"
+	InteractionService_CancelCollections_FullMethodName        = "/interaction.InteractionService/CancelCollections"
+	InteractionService_DelHistories_FullMethodName             = "/interaction.InteractionService/DelHistories"
+	InteractionService_CancelLike_FullMethodName               = "/interaction.InteractionService/CancelLike"
 )
 
 // InteractionServiceClient is the client API for InteractionService service.
@@ -39,7 +40,8 @@ type InteractionServiceClient interface {
 	// 这个为展示完视频信息之后再查看是否登录，判断是否发送事件
 	PostInteraction(ctx context.Context, in *PostInteractionRequest, opts ...grpc.CallOption) (*PostInteractionResponse, error)
 	// Get
-	GetRecommend(ctx context.Context, in *GetRecommendRequest, opts ...grpc.CallOption) (*GetRecommendResponse, error)
+	GetRecommendBaseUser(ctx context.Context, in *GetRecommendRequest, opts ...grpc.CallOption) (*GetRecommendResponse, error)
+	GetRecommendBaseCreation(ctx context.Context, in *GetRecommendRequest, opts ...grpc.CallOption) (*GetRecommendResponse, error)
 	// 这个为展示完视频信息之后再查看是否登录，再盘点是否已经点赞过
 	GetActionTag(ctx context.Context, in *GetCreationInteractionRequest, opts ...grpc.CallOption) (*GetCreationInteractionResponse, error)
 	GetHistories(ctx context.Context, in *GetHistoriesRequest, opts ...grpc.CallOption) (*GetInteractionsResponse, error)
@@ -69,10 +71,20 @@ func (c *interactionServiceClient) PostInteraction(ctx context.Context, in *Post
 	return out, nil
 }
 
-func (c *interactionServiceClient) GetRecommend(ctx context.Context, in *GetRecommendRequest, opts ...grpc.CallOption) (*GetRecommendResponse, error) {
+func (c *interactionServiceClient) GetRecommendBaseUser(ctx context.Context, in *GetRecommendRequest, opts ...grpc.CallOption) (*GetRecommendResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetRecommendResponse)
-	err := c.cc.Invoke(ctx, InteractionService_GetRecommend_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, InteractionService_GetRecommendBaseUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *interactionServiceClient) GetRecommendBaseCreation(ctx context.Context, in *GetRecommendRequest, opts ...grpc.CallOption) (*GetRecommendResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRecommendResponse)
+	err := c.cc.Invoke(ctx, InteractionService_GetRecommendBaseCreation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +179,8 @@ type InteractionServiceServer interface {
 	// 这个为展示完视频信息之后再查看是否登录，判断是否发送事件
 	PostInteraction(context.Context, *PostInteractionRequest) (*PostInteractionResponse, error)
 	// Get
-	GetRecommend(context.Context, *GetRecommendRequest) (*GetRecommendResponse, error)
+	GetRecommendBaseUser(context.Context, *GetRecommendRequest) (*GetRecommendResponse, error)
+	GetRecommendBaseCreation(context.Context, *GetRecommendRequest) (*GetRecommendResponse, error)
 	// 这个为展示完视频信息之后再查看是否登录，再盘点是否已经点赞过
 	GetActionTag(context.Context, *GetCreationInteractionRequest) (*GetCreationInteractionResponse, error)
 	GetHistories(context.Context, *GetHistoriesRequest) (*GetInteractionsResponse, error)
@@ -190,8 +203,11 @@ type UnimplementedInteractionServiceServer struct{}
 func (UnimplementedInteractionServiceServer) PostInteraction(context.Context, *PostInteractionRequest) (*PostInteractionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PostInteraction not implemented")
 }
-func (UnimplementedInteractionServiceServer) GetRecommend(context.Context, *GetRecommendRequest) (*GetRecommendResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetRecommend not implemented")
+func (UnimplementedInteractionServiceServer) GetRecommendBaseUser(context.Context, *GetRecommendRequest) (*GetRecommendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRecommendBaseUser not implemented")
+}
+func (UnimplementedInteractionServiceServer) GetRecommendBaseCreation(context.Context, *GetRecommendRequest) (*GetRecommendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRecommendBaseCreation not implemented")
 }
 func (UnimplementedInteractionServiceServer) GetActionTag(context.Context, *GetCreationInteractionRequest) (*GetCreationInteractionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetActionTag not implemented")
@@ -256,20 +272,38 @@ func _InteractionService_PostInteraction_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InteractionService_GetRecommend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _InteractionService_GetRecommendBaseUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetRecommendRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(InteractionServiceServer).GetRecommend(ctx, in)
+		return srv.(InteractionServiceServer).GetRecommendBaseUser(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: InteractionService_GetRecommend_FullMethodName,
+		FullMethod: InteractionService_GetRecommendBaseUser_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InteractionServiceServer).GetRecommend(ctx, req.(*GetRecommendRequest))
+		return srv.(InteractionServiceServer).GetRecommendBaseUser(ctx, req.(*GetRecommendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InteractionService_GetRecommendBaseCreation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRecommendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InteractionServiceServer).GetRecommendBaseCreation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InteractionService_GetRecommendBaseCreation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InteractionServiceServer).GetRecommendBaseCreation(ctx, req.(*GetRecommendRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -430,8 +464,12 @@ var InteractionService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _InteractionService_PostInteraction_Handler,
 		},
 		{
-			MethodName: "GetRecommend",
-			Handler:    _InteractionService_GetRecommend_Handler,
+			MethodName: "GetRecommendBaseUser",
+			Handler:    _InteractionService_GetRecommendBaseUser_Handler,
+		},
+		{
+			MethodName: "GetRecommendBaseCreation",
+			Handler:    _InteractionService_GetRecommendBaseCreation_Handler,
 		},
 		{
 			MethodName: "GetActionTag",

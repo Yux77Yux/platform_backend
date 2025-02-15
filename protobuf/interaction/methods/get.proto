@@ -11,14 +11,13 @@ import "common/access_token.proto";
 import "common/api_response.proto";
 
 message GetRecommendRequest {
-  common.AccessToken access_token = 1;
+  int64 id = 1;
 }
 
 message GetRecommendResponse {
   common.ApiResponse msg = 1;
   repeated int64 creations = 2;
 }
-
 
 message GetCreationInteractionRequest {
   interaction.messages.BaseInteraction base = 1;

@@ -78,6 +78,24 @@ func pendingCreationProcessor(msg amqp.Delivery) error {
 	return nil
 }
 
+func storeCreationProcessor(msg amqp.Delivery) error {
+	creation_info := new(generated.CreationInfo)
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, creation_info)
+	if err != nil {
+		log.Printf("Error unmarshaling message: %v", err)
+		return fmt.Errorf("register processor error: %w", err)
+	}
+
+	// 写入缓存
+	err = cache.CreationAddInCache(creation_info)
+	if err != nil {
+		log.Printf("cache CreationAddInCache occur error: %v", err)
+	}
+
+	return nil
+}
+
 func updateCreationProcessor(msg amqp.Delivery) error {
 	creation := new(generated.CreationUpdated)
 	// 反序列化

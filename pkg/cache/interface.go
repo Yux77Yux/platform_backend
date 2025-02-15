@@ -48,8 +48,8 @@ type RedisMethods interface {
 	GetElementsList(ctx context.Context, kind string, unique string, start, stop int64) ([]string, error)
 
 	ScanSet(ctx context.Context, kind string, fliter string, cursor uint64, count int64) ([]string, uint64, error)
-	AddToSet(ctx context.Context, kind string, unique string, value interface{}) error
-	RemSet(ctx context.Context, kind string, unique string, value interface{}) error
+	AddToSet(ctx context.Context, kind string, unique string, values ...interface{}) error
+	RemSet(ctx context.Context, kind string, unique string, values ...interface{}) error
 	ExistsInSet(ctx context.Context, kind string, unique string, value interface{}) (bool, error)
 	CountSet(ctx context.Context, kind string, unique string) (int64, error)
 	GetMembersSet(ctx context.Context, kind string, unique string) ([]string, error)

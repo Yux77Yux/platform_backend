@@ -16,7 +16,8 @@ service InteractionService {
   rpc PostInteraction(interaction.methods.PostInteractionRequest) returns (interaction.methods.PostInteractionResponse);
 
   // Get
-  rpc GetRecommend(interaction.methods.GetRecommendRequest) returns (interaction.methods.GetRecommendResponse);
+  rpc GetRecommendBaseUser(interaction.methods.GetRecommendRequest) returns (interaction.methods.GetRecommendResponse);
+  rpc GetRecommendBaseCreation(interaction.methods.GetRecommendRequest) returns (interaction.methods.GetRecommendResponse);
 
   // 这个为展示完视频信息之后再查看是否登录，再盘点是否已经点赞过
   rpc GetActionTag(interaction.methods.GetCreationInteractionRequest) returns (interaction.methods.GetCreationInteractionResponse);

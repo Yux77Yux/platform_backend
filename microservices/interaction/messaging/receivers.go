@@ -2,35 +2,61 @@ package messaging
 
 // 由于不同的exchange，需要不同的接收者，事实上需要被调度，统一开关
 
-// import (
-// 	"fmt"
-// 	"log"
+import (
+	"log"
 
-// 	amqp "github.com/rabbitmq/amqp091-go"
-// 	"google.golang.org/protobuf/proto"
+	amqp "github.com/rabbitmq/amqp091-go"
+	"google.golang.org/protobuf/proto"
 
-// 	// common "github.com/Yux77Yux/platform_backend/generated/common"
-// 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
-// 	// cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
-// 	dispatch "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/dispatch"
-// 	// db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
-// )
+	common "github.com/Yux77Yux/platform_backend/generated/common"
+	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
+	recommend "github.com/Yux77Yux/platform_backend/microservices/interaction/recommend"
+)
 
-// func updateUserSpaceProcessor(msg amqp.Delivery) error {
-// 	log.Println("Update User Info Start !!!")
-// 	user := new(generated.UserUpdateSpace)
+func computeSimilarProcessor(msg amqp.Delivery) error {
+	req := new(common.CreationId)
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, req)
+	if err != nil {
+		log.Printf("error: Unmarshal %v", err)
+		return err
+	}
 
-// 	// 反序列化
-// 	err := proto.Unmarshal(msg.Body, user)
-// 	if err != nil {
-// 		log.Printf("Error unmarshaling message: %v", err)
-// 		return fmt.Errorf("update user processor error: %w", err)
-// 	}
+	id := req.GetId()
+	results, err := recommend.RecommendItemBased(id)
+	if err != nil {
+		log.Printf("error: RecommendItemBased %v", err)
+		return err
+	}
 
-// 	// 更新 数据库用户表
-// 	go dispatch.HandleRequest(user, dispatch.UpdateUserSpace)
-// 	go dispatch.HandleRequest(user, dispatch.UpdateUserSpaceCache)
+	err = cache.SetRecommendBaseItem(id, results)
+	if err != nil {
+		log.Printf("error: cache SetRecommendBaseItem %v", err)
+		return err
+	}
+	return nil
+}
 
-// 	log.Println("UpdateUserProcessor success")
-// 	return nil
-// }
+func computeUserProcessor(msg amqp.Delivery) error {
+	req := new(common.UserDefault)
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, req)
+	if err != nil {
+		log.Printf("error: Unmarshal %v", err)
+		return err
+	}
+
+	id := req.GetUserId()
+	results, err := recommend.Recommend(id)
+	if err != nil {
+		log.Printf("error: RecommendItemBased %v", err)
+		return err
+	}
+
+	err = cache.SetRecommendBaseUser(id, results)
+	if err != nil {
+		log.Printf("error: cache SetRecommendBaseUser %v", err)
+		return err
+	}
+	return nil
+}

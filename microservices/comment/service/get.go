@@ -8,10 +8,23 @@ import (
 	internal "github.com/Yux77Yux/platform_backend/microservices/comment/internal"
 )
 
-func (s *Server) InitalComments(ctx context.Context, req *generated.InitalCommentsRequest) (*generated.InitalCommentsResponse, error) {
+func (s *Server) GetComments(ctx context.Context, req *generated.GetCommentsRequest) (*generated.GetCommentsResponse, error) {
+	log.Println("info: GetComments service start")
+
+	response, err := internal.GetComments(ctx, req)
+	if err != nil {
+		log.Println("error: GetComments occur fail: ", err)
+		return response, nil
+	}
+
+	log.Println("info: GetComments occur success")
+	return response, nil
+}
+
+func (s *Server) InitialComments(ctx context.Context, req *generated.InitialCommentsRequest) (*generated.InitialCommentsResponse, error) {
 	log.Println("info: InitalComments service start")
 
-	response, err := internal.InitalComments(ctx, req)
+	response, err := internal.InitialComments(ctx, req)
 	if err != nil {
 		log.Println("error: InitalComments occur fail: ", err)
 		return response, nil

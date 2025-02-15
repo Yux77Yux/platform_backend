@@ -23,7 +23,8 @@ type Claims struct {
 func GenerateJWT(userID int64, role string, scope []string) (string, error) {
 	// Set expiration time based on whether it's an access token or refresh token
 	expirationTime := time.Now().Add(30 * time.Minute) // default for access token
-	if len(scope) == 0 {
+	NoScope := len(scope) == 0
+	if NoScope {
 		// No scope means refresh token
 		expirationTime = time.Now().Add(7 * 24 * time.Hour) // Refresh token expires in 7 days
 	}
@@ -39,7 +40,17 @@ func GenerateJWT(userID int64, role string, scope []string) (string, error) {
 
 	// Create the token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	str, err := token.SignedString(jwtSecret)
+	if err != nil {
+		return "", err
+	}
+	if NoScope {
+		str, err = EncryptRefreshToken(str)
+		if err != nil {
+			return "", err
+		}
+	}
+	return str, nil
 }
 
 func ParseJWT(tokenStr string) (*Claims, error) {

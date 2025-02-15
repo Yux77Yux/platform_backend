@@ -17,7 +17,17 @@ type ContextKey string
 const RefreshTokenKey ContextKey = "refreshToken"
 
 func Refresh(req *generated.RefreshRequest) (*generated.RefreshResponse, error) {
-	refreshToken := req.GetRefreshToken().GetValue()
+	token := req.GetRefreshToken().GetValue()
+	// 解密
+	refreshToken, err := jwt.VerifyRefreshToken(token)
+	if err != nil {
+		return &generated.RefreshResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_ERROR,
+				Code:   "403", // 返回状态码
+			},
+		}, err
+	}
 	// 检测refreshToken是否过期或无效
 	claims, err := jwt.ParseJWT(refreshToken)
 	if err != nil {

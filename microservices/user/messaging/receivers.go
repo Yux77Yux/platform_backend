@@ -143,7 +143,6 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 	user_id := req.GetUserId()
 	// 用于后来的黑名单,尚未开发
 	// accessToken := req.GetAccessToken()
-	block := false
 
 	// 判断redis有无存有
 	ctx := context.Background()
@@ -209,8 +208,7 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 	user_info.UserDefault.UserId = user_id
 
 	return &generated.GetUserResponse{
-		User:  user_info,
-		Block: block,
+		User: user_info,
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
 			Code:   "200",

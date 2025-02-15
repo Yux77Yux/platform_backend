@@ -10,7 +10,7 @@ type CacheInterface interface {
 
 	DelKey(ctx context.Context, kind string, unique string) error
 
-	AddToSet(ctx context.Context, kind string, unique string, value interface{}) error
+	AddToSet(ctx context.Context, kind string, unique string, values ...interface{}) error
 	ExistsInSet(ctx context.Context, kind string, unique string, value interface{}) (bool, error)
 
 	LPushList(ctx context.Context, kind string, unique string, value ...interface{}) error

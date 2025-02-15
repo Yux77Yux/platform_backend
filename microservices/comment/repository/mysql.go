@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -283,8 +284,8 @@ func GetFirstCommentsInTransaction(ctx context.Context, creation_id int64) (*gen
 				dialog     int32
 				user_id    int64
 				created_at time.Time
-				content    string
-				media      string
+				content    sql.NullString
+				media      sql.NullString
 			)
 
 			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
@@ -299,8 +300,8 @@ func GetFirstCommentsInTransaction(ctx context.Context, creation_id int64) (*gen
 				UserId:     user_id,
 				CreationId: creation_id,
 				CreatedAt:  timestamppb.New(created_at),
-				Content:    content,
-				Media:      media,
+				Content:    content.String,
+				Media:      media.String,
 			})
 		}
 	}
@@ -365,8 +366,8 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 				dialog     int32
 				user_id    int64
 				created_at time.Time
-				content    string
-				media      string
+				content    sql.NullString
+				media      sql.NullString
 			)
 
 			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
@@ -381,8 +382,8 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 				UserId:     user_id,
 				CreationId: creation_id,
 				CreatedAt:  timestamppb.New(created_at),
-				Content:    content,
-				Media:      media,
+				Content:    content.String,
+				Media:      media.String,
 			})
 		}
 	}
@@ -444,11 +445,13 @@ func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root
 				dialog     int32
 				user_id    int64
 				created_at time.Time
-				content    string
-				media      string
+				content    sql.NullString
+				media      sql.NullString
 			)
 
-			rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
+			if err := rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media); err != nil {
+				return nil, err
+			}
 			comments = append(comments, &generated.Comment{
 				CommentId:  id,
 				Root:       root,
@@ -457,8 +460,8 @@ func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root
 				UserId:     user_id,
 				CreationId: creation_id,
 				CreatedAt:  timestamppb.New(created_at),
-				Content:    content,
-				Media:      media,
+				Content:    content.String,
+				Media:      media.String,
 			})
 		}
 	}
@@ -520,8 +523,8 @@ func GetReplyCommentsInTransaction(ctx context.Context, user_id int64, page int3
 				user_id     int64
 				creation_id int64
 				created_at  time.Time
-				content     string
-				media       string
+				content     sql.NullString
+				media       sql.NullString
 			)
 
 			rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
@@ -533,8 +536,8 @@ func GetReplyCommentsInTransaction(ctx context.Context, user_id int64, page int3
 				UserId:     user_id,
 				CreationId: creation_id,
 				CreatedAt:  timestamppb.New(created_at),
-				Content:    content,
-				Media:      media,
+				Content:    content.String,
+				Media:      media.String,
 			})
 		}
 	}
@@ -598,6 +601,87 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 	}
 
 	return result, nil
+}
+
+func GetComments(ctx context.Context, ids []int32) ([]*generated.Comment, error) {
+	count := len(ids)
+	// 构建用于构建 IN 子句的占位符部分
+	sqlStr := make([]string, count) // 使用切片存储占位符
+	for i := 0; i < count; i++ {
+		sqlStr[i] = "?"
+	}
+
+	values := make([]any, count)
+	for i := 0; i < count; i++ {
+		values[i] = ids[i]
+	}
+
+	query := fmt.Sprintf(`
+			SELECT 
+    			c.id,
+    			c.root,
+    			c.parent,
+    			c.dialog,
+    			c.user_id,
+    			c.creation_id,
+    			c.created_at,
+    			cc.content,
+    			cc.media
+			FROM 
+    			db_comment_1.Comment c
+			LEFT JOIN 
+    			db_comment_1.CommentContent cc 
+			ON
+				c.id = cc.comment_id
+			WHERE c.id IN (%s)`, strings.Join(sqlStr, ","))
+
+	comments := make([]*generated.Comment, 0, count)
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		// 查评论
+		rows, err := db.QueryContext(
+			ctx,
+			query,
+			values...,
+		)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var (
+				id          int32
+				root        int32
+				parent      int32
+				dialog      int32
+				user_id     int64
+				creation_id int64
+				created_at  time.Time
+				content     sql.NullString
+				media       sql.NullString
+			)
+
+			if err := rows.Scan(&id, &root, &parent, &dialog, &user_id, &creation_id, &created_at, &content, &media); err != nil {
+				return nil, err
+			}
+			comments = append(comments, &generated.Comment{
+				CommentId:  id,
+				Root:       root,
+				Parent:     parent,
+				Dialog:     dialog,
+				UserId:     user_id,
+				CreationId: creation_id,
+				CreatedAt:  timestamppb.New(created_at),
+				Content:    content.String,
+				Media:      media.String,
+			})
+		}
+	}
+
+	return comments, nil
 }
 
 // UPDATE

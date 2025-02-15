@@ -13,7 +13,7 @@ import "aggregator/methods/space.proto";
 import "aggregator/methods/watch.proto";
 
 service AggregatorService {
-  // User
+  // User OK
   rpc Login(aggregator.methods.LoginRequest) returns (aggregator.methods.LoginResponse) {
     option (google.api.http) = {
       post: "/api/user/login"
@@ -21,44 +21,107 @@ service AggregatorService {
     };
   }
 
+  // Space OK
   rpc Space(aggregator.methods.SpaceRequest) returns (aggregator.methods.SpaceResponse) {
     option (google.api.http) = {
-      get: "/api/space/{user_id}/{access_token.value=*}"
+      get: "/api/space/{user_id}"
     };
   }
 
-  //  Creation
+  //  WatchCreation OK
   rpc WatchCreation(aggregator.methods.WatchCreationRequest) returns (aggregator.methods.WatchCreationResponse) {
     option (google.api.http) = {
-      get: "/api/watch/{creation_id}/{access_token.value=*}"
+      get: "/api/watch/{creation_id}"
+    };
+  }
+
+  // 相似视频 OK
+  rpc SimilarCreations(aggregator.methods.SimilarCreationsRequest) returns (aggregator.methods.GetCardsResponse) {
+    option (google.api.http) = {
+      get: "/api/watch/similar/{creation_id}"
+    };
+  }
+
+  // Comment OK
+  rpc InitialComments(aggregator.methods.InitialCommentsRequest) returns (aggregator.methods.InitialCommentsResponse) {
+    option (google.api.http) = {
+      get: "/api/watch/comments/{request.creation_id}"
+    };
+  }
+
+  rpc GetTopComments(aggregator.methods.GetTopCommentsRequest) returns (aggregator.methods.GetCommentsResponse) {
+    option (google.api.http) = {
+      get: "/api/watch/comments/{request.creation_id=*}/{request.page=*}"
+    };
+  }
+
+  rpc GetSecondComments(aggregator.methods.GetSecondCommentsRequest) returns (aggregator.methods.GetCommentsResponse) {
+    option (google.api.http) = {
+      get: "/api/watch/comments/seconds/{request.creation_id=*}/{request.root=*}/{request.page=*}"
     };
   }
 
   // Review
-  rpc GetReviews(aggregator.methods.GetReviewsRequest) returns (aggregator.methods.GetReviewsUserResponse) {
+  rpc GetUserReviews(aggregator.methods.GetReviewsRequest) returns (aggregator.methods.GetUserReviewsResponse) {
     option (google.api.http) = {
-      get: "/api/aggregator/{access_token.value=*}"
+      post: "/api/review/query/user"
+      body: "*"
+    };
+  }
+
+  rpc GetCreationReviews(aggregator.methods.GetReviewsRequest) returns (aggregator.methods.GetCreationReviewsResponse) {
+    option (google.api.http) = {
+      post: "/api/review/query/creation"
+      body: "*"
+    };
+  }
+
+  rpc GetCommentReviews(aggregator.methods.GetReviewsRequest) returns (aggregator.methods.GetCommentReviewsResponse) {
+    option (google.api.http) = {
+      post: "/api/review/query/comment"
+      body: "*"
+    };
+  }
+
+  rpc GetNewUserReviews(aggregator.methods.GetNewReviewsRequest) returns (aggregator.methods.GetUserReviewsResponse) {
+    option (google.api.http) = {
+      post: "/api/review/query/new/user"
+      body: "*"
+    };
+  }
+
+  rpc GetNewCreationReviews(aggregator.methods.GetNewReviewsRequest) returns (aggregator.methods.GetCreationReviewsResponse) {
+    option (google.api.http) = {
+      post: "/api/review/query/new/creation"
+      body: "*"
+    };
+  }
+
+  rpc GetNewCommentReviews(aggregator.methods.GetNewReviewsRequest) returns (aggregator.methods.GetCommentReviewsResponse) {
+    option (google.api.http) = {
+      post: "/api/review/query/new/comment"
+      body: "*"
     };
   }
 
   // 主页
   rpc HomePage(aggregator.methods.HomeRequest) returns (aggregator.methods.GetCardsResponse){
     option (google.api.http) = {
-      get: "/api/aggregator/home/{access_token.value=*}"
+      get: "/api/home/{access_token.value=*}"
     };
   }
 
   // 收藏夹
   rpc Collections(aggregator.methods.CollectionsRequest) returns (aggregator.methods.GetCardsResponse){
     option (google.api.http) = {
-      get: "/api/aggregator/collections/{access_token.value=*}/{page}"
+      get: "/api/collections/{access_token.value=*}/{page}"
     };
   }
 
   // 历史
   rpc History(aggregator.methods.HistoryRequest) returns (aggregator.methods.GetCardsResponse){
     option (google.api.http) = {
-      get: "/api/aggregator/history/{access_token.value=*}/{page}"
+      get: "/api/history/{access_token.value=*}/{page}"
     };
   }
 }

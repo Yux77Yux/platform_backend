@@ -15,9 +15,6 @@ import (
 
 func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.GetUserResponse, error) {
 	user_id := req.GetUserId()
-	// 用于后来的黑名单,尚未开发
-	// accessToken := req.GetAccessToken()
-	block := false
 
 	// 判断redis有无存有
 	exist, err := cache.ExistsUserInfo(ctx, user_id)
@@ -81,8 +78,7 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 	user_info.UserDefault.UserId = user_id
 
 	return &generated.GetUserResponse{
-		User:  user_info,
-		Block: block,
+		User: user_info,
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
 			Code:   "200",
@@ -235,4 +231,27 @@ func GetFollowers(ctx context.Context, req *generated.GetFollowRequest) (*genera
 		Code:   "200",
 	}
 	return response, nil
+}
+
+func GetUsers(ctx context.Context, req *generated.GetUsersRequest) (*generated.GetUsersResponse, error) {
+	ids := req.GetIds()
+
+	users, err := db.GetUsers(ctx, ids)
+	if err != nil {
+		return &generated.GetUsersResponse{
+			Msg: &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    "500",
+				Details: err.Error(),
+			},
+		}, err
+	}
+
+	return &generated.GetUsersResponse{
+		Users: users,
+		Msg: &common.ApiResponse{
+			Status: common.ApiResponse_SUCCESS,
+			Code:   "200",
+		},
+	}, nil
 }

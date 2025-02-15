@@ -1,4 +1,4 @@
- syntax = "proto3";
+syntax = "proto3";
 
 package comment;
 
@@ -19,11 +19,7 @@ service CommentService {
     };
   }
 
-  rpc InitalComments(comment.methods.InitalCommentsRequest) returns (comment.methods.InitalCommentsResponse) {
-    option (google.api.http) = {
-      get: "/api/comment/{creation_id}"
-    };
-  }
+  rpc InitialComments(comment.methods.InitialCommentsRequest) returns (comment.methods.InitialCommentsResponse);
 
   rpc DeleteComment(comment.methods.DeleteCommentRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
@@ -31,23 +27,13 @@ service CommentService {
     };
   }
 
-  rpc GetTopComments(comment.methods.GetTopCommentsRequest) returns (comment.methods.GetCommentsResponse) {
-    option (google.api.http) = {
-      get: "/api/comment/top/{creation_id}/{page}"
-    };
-  }
+  rpc GetTopComments(comment.methods.GetTopCommentsRequest) returns (comment.methods.GetCommentsResponse);
 
-  rpc GetSecondComments(comment.methods.GetSecondCommentsRequest) returns (comment.methods.GetCommentsResponse) {
-    option (google.api.http) = {
-      get: "/api/comment/second/{creation_id}/{root_id}/{page}"
-    };
-  }
+  rpc GetSecondComments(comment.methods.GetSecondCommentsRequest) returns (comment.methods.GetCommentsResponse);
 
-  rpc GetReplyComments(comment.methods.GetReplyCommentsRequest) returns (comment.methods.GetCommentsResponse) {
-    option (google.api.http) = {
-      get: "/api/comment/reply/{access_token.value=*}/{page}"
-    };
-  }
+  rpc GetReplyComments(comment.methods.GetReplyCommentsRequest) returns (comment.methods.GetCommentsResponse) ;
 
   rpc GetComment(comment.methods.GetCommentRequest) returns (comment.methods.GetCommentResponse);
+  
+  rpc GetComments(comment.methods.GetCommentsRequest) returns (comment.methods.GetCommentsResponse);
 }

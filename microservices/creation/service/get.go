@@ -21,10 +21,10 @@ func (s *Server) GetCreation(ctx context.Context, req *generated.GetCreationRequ
 	return response, nil
 }
 
-func (s *Server) GetSimilarCreationList(ctx context.Context, req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
-	log.Println("info: GetSimilarCreationList service start")
+func (s *Server) GetCreationList(ctx context.Context, req *generated.GetCreationListRequest) (*generated.GetCreationListResponse, error) {
+	log.Println("info: GetCreationList service start")
 
-	response, err := internal.GetSimilarCreationList(ctx, req)
+	response, err := internal.GetCreationList(ctx, req)
 	if err != nil {
 		log.Println("error: get creation occur fail: ", err)
 		return response, nil
@@ -34,10 +34,10 @@ func (s *Server) GetSimilarCreationList(ctx context.Context, req *generated.GetP
 	return response, nil
 }
 
-func (s *Server) GetSpaceCreationList(ctx context.Context, req *generated.GetPublicCreationListRequest) (*generated.GetCreationListResponse, error) {
-	log.Println("info: GetSpaceCreationList service start")
+func (s *Server) GetPublicCreationList(ctx context.Context, req *generated.GetCreationListRequest) (*generated.GetCreationListResponse, error) {
+	log.Println("info: GetPublicCreationList service start")
 
-	response, err := internal.GetSpaceCreationList(ctx, req)
+	response, err := internal.GetPublicCreationList(ctx, req)
 	if err != nil {
 		log.Println("error: get creation occur fail: ", err)
 		return response, nil
@@ -47,23 +47,10 @@ func (s *Server) GetSpaceCreationList(ctx context.Context, req *generated.GetPub
 	return response, nil
 }
 
-func (s *Server) GetCollectionCreationList(ctx context.Context, req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
-	log.Println("info: GetCollectionCreationList service start")
+func (s *Server) GetSpaceCreations(ctx context.Context, req *generated.GetSpaceCreationsRequest) (*generated.GetCreationListResponse, error) {
+	log.Println("info: GetSpaceCreations service start")
 
-	response, err := internal.GetCollectionCreationList(ctx, req)
-	if err != nil {
-		log.Println("error: get creation occur fail: ", err)
-		return response, nil
-	}
-
-	log.Println("info: get creation occur success")
-	return response, nil
-}
-
-func (s *Server) GetHomeCreationList(ctx context.Context, req *generated.GetSpecificCreationListRequest) (*generated.GetCreationListResponse, error) {
-	log.Println("info: GetHomeCreationList service start")
-
-	response, err := internal.GetHomeCreationList(ctx, req)
+	response, err := internal.GetSpaceCreations(ctx, req)
 	if err != nil {
 		log.Println("error: get creation occur fail: ", err)
 		return response, nil

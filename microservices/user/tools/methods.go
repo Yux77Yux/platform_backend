@@ -20,8 +20,8 @@ import (
 )
 
 // 验证
-func VerifyPassword(storedHashWithSalt, password string) (bool, error) {
-	saltHex, hashHex, err := SplitHash(storedHashWithSalt)
+func VerifyPassword(passwordInStore, password string) (bool, error) {
+	saltHex, hashHex, err := SplitHash(passwordInStore)
 	if err != nil {
 		return false, err
 	}

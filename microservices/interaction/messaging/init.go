@@ -7,10 +7,16 @@ import (
 	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue"
 )
 
+const (
+	ComputeSimilarCreation = "ComputeSimilarCreation"
+	ComputeUser            = "ComputeUser"
+)
+
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
-		// "register":         "direct",
+		ComputeSimilarCreation: "direct",
+		ComputeUser:            "direct",
 		// Add more exchanges here
 	}
 	ListenRPCs = []string{
@@ -49,9 +55,12 @@ func Init() {
 		}
 
 		switch exchange {
+
 		// 不同的exchange使用不同函数
-		// case "register":
-		// 	go ListenToQueue(exchange, "register", "register", registerProcessor)
+		case ComputeSimilarCreation:
+			go ListenToQueue(exchange, ComputeSimilarCreation, ComputeSimilarCreation, computeSimilarProcessor)
+		case ComputeUser:
+			go ListenToQueue(exchange, ComputeUser, ComputeUser, computeUserProcessor)
 		}
 	}
 

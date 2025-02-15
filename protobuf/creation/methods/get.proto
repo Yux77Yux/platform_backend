@@ -4,7 +4,6 @@ package creation.methods;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/creation";
 
-import "common/access_token.proto";
 import "common/api_response.proto";
 import "creation/messages/creation.proto";
 
@@ -19,24 +18,13 @@ message GetCreationResponse {
 }
 
 // 和某一id有关的的作品，比如收藏夹，历史记录，个性化推送等
-message GetSpecificCreationListRequest {
-  common.AccessToken access_token = 1;
+message GetSpaceCreationsRequest {
+  int64 user_id = 1;
 }
 
-message GetPublicCreationListRequest {
-  // 例如某人空间的视频，某个视频的相似视频列表 所以creation_id 或 user_id
-  int64 id = 1;
-}
-
-// 查询（待定，综合排序可查到完全匹配的up主）
-message GetQueryCreationListRequest {
-  string query_str = 1;
-}
-
-// 这个message未加入service中，不知道是否利用
+// 发布状态的Creation列表
 message GetCreationListRequest {
-  // 请求的视频数组
-  repeated int64 creation_id = 1;
+  repeated int64 ids = 1;
 }
 
 message GetCreationListResponse {

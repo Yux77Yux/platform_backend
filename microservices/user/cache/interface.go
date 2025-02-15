@@ -10,7 +10,7 @@ type CacheInterface interface {
 	Open(connStr string, password string) error
 	Close() error
 
-	AddToSet(ctx context.Context, kind string, unique string, value interface{}) error
+	AddToSet(ctx context.Context, kind string, unique string, values ...interface{}) error
 	ExistsInSet(ctx context.Context, kind string, unique string, value interface{}) (bool, error)
 
 	ScanZSet(ctx context.Context, kind string, fliter string, cursor uint64, count int64) ([]string, uint64, error)

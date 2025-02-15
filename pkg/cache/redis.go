@@ -404,15 +404,15 @@ func (r *RedisClient) ScanSet(ctx context.Context, kind string, fliter string, c
 }
 
 // 向 Set 中添加/更新元素
-func (r *RedisClient) AddToSet(ctx context.Context, kind string, unique string, value interface{}) error {
+func (r *RedisClient) AddToSet(ctx context.Context, kind string, unique string, values ...interface{}) error {
 	key := fmt.Sprintf("Set_%s_%s", kind, unique)
-	return r.redisClient.SAdd(ctx, key, value).Err()
+	return r.redisClient.SAdd(ctx, key, values...).Err()
 }
 
 // 在 Set 中删除元素
-func (r *RedisClient) RemSet(ctx context.Context, kind string, unique string, value interface{}) error {
+func (r *RedisClient) RemSet(ctx context.Context, kind string, unique string, values ...interface{}) error {
 	key := fmt.Sprintf("Set_%s_%s", kind, unique)
-	return r.redisClient.SRem(ctx, key, value).Err()
+	return r.redisClient.SRem(ctx, key, values...).Err()
 }
 
 // 检查 Set 中是否存在某个元素

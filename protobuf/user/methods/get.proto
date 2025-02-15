@@ -25,15 +25,22 @@ message GetFollowResponse{
   bool master = 3;
 }
 
+message GetUsersRequest{
+  repeated int64 ids = 1;
+}
+
+message GetUsersResponse {
+  repeated common.UserCreationComment users = 1;
+  common.ApiResponse msg = 2;
+}
+
 message GetUserRequest {
   int64 user_id = 1;
-  common.AccessToken access_token = 2;
 }
 
 message GetUserResponse {
   user.messages.User user = 1;
   common.ApiResponse msg = 2;
-  bool block = 3;
 }
 
 message LoginRequest{

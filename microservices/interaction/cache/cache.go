@@ -9,9 +9,10 @@ import (
 	"strings"
 	"time"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	"github.com/go-redis/redis/v8"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 )
 
 // GET
@@ -272,8 +273,40 @@ func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction)
 	}
 }
 
-// UPDATE
+// 查看是否过期，是否重新计算
 
+// POST
+func SetRecommendBaseUser(id int64, ids []int64) error {
+	ctx := context.Background()
+	count := len(ids)
+	values := make([]any, count)
+	for i, val := range ids {
+		values[i] = val
+	}
+
+	err := CacheClient.AddToSet(ctx, "RecommendBaseUser", strconv.FormatInt(id, 10), values...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func SetRecommendBaseItem(id int64, ids []int64) error {
+	ctx := context.Background()
+	count := len(ids)
+	values := make([]any, count)
+	for i, val := range ids {
+		values[i] = val
+	}
+
+	err := CacheClient.AddToSet(ctx, "RecommendBaseItem", strconv.FormatInt(id, 10), values...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// POST & UPDATE
 // 历史记录 更新时间戳
 func UpdateHistories(data []*generated.Interaction) error {
 	ctx := context.Background()

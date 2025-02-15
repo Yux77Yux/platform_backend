@@ -5,32 +5,47 @@ package aggregator.methods;
 option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
 
 import "review/messages/review.proto";
+import "review/messages/status.proto";
 import "creation/messages/creation.proto";
-import "user/messages/user.proto";
-
 import "comment/messages/comment.proto";
+
+import "common/user_creation_comment.proto";
 import "common/access_token.proto";
 import "common/api_response.proto";
 
+message GetReviewsRequest {
+  common.AccessToken access_token = 1;
+  review.messages.ReviewStatus status = 2;// 获取需要审核的，或已被审核的
+  int32 page = 3;
+}
 
-message GetReviewsRequest{
+message GetNewReviewsRequest {
   common.AccessToken access_token = 1;
 }
 
-message GetReviewsCreationResponse{
+message GetCreationReviewsResponse {
+  message CreationReview {
+    review.messages.Review review = 1;
+    creation.messages.Creation creation = 2;
+  }
   common.ApiResponse msg = 1;
-  review.messages.Review review = 2;
-  creation.messages.Creation creation = 3;
+  repeated CreationReview reviews = 2;
 }
 
-message GetReviewsUserResponse{
+message GetUserReviewsResponse {
+  message UserReview {
+    review.messages.Review review = 1;
+    common.UserCreationComment user = 2;
+  }
   common.ApiResponse msg = 1;
-  review.messages.Review review = 2;
-  user.messages.User user = 3;
+  repeated UserReview reviews = 2;
 }
 
-message GetReviewsCommentResponse{
+message GetCommentReviewsResponse {
+  message CommentReview {
+    review.messages.Review review = 1;
+    comment.messages.Comment comment = 2;
+  }
   common.ApiResponse msg = 1;
-  review.messages.Review review = 2;
-  comment.messages.Comment comment = 3;
+  repeated CommentReview reviews = 2;
 }

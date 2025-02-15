@@ -34,13 +34,12 @@ func DeleteCreation(req *generated.DeleteCreationRequest) error {
 	creationId := req.GetCreationId()
 
 	// 取作品作者id
-	var author_id int64 = -1
-	str, err := cache.GetCreationInfo(creationId, []string{"author_id"})
+	creationInfo, err := cache.GetCreationInfo(context.Background(), creationId)
 	if err != nil {
 		return fmt.Errorf("error: get author in cache error")
 	}
-
-	if str["author_id"] == "" {
+	author_id := creationInfo.GetCreation().GetBaseInfo().GetAuthorId()
+	if author_id <= 0 {
 		author_id, err = db.GetAuthorIdInTransaction(context.Background(), creationId)
 		if err != nil {
 			return err

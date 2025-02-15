@@ -3,10 +3,12 @@ package cache
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
+	"github.com/go-redis/redis/v8"
 )
 
 // POST
@@ -61,16 +63,14 @@ func CreationAddInCache(creationInfo *generated.CreationInfo) error {
 }
 
 // GET
-func GetCreationInfo(creation_id int64, fields []string) (map[string]string, error) {
-	ctx := context.Background()
-
+func GetCreationInfoFields(ctx context.Context, creation_id int64, fields []string) (map[string]string, error) {
 	resultCh := make(chan struct {
 		creationInfo map[string]string
 		err          error
 	}, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		if len(fields) == 0 {
+		if len(fields) == 0 || fields == nil {
 			result, err := CacheClient.GetAllHash(ctx, "CreationInfo", strconv.FormatInt(creation_id, 10))
 			resultCh <- struct {
 				creationInfo map[string]string
@@ -83,6 +83,7 @@ func GetCreationInfo(creation_id int64, fields []string) (map[string]string, err
 			values, err := CacheClient.GetAnyHash(ctx, "CreationInfo", strconv.FormatInt(creation_id, 10), fields...)
 			// 构造结果 map
 			result := make(map[string]string, len(fields))
+
 			for i, field := range fields {
 				// 类型断言并检查 nil 值
 				if values[i] != nil {
@@ -94,6 +95,7 @@ func GetCreationInfo(creation_id int64, fields []string) (map[string]string, err
 					result[field] = strValue
 				}
 			}
+
 			resultCh <- struct {
 				creationInfo map[string]string
 				err          error
@@ -113,8 +115,233 @@ func GetCreationInfo(creation_id int64, fields []string) (map[string]string, err
 			return nil, result.err
 		}
 
-		return result.creationInfo, nil
+		creationInfo := result.creationInfo
+		for _, key := range fields {
+			if val, ok := creationInfo[key]; !ok || val == "" {
+				return nil, fmt.Errorf("error: missing or empty field %s", key)
+			}
+		}
+		return creationInfo, nil
 	}
+}
+
+// 视频展示页的Redis缓存
+func GetCreationInfo(ctx context.Context, creation_id int64) (*generated.CreationInfo, error) {
+	results, err := GetCreationInfoFields(ctx, creation_id, nil)
+	if err != nil {
+		log.Printf("error: GetCreationInfo GetCreationInfoFields %v", err)
+		return nil, err
+	}
+	creationInfo := tools.MapCreationInfoByString(results)
+	if creationInfo == nil {
+		return nil, fmt.Errorf("error: MapCreationInfoByString %v", err)
+	}
+
+	return creationInfo, nil
+}
+
+func parseIntField(value string, bitSize int) (int64, error) {
+	if value == "" {
+		return 0, fmt.Errorf("数值字段为空")
+	}
+	return strconv.ParseInt(value, 10, bitSize)
+}
+func mapToCreationInfo(results map[string]string, creation_id int64) (*generated.CreationInfo, error) {
+	requiredKeys := []string{
+		"author_id", "src", "thumbnail", "title", "bio",
+		"duration", "views",
+	}
+	// 确保所有必须字段存在且非空
+	for _, key := range requiredKeys {
+		if val, ok := results[key]; !ok || val == "" {
+			return nil, fmt.Errorf("error: missing or empty field %s", key)
+		}
+	}
+
+	var (
+		authorIdStr = results["author_id"]
+		src         = results["src"]
+		thumbnail   = results["thumbnail"]
+		title       = results["title"]
+		bio         = results["bio"]
+		durationStr = results["duration"]
+		viewsStr    = results["views"]
+	)
+
+	authorId, err := parseIntField(authorIdStr, 64)
+	if err != nil {
+		log.Printf("error: GetCreationInfo authorIdStr ParseInt %v", err)
+		return nil, err
+	}
+
+	durationInt, err := strconv.Atoi(durationStr)
+	if err != nil {
+		log.Printf("error: GetCreationInfo durationStr Atoi %v", err)
+		return nil, err
+	}
+	duration := int32(durationInt)
+
+	viewsInt, err := strconv.Atoi(viewsStr)
+	if err != nil {
+		log.Printf("error: GetCreationInfo viewsStr Atoi %v", err)
+		return nil, err
+	}
+	views := int32(viewsInt)
+
+	creationInfo := &generated.CreationInfo{
+		Creation: &generated.Creation{
+			CreationId: creation_id,
+			BaseInfo: &generated.CreationUpload{
+				AuthorId:  authorId,
+				Src:       src,
+				Thumbnail: thumbnail,
+				Title:     title,
+				Bio:       bio,
+				Duration:  duration,
+			},
+		},
+		CreationEngagement: &generated.CreationEngagement{
+			CreationId: creation_id,
+			Views:      views,
+		},
+	}
+
+	return creationInfo, nil
+}
+
+// (返回的，未缓存的，是否重新计算，错误)
+func GetSimilarCreationList(ctx context.Context, creation_id int64) ([]int64, error) {
+	strs, err := CacheClient.RevRangeZSet(ctx, "SimilarCreation", strconv.FormatInt(creation_id, 10), 0, 149)
+	if err != nil {
+		log.Printf("error: GetSpaceCreationList RevRangeZSet %v", err)
+		return nil, err
+	}
+
+	count := len(strs)
+	if count == 0 {
+		return nil, nil // 返回空结果
+	}
+
+	ids := make([]int64, count)
+	for i, str := range strs {
+		id, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		ids[i] = id
+	}
+
+	return ids, nil
+}
+
+func GetSpaceCreationList(ctx context.Context, user_id int64) ([]int64, error) {
+	strs, err := CacheClient.RevRangeZSet(ctx, "SpaceCreation", strconv.FormatInt(user_id, 10), 0, 149)
+	if err != nil {
+		log.Printf("error: GetSpaceCreationList RevRangeZSet %v", err)
+		return nil, err
+	}
+
+	count := len(strs)
+	if count == 0 {
+		return nil, nil // 返回空结果
+	}
+
+	ids := make([]int64, count)
+	for i, str := range strs {
+		id, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		ids[i] = id
+	}
+
+	return ids, nil
+}
+
+func GetHistoryCreationList(ctx context.Context, user_id int64) ([]int64, error) {
+	strs, err := CacheClient.RevRangeZSet(ctx, "Histories", strconv.FormatInt(user_id, 10), 0, 149)
+	if err != nil {
+		log.Printf("error: GetHistoryCreationList RevRangeZSet %v", err)
+		return nil, err
+	}
+
+	count := len(strs)
+	if count == 0 {
+		return nil, nil // 返回空结果
+	}
+
+	ids := make([]int64, count)
+	for i, str := range strs {
+		id, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		ids[i] = id
+	}
+
+	return ids, nil
+}
+
+func GetCollectionCreationList(ctx context.Context, user_id int64) ([]int64, error) {
+	strs, err := CacheClient.RevRangeZSet(ctx, "Collections", strconv.FormatInt(user_id, 10), 0, 149)
+	if err != nil {
+		log.Printf("error: GetCollectionCreationList RevRangeZSet %v", err)
+		return nil, err
+	}
+
+	count := len(strs)
+	if count == 0 {
+		return nil, nil // 返回空结果
+	}
+
+	ids := make([]int64, count)
+	for i, str := range strs {
+		id, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		ids[i] = id
+	}
+
+	return ids, nil
+}
+
+// Collections,History
+func GetCreationList(ctx context.Context, creationIds []int64) ([]*generated.CreationInfo, []int64, error) {
+	pipe := CacheClient.Pipeline()
+
+	length := len(creationIds)
+	infos := make([]*generated.CreationInfo, 0, length)
+	notCaches := make([]int64, 0, length)
+	cmds := make(map[int64]*redis.StringStringMapCmd)
+
+	for _, id := range creationIds {
+		key := fmt.Sprintf("Hash_CreationInfo_%d", id)
+		cmds[id] = pipe.HGetAll(ctx, key)
+	}
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for id, cmd := range cmds {
+		results, err := cmd.Result()
+		// 有错误则跳过
+		if err != nil {
+			notCaches = append(notCaches, id)
+			continue
+		}
+
+		creationInfo, err := mapToCreationInfo(results, id)
+		if err != nil {
+			notCaches = append(notCaches, id)
+			continue
+		}
+		infos = append(infos, creationInfo)
+	}
+
+	return infos, notCaches, nil
 }
 
 // DEL
@@ -127,7 +354,7 @@ func DeleteCreation(creation_id int64) error {
 	}, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		err := CacheClient.DelKey(ctx, "Hash_CreationInfo", idStr)
+		err := CacheClient.SetFieldHash(ctx, "Hash_CreationInfo", idStr, "status", generated.CreationStatus_DELETE.String())
 		resultCh <- struct {
 			err error
 		}{

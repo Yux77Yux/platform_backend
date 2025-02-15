@@ -11,15 +11,22 @@ const (
 	DraftCreation        = "DraftCreation"
 	PendingCreation      = "PendingCreation"
 	UpdateCreation       = "UpdateCreation"
+	StoreCreationInfo    = "StoreCreationInfo"
 	UpdateCreationStatus = "UpdateCreationStatus"
+
+	// 发布至其他服务
+	ComputeSimilarCreation = "ComputeSimilarCreation"
+	ComputeUser            = "ComputeUser"
 )
 
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
-		DraftCreation:   "direct",
-		PendingCreation: "direct",
-		UpdateCreation:  "direct",
+		DraftCreation:        "direct",
+		PendingCreation:      "direct",
+		UpdateCreation:       "direct",
+		StoreCreationInfo:    "direct",
+		UpdateCreationStatus: "direct",
 		// Add more exchanges here
 	}
 )
@@ -62,6 +69,8 @@ func Init() {
 			go ListenToQueue(exchange, DraftCreation, DraftCreation, draftCreationProcessor)
 		case UpdateCreation:
 			go ListenToQueue(exchange, UpdateCreation, UpdateCreation, updateCreationProcessor)
+		case StoreCreationInfo:
+			go ListenToQueue(exchange, StoreCreationInfo, StoreCreationInfo, storeCreationProcessor)
 		case UpdateCreationStatus:
 			go ListenToQueue(exchange, UpdateCreationStatus, UpdateCreationStatus, updateCreationStatusProcessor)
 		}

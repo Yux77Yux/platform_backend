@@ -29,14 +29,6 @@ func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequ
 		}
 
 		response.Interaction = interaction
-		// 补充Redis
-		// action:=interaction.GetActionTag()
-		// if action & 2 ==2{
-
-		// }
-		// if action & 4 == 4{
-
-		// }
 	}
 
 	response.Msg = &common.ApiResponse{
@@ -140,25 +132,26 @@ func GetHistories(ctx context.Context, req *generated.GetHistoriesRequest) (*gen
 
 func GetRecommend(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
 	var response = new(generated.GetRecommendResponse)
-	token := req.GetAccessToken().GetValue()
-	pass, userId, err := auth.Auth("get", "interaction", token)
-	if err != nil {
-		return &generated.GetRecommendResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_FAILED,
-				Code:   "500",
-			},
-		}, err
-	}
-	if !pass {
-		return &generated.GetRecommendResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_ERROR,
-				Code:   "403",
-			},
-		}, nil
-	}
+	// token := req.GetAccessToken().GetValue()
+	// pass, userId, err := auth.Auth("get", "interaction", token)
+	// if err != nil {
+	// 	return &generated.GetRecommendResponse{
+	// 		Msg: &common.ApiResponse{
+	// 			Status: common.ApiResponse_FAILED,
+	// 			Code:   "500",
+	// 		},
+	// 	}, err
+	// }
+	// if !pass {
+	// 	return &generated.GetRecommendResponse{
+	// 		Msg: &common.ApiResponse{
+	// 			Status: common.ApiResponse_ERROR,
+	// 			Code:   "403",
+	// 		},
+	// 	}, nil
+	// }
 
+	userId := req.GetId()
 	interactions, err := recommend.Recommend(userId)
 	if err != nil {
 		response.Msg = &common.ApiResponse{

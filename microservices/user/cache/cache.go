@@ -537,14 +537,14 @@ func GetUserCredentials(ctx context.Context, userCrdentials *generated.UserCrede
 			return nil, nil
 		}
 
-		credentials := new(generated.UserCredentials)
-		err := proto.Unmarshal([]byte(result.credentials), credentials)
+		credentialsInStore := new(generated.UserCredentials)
+		err := proto.Unmarshal([]byte(result.credentials), credentialsInStore)
 		if err != nil {
 			return nil, err
 		}
 
 		// 验证密码
-		match, err := tools.VerifyPassword(credentials.GetPassword(), userCrdentials.GetPassword())
+		match, err := tools.VerifyPassword(credentialsInStore.GetPassword(), userCrdentials.GetPassword())
 		if err != nil {
 			return nil, fmt.Errorf("failed to verify password: %w", err)
 		}
@@ -552,7 +552,7 @@ func GetUserCredentials(ctx context.Context, userCrdentials *generated.UserCrede
 			return nil, nil
 		}
 
-		return credentials, nil
+		return credentialsInStore, nil
 	}
 }
 

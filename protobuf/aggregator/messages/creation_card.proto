@@ -7,12 +7,9 @@ option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
 import "creation/messages/creation.proto";
 import "common/user_creation_comment.proto";
 
-message CreationInfo {
+message CreationCard {
   creation.messages.Creation creation = 1;
   creation.messages.CreationEngagement creation_engagement = 2;
-}
 
-message CreationCard {
-  CreationInfo creation = 1;
-  common.UserCreationComment user = 2;
+  common.UserCreationComment user = 3;
 }

@@ -29,6 +29,7 @@ const (
 	UserService_GetFolloweesByViews_FullMethodName = "/user.UserService/GetFolloweesByViews"
 	UserService_GetFollowers_FullMethodName        = "/user.UserService/GetFollowers"
 	UserService_GetUser_FullMethodName             = "/user.UserService/GetUser"
+	UserService_GetUsers_FullMethodName            = "/user.UserService/GetUsers"
 	UserService_UpdateUserSpace_FullMethodName     = "/user.UserService/UpdateUserSpace"
 	UserService_UpdateUserAvatar_FullMethodName    = "/user.UserService/UpdateUserAvatar"
 	UserService_UpdateUserStatus_FullMethodName    = "/user.UserService/UpdateUserStatus"
@@ -52,6 +53,7 @@ type UserServiceClient interface {
 	GetFolloweesByViews(ctx context.Context, in *GetFollowRequest, opts ...grpc.CallOption) (*GetFollowResponse, error)
 	GetFollowers(ctx context.Context, in *GetFollowRequest, opts ...grpc.CallOption) (*GetFollowResponse, error)
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	GetUsers(ctx context.Context, in *GetUsersRequest, opts ...grpc.CallOption) (*GetUsersResponse, error)
 	// UPDATE
 	// 批量字段
 	UpdateUserSpace(ctx context.Context, in *UpdateUserSpaceRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error)
@@ -162,6 +164,16 @@ func (c *userServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opt
 	return out, nil
 }
 
+func (c *userServiceClient) GetUsers(ctx context.Context, in *GetUsersRequest, opts ...grpc.CallOption) (*GetUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUsersResponse)
+	err := c.cc.Invoke(ctx, UserService_GetUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *userServiceClient) UpdateUserSpace(ctx context.Context, in *UpdateUserSpaceRequest, opts ...grpc.CallOption) (*UpdateUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateUserResponse)
@@ -228,6 +240,7 @@ type UserServiceServer interface {
 	GetFolloweesByViews(context.Context, *GetFollowRequest) (*GetFollowResponse, error)
 	GetFollowers(context.Context, *GetFollowRequest) (*GetFollowResponse, error)
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
+	GetUsers(context.Context, *GetUsersRequest) (*GetUsersResponse, error)
 	// UPDATE
 	// 批量字段
 	UpdateUserSpace(context.Context, *UpdateUserSpaceRequest) (*UpdateUserResponse, error)
@@ -274,6 +287,9 @@ func (UnimplementedUserServiceServer) GetFollowers(context.Context, *GetFollowRe
 }
 func (UnimplementedUserServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
+}
+func (UnimplementedUserServiceServer) GetUsers(context.Context, *GetUsersRequest) (*GetUsersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUsers not implemented")
 }
 func (UnimplementedUserServiceServer) UpdateUserSpace(context.Context, *UpdateUserSpaceRequest) (*UpdateUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateUserSpace not implemented")
@@ -473,6 +489,24 @@ func _UserService_GetUser_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_GetUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetUsers(ctx, req.(*GetUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UserService_UpdateUserSpace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateUserSpaceRequest)
 	if err := dec(in); err != nil {
@@ -605,6 +639,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUser",
 			Handler:    _UserService_GetUser_Handler,
+		},
+		{
+			MethodName: "GetUsers",
+			Handler:    _UserService_GetUsers_Handler,
 		},
 		{
 			MethodName: "UpdateUserSpace",

@@ -9,18 +9,22 @@ import "comment/messages/comment.proto";
 import "common/access_token.proto";
 import "common/api_response.proto";
 
-// 作品的一级评论
-message InitalCommentsRequest {
+// 初始化
+message InitialCommentsRequest {
   int64 creation_id = 1;
 }
 
-message InitalCommentsResponse {
+message InitialCommentsResponse {
   repeated comment.messages.Comment comments = 1;
   comment.messages.CommentArea comment_area = 2;
   common.ApiResponse msg = 3;
 }
 
 // 作品的一级评论
+message GetCommentsRequest {
+  repeated int32 ids = 1;
+}
+
 message GetTopCommentsRequest {
   int64 creation_id = 1;
   int32 page = 2;
@@ -33,6 +37,7 @@ message GetSecondCommentsRequest {
   int32 page = 3;
 }
 
+// 消息中心，没做
 // 回复我的评论，在页面的消息内显示,权限类
 message GetReplyCommentsRequest {
   common.AccessToken access_token = 1;// 自己的id，
@@ -45,9 +50,8 @@ message GetCommentsResponse {
 }
 
 message GetCommentRequest {
-  int64 creation_id = 1;
+  int32 id = 1;
 }
-
 
 message GetCommentResponse {
   comment.messages.Comment comment = 1;

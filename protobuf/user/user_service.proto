@@ -49,24 +49,21 @@ service UserService {
       get: "/api/user/followee/time/{user_id}/{access_token.value=*}"
     };
   }
-  
+
   rpc GetFolloweesByViews(user.methods.GetFollowRequest) returns (user.methods.GetFollowResponse) {
     option (google.api.http) = {
       get: "/api/user/followee/views/{user_id}/{access_token.value=*}"
     };
   }
-  
+
   rpc GetFollowers(user.methods.GetFollowRequest) returns (user.methods.GetFollowResponse) {
     option (google.api.http) = {
       get: "/api/user/follower/{user_id}/{access_token.value=*}"
     };
   }
 
-  rpc GetUser(user.methods.GetUserRequest) returns (user.methods.GetUserResponse) {
-    option (google.api.http) = {
-      get: "/api/user/{user_id}/{access_token.value=*}"
-    };
-  }
+  rpc GetUser(user.methods.GetUserRequest) returns (user.methods.GetUserResponse);
+  rpc GetUsers(user.methods.GetUsersRequest) returns (user.methods.GetUsersResponse);
 
   // UPDATE
   // 批量字段
@@ -100,7 +97,7 @@ service UserService {
       body: "*"
     };
   }
-  
+
   rpc DelReviewer(user.methods.DelReviewerRequest) returns (user.methods.DelReviewerResponse) {
     option (google.api.http) = {
       patch: "/api/reviewer/auth"

@@ -19,26 +19,47 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AggregatorService_Login_FullMethodName         = "/aggregator.AggregatorService/Login"
-	AggregatorService_Space_FullMethodName         = "/aggregator.AggregatorService/Space"
-	AggregatorService_WatchCreation_FullMethodName = "/aggregator.AggregatorService/WatchCreation"
-	AggregatorService_GetReviews_FullMethodName    = "/aggregator.AggregatorService/GetReviews"
-	AggregatorService_HomePage_FullMethodName      = "/aggregator.AggregatorService/HomePage"
-	AggregatorService_Collections_FullMethodName   = "/aggregator.AggregatorService/Collections"
-	AggregatorService_History_FullMethodName       = "/aggregator.AggregatorService/History"
+	AggregatorService_Login_FullMethodName                 = "/aggregator.AggregatorService/Login"
+	AggregatorService_Space_FullMethodName                 = "/aggregator.AggregatorService/Space"
+	AggregatorService_WatchCreation_FullMethodName         = "/aggregator.AggregatorService/WatchCreation"
+	AggregatorService_SimilarCreations_FullMethodName      = "/aggregator.AggregatorService/SimilarCreations"
+	AggregatorService_InitialComments_FullMethodName       = "/aggregator.AggregatorService/InitialComments"
+	AggregatorService_GetTopComments_FullMethodName        = "/aggregator.AggregatorService/GetTopComments"
+	AggregatorService_GetSecondComments_FullMethodName     = "/aggregator.AggregatorService/GetSecondComments"
+	AggregatorService_GetUserReviews_FullMethodName        = "/aggregator.AggregatorService/GetUserReviews"
+	AggregatorService_GetCreationReviews_FullMethodName    = "/aggregator.AggregatorService/GetCreationReviews"
+	AggregatorService_GetCommentReviews_FullMethodName     = "/aggregator.AggregatorService/GetCommentReviews"
+	AggregatorService_GetNewUserReviews_FullMethodName     = "/aggregator.AggregatorService/GetNewUserReviews"
+	AggregatorService_GetNewCreationReviews_FullMethodName = "/aggregator.AggregatorService/GetNewCreationReviews"
+	AggregatorService_GetNewCommentReviews_FullMethodName  = "/aggregator.AggregatorService/GetNewCommentReviews"
+	AggregatorService_HomePage_FullMethodName              = "/aggregator.AggregatorService/HomePage"
+	AggregatorService_Collections_FullMethodName           = "/aggregator.AggregatorService/Collections"
+	AggregatorService_History_FullMethodName               = "/aggregator.AggregatorService/History"
 )
 
 // AggregatorServiceClient is the client API for AggregatorService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AggregatorServiceClient interface {
-	// User
+	// User OK
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	// Space OK
 	Space(ctx context.Context, in *SpaceRequest, opts ...grpc.CallOption) (*SpaceResponse, error)
-	// Creation
+	// WatchCreation OK
 	WatchCreation(ctx context.Context, in *WatchCreationRequest, opts ...grpc.CallOption) (*WatchCreationResponse, error)
+	// 相似视频 OK
+	SimilarCreations(ctx context.Context, in *SimilarCreationsRequest, opts ...grpc.CallOption) (*GetCardsResponse, error)
+	// Comment OK
+	InitialComments(ctx context.Context, in *InitialCommentsRequest, opts ...grpc.CallOption) (*InitialCommentsResponse, error)
+	GetTopComments(ctx context.Context, in *GetTopCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
+	GetSecondComments(ctx context.Context, in *GetSecondCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
 	// Review
-	GetReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetReviewsUserResponse, error)
+	GetUserReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetUserReviewsResponse, error)
+	GetCreationReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetCreationReviewsResponse, error)
+	GetCommentReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetCommentReviewsResponse, error)
+	GetNewUserReviews(ctx context.Context, in *GetNewReviewsRequest, opts ...grpc.CallOption) (*GetUserReviewsResponse, error)
+	GetNewCreationReviews(ctx context.Context, in *GetNewReviewsRequest, opts ...grpc.CallOption) (*GetCreationReviewsResponse, error)
+	GetNewCommentReviews(ctx context.Context, in *GetNewReviewsRequest, opts ...grpc.CallOption) (*GetCommentReviewsResponse, error)
 	// 主页
 	HomePage(ctx context.Context, in *HomeRequest, opts ...grpc.CallOption) (*GetCardsResponse, error)
 	// 收藏夹
@@ -85,10 +106,100 @@ func (c *aggregatorServiceClient) WatchCreation(ctx context.Context, in *WatchCr
 	return out, nil
 }
 
-func (c *aggregatorServiceClient) GetReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetReviewsUserResponse, error) {
+func (c *aggregatorServiceClient) SimilarCreations(ctx context.Context, in *SimilarCreationsRequest, opts ...grpc.CallOption) (*GetCardsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetReviewsUserResponse)
-	err := c.cc.Invoke(ctx, AggregatorService_GetReviews_FullMethodName, in, out, cOpts...)
+	out := new(GetCardsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_SimilarCreations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) InitialComments(ctx context.Context, in *InitialCommentsRequest, opts ...grpc.CallOption) (*InitialCommentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InitialCommentsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_InitialComments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) GetTopComments(ctx context.Context, in *GetTopCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCommentsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_GetTopComments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) GetSecondComments(ctx context.Context, in *GetSecondCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCommentsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_GetSecondComments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) GetUserReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetUserReviewsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserReviewsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_GetUserReviews_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) GetCreationReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetCreationReviewsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCreationReviewsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_GetCreationReviews_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) GetCommentReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetCommentReviewsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCommentReviewsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_GetCommentReviews_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) GetNewUserReviews(ctx context.Context, in *GetNewReviewsRequest, opts ...grpc.CallOption) (*GetUserReviewsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUserReviewsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_GetNewUserReviews_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) GetNewCreationReviews(ctx context.Context, in *GetNewReviewsRequest, opts ...grpc.CallOption) (*GetCreationReviewsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCreationReviewsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_GetNewCreationReviews_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) GetNewCommentReviews(ctx context.Context, in *GetNewReviewsRequest, opts ...grpc.CallOption) (*GetCommentReviewsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCommentReviewsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_GetNewCommentReviews_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -129,13 +240,25 @@ func (c *aggregatorServiceClient) History(ctx context.Context, in *HistoryReques
 // All implementations must embed UnimplementedAggregatorServiceServer
 // for forward compatibility.
 type AggregatorServiceServer interface {
-	// User
+	// User OK
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
+	// Space OK
 	Space(context.Context, *SpaceRequest) (*SpaceResponse, error)
-	// Creation
+	// WatchCreation OK
 	WatchCreation(context.Context, *WatchCreationRequest) (*WatchCreationResponse, error)
+	// 相似视频 OK
+	SimilarCreations(context.Context, *SimilarCreationsRequest) (*GetCardsResponse, error)
+	// Comment OK
+	InitialComments(context.Context, *InitialCommentsRequest) (*InitialCommentsResponse, error)
+	GetTopComments(context.Context, *GetTopCommentsRequest) (*GetCommentsResponse, error)
+	GetSecondComments(context.Context, *GetSecondCommentsRequest) (*GetCommentsResponse, error)
 	// Review
-	GetReviews(context.Context, *GetReviewsRequest) (*GetReviewsUserResponse, error)
+	GetUserReviews(context.Context, *GetReviewsRequest) (*GetUserReviewsResponse, error)
+	GetCreationReviews(context.Context, *GetReviewsRequest) (*GetCreationReviewsResponse, error)
+	GetCommentReviews(context.Context, *GetReviewsRequest) (*GetCommentReviewsResponse, error)
+	GetNewUserReviews(context.Context, *GetNewReviewsRequest) (*GetUserReviewsResponse, error)
+	GetNewCreationReviews(context.Context, *GetNewReviewsRequest) (*GetCreationReviewsResponse, error)
+	GetNewCommentReviews(context.Context, *GetNewReviewsRequest) (*GetCommentReviewsResponse, error)
 	// 主页
 	HomePage(context.Context, *HomeRequest) (*GetCardsResponse, error)
 	// 收藏夹
@@ -161,8 +284,35 @@ func (UnimplementedAggregatorServiceServer) Space(context.Context, *SpaceRequest
 func (UnimplementedAggregatorServiceServer) WatchCreation(context.Context, *WatchCreationRequest) (*WatchCreationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WatchCreation not implemented")
 }
-func (UnimplementedAggregatorServiceServer) GetReviews(context.Context, *GetReviewsRequest) (*GetReviewsUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetReviews not implemented")
+func (UnimplementedAggregatorServiceServer) SimilarCreations(context.Context, *SimilarCreationsRequest) (*GetCardsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SimilarCreations not implemented")
+}
+func (UnimplementedAggregatorServiceServer) InitialComments(context.Context, *InitialCommentsRequest) (*InitialCommentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitialComments not implemented")
+}
+func (UnimplementedAggregatorServiceServer) GetTopComments(context.Context, *GetTopCommentsRequest) (*GetCommentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTopComments not implemented")
+}
+func (UnimplementedAggregatorServiceServer) GetSecondComments(context.Context, *GetSecondCommentsRequest) (*GetCommentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSecondComments not implemented")
+}
+func (UnimplementedAggregatorServiceServer) GetUserReviews(context.Context, *GetReviewsRequest) (*GetUserReviewsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUserReviews not implemented")
+}
+func (UnimplementedAggregatorServiceServer) GetCreationReviews(context.Context, *GetReviewsRequest) (*GetCreationReviewsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCreationReviews not implemented")
+}
+func (UnimplementedAggregatorServiceServer) GetCommentReviews(context.Context, *GetReviewsRequest) (*GetCommentReviewsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCommentReviews not implemented")
+}
+func (UnimplementedAggregatorServiceServer) GetNewUserReviews(context.Context, *GetNewReviewsRequest) (*GetUserReviewsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNewUserReviews not implemented")
+}
+func (UnimplementedAggregatorServiceServer) GetNewCreationReviews(context.Context, *GetNewReviewsRequest) (*GetCreationReviewsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNewCreationReviews not implemented")
+}
+func (UnimplementedAggregatorServiceServer) GetNewCommentReviews(context.Context, *GetNewReviewsRequest) (*GetCommentReviewsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNewCommentReviews not implemented")
 }
 func (UnimplementedAggregatorServiceServer) HomePage(context.Context, *HomeRequest) (*GetCardsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HomePage not implemented")
@@ -248,20 +398,182 @@ func _AggregatorService_WatchCreation_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AggregatorService_GetReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _AggregatorService_SimilarCreations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SimilarCreationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).SimilarCreations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_SimilarCreations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).SimilarCreations(ctx, req.(*SimilarCreationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_InitialComments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitialCommentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).InitialComments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_InitialComments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).InitialComments(ctx, req.(*InitialCommentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_GetTopComments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTopCommentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).GetTopComments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_GetTopComments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).GetTopComments(ctx, req.(*GetTopCommentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_GetSecondComments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSecondCommentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).GetSecondComments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_GetSecondComments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).GetSecondComments(ctx, req.(*GetSecondCommentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_GetUserReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetReviewsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AggregatorServiceServer).GetReviews(ctx, in)
+		return srv.(AggregatorServiceServer).GetUserReviews(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AggregatorService_GetReviews_FullMethodName,
+		FullMethod: AggregatorService_GetUserReviews_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AggregatorServiceServer).GetReviews(ctx, req.(*GetReviewsRequest))
+		return srv.(AggregatorServiceServer).GetUserReviews(ctx, req.(*GetReviewsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_GetCreationReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReviewsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).GetCreationReviews(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_GetCreationReviews_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).GetCreationReviews(ctx, req.(*GetReviewsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_GetCommentReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReviewsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).GetCommentReviews(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_GetCommentReviews_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).GetCommentReviews(ctx, req.(*GetReviewsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_GetNewUserReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNewReviewsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).GetNewUserReviews(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_GetNewUserReviews_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).GetNewUserReviews(ctx, req.(*GetNewReviewsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_GetNewCreationReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNewReviewsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).GetNewCreationReviews(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_GetNewCreationReviews_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).GetNewCreationReviews(ctx, req.(*GetNewReviewsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_GetNewCommentReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetNewReviewsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).GetNewCommentReviews(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_GetNewCommentReviews_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).GetNewCommentReviews(ctx, req.(*GetNewReviewsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -340,8 +652,44 @@ var AggregatorService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AggregatorService_WatchCreation_Handler,
 		},
 		{
-			MethodName: "GetReviews",
-			Handler:    _AggregatorService_GetReviews_Handler,
+			MethodName: "SimilarCreations",
+			Handler:    _AggregatorService_SimilarCreations_Handler,
+		},
+		{
+			MethodName: "InitialComments",
+			Handler:    _AggregatorService_InitialComments_Handler,
+		},
+		{
+			MethodName: "GetTopComments",
+			Handler:    _AggregatorService_GetTopComments_Handler,
+		},
+		{
+			MethodName: "GetSecondComments",
+			Handler:    _AggregatorService_GetSecondComments_Handler,
+		},
+		{
+			MethodName: "GetUserReviews",
+			Handler:    _AggregatorService_GetUserReviews_Handler,
+		},
+		{
+			MethodName: "GetCreationReviews",
+			Handler:    _AggregatorService_GetCreationReviews_Handler,
+		},
+		{
+			MethodName: "GetCommentReviews",
+			Handler:    _AggregatorService_GetCommentReviews_Handler,
+		},
+		{
+			MethodName: "GetNewUserReviews",
+			Handler:    _AggregatorService_GetNewUserReviews_Handler,
+		},
+		{
+			MethodName: "GetNewCreationReviews",
+			Handler:    _AggregatorService_GetNewCreationReviews_Handler,
+		},
+		{
+			MethodName: "GetNewCommentReviews",
+			Handler:    _AggregatorService_GetNewCommentReviews_Handler,
 		},
 		{
 			MethodName: "HomePage",

@@ -6,6 +6,7 @@ option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
 
 import "creation/messages/creation.proto";
 import "comment/messages/comment.proto";
+import "comment/methods/get.proto";
 
 import "common/user_creation_comment.proto";
 import "common/api_response.proto";
@@ -13,9 +14,10 @@ import "common/access_token.proto";
 
 import "aggregator/messages/comment_info.proto";
 
+
+// 视频和用户信息   专注于返回视频信息，用户数据处理延后
 message WatchCreationRequest {
   int64 creation_id = 1;
-  common.AccessToken access_token = 2;
 }
 
 message WatchCreationResponse {
@@ -23,7 +25,40 @@ message WatchCreationResponse {
 
   common.UserCreationComment creation_user = 2;// 作品的用户信息
   creation.messages.CreationInfo creation_info = 3;// 作品的详细信息
+}
 
-  comment.messages.CommentArea comment_area = 4;// 作品的评论总数
-  repeated aggregator.messages.CommentInfo comments_top = 5;// 返回页面上的一级评论
+
+// 相似视频 Request 与 Response 在get.proto
+
+// 在加载完视频之后，首先加载评论
+
+// 第一次加载作品的评论
+message InitialCommentsRequest {
+  comment.methods.InitialCommentsRequest request = 1;
+}
+message InitialCommentsResponse {
+  repeated aggregator.messages.CommentInfo comments = 1;
+  comment.messages.CommentArea area = 2;
+  common.ApiResponse msg = 3;// 返回的响应
+}
+
+message GetTopCommentsRequest {
+  comment.methods.GetTopCommentsRequest request = 1;
+}
+
+// 一级评论内的评论
+message GetSecondCommentsRequest {
+  comment.methods.GetSecondCommentsRequest request = 1;
+  common.AccessToken access_token = 2;
+}
+
+// 回复我的评论，在页面的消息内显示, 权限类 没做
+message GetReplyCommentsRequest {
+  comment.methods.GetReplyCommentsRequest request = 1;
+  common.AccessToken access_token = 2;
+}
+
+message GetCommentsResponse {
+  repeated aggregator.messages.CommentInfo comments = 1;
+  common.ApiResponse msg = 2;// 返回的响应
 }

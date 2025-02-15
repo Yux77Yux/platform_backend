@@ -8,17 +8,16 @@ import "review/messages/status.proto";
 import "review/messages/type.proto";
 import "review/messages/review.proto";
 import "common/api_response.proto";
-import "common/access_token.proto";
 
 message GetReviewsRequest {
-  common.AccessToken access_token = 1;
-  review.messages.TargetType type = 2;// 获取类型，评论，用户，作品
-  review.messages.ReviewStatus status = 3;// 获取需要审核的，或已被审核的
-  int32 page = 4;
+  review.messages.TargetType type = 1;// 获取类型，评论，用户，作品
+  review.messages.ReviewStatus status = 2;// 获取需要审核的，或已被审核的
+  int32 page = 3;
+  int64 reviewer_id = 4;
 }
 
 message GetNewReviewsRequest {
-  common.AccessToken access_token = 1;
+  int64 reviewer_id = 1;
   review.messages.TargetType type = 2;
 }
 
@@ -27,6 +26,7 @@ message GetReviewsResponse {
   repeated review.messages.Review reviews = 2;
 }
 
+// 用于给 用户 查看 是否审核完毕
 message GetReviewDetailRequest {
   int64 id = 1;
 }

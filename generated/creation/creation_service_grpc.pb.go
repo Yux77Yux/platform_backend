@@ -20,15 +20,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CreationService_UploadCreation_FullMethodName            = "/creation.CreationService/UploadCreation"
-	CreationService_GetCreation_FullMethodName               = "/creation.CreationService/GetCreation"
-	CreationService_GetSpaceCreationList_FullMethodName      = "/creation.CreationService/GetSpaceCreationList"
-	CreationService_GetCollectionCreationList_FullMethodName = "/creation.CreationService/GetCollectionCreationList"
-	CreationService_GetHomeCreationList_FullMethodName       = "/creation.CreationService/GetHomeCreationList"
-	CreationService_GetSimilarCreationList_FullMethodName    = "/creation.CreationService/GetSimilarCreationList"
-	CreationService_DeleteCreation_FullMethodName            = "/creation.CreationService/DeleteCreation"
-	CreationService_UpdateCreation_FullMethodName            = "/creation.CreationService/UpdateCreation"
-	CreationService_UpdateCreationStatus_FullMethodName      = "/creation.CreationService/UpdateCreationStatus"
+	CreationService_UploadCreation_FullMethodName        = "/creation.CreationService/UploadCreation"
+	CreationService_GetCreation_FullMethodName           = "/creation.CreationService/GetCreation"
+	CreationService_GetSpaceCreations_FullMethodName     = "/creation.CreationService/GetSpaceCreations"
+	CreationService_GetCreationList_FullMethodName       = "/creation.CreationService/GetCreationList"
+	CreationService_GetPublicCreationList_FullMethodName = "/creation.CreationService/GetPublicCreationList"
+	CreationService_DeleteCreation_FullMethodName        = "/creation.CreationService/DeleteCreation"
+	CreationService_UpdateCreation_FullMethodName        = "/creation.CreationService/UpdateCreation"
+	CreationService_UpdateCreationStatus_FullMethodName  = "/creation.CreationService/UpdateCreationStatus"
 )
 
 // CreationServiceClient is the client API for CreationService service.
@@ -39,16 +38,9 @@ type CreationServiceClient interface {
 	UploadCreation(ctx context.Context, in *UploadCreationRequest, opts ...grpc.CallOption) (*UploadCreationResponse, error)
 	// GET
 	GetCreation(ctx context.Context, in *GetCreationRequest, opts ...grpc.CallOption) (*GetCreationResponse, error)
-	// 作者的作品
-	GetSpaceCreationList(ctx context.Context, in *GetPublicCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
-	// 收藏夹
-	GetCollectionCreationList(ctx context.Context, in *GetSpecificCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
-	// 推荐列表在creation处获取，但写入由interaction负责，不够则发布事件进行重新计算
-	// 主页
-	GetHomeCreationList(ctx context.Context, in *GetSpecificCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
-	// 相似列表在creation处获取，但写入由interaction负责，不存在则直接调取api然后直接返回，同时存入redis
-	// 作品的相似作品列表
-	GetSimilarCreationList(ctx context.Context, in *GetPublicCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
+	GetSpaceCreations(ctx context.Context, in *GetSpaceCreationsRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
+	GetCreationList(ctx context.Context, in *GetCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
+	GetPublicCreationList(ctx context.Context, in *GetCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
 	// DELETE
 	DeleteCreation(ctx context.Context, in *DeleteCreationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// UPDATE
@@ -84,40 +76,30 @@ func (c *creationServiceClient) GetCreation(ctx context.Context, in *GetCreation
 	return out, nil
 }
 
-func (c *creationServiceClient) GetSpaceCreationList(ctx context.Context, in *GetPublicCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error) {
+func (c *creationServiceClient) GetSpaceCreations(ctx context.Context, in *GetSpaceCreationsRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCreationListResponse)
-	err := c.cc.Invoke(ctx, CreationService_GetSpaceCreationList_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, CreationService_GetSpaceCreations_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *creationServiceClient) GetCollectionCreationList(ctx context.Context, in *GetSpecificCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error) {
+func (c *creationServiceClient) GetCreationList(ctx context.Context, in *GetCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCreationListResponse)
-	err := c.cc.Invoke(ctx, CreationService_GetCollectionCreationList_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, CreationService_GetCreationList_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *creationServiceClient) GetHomeCreationList(ctx context.Context, in *GetSpecificCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error) {
+func (c *creationServiceClient) GetPublicCreationList(ctx context.Context, in *GetCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCreationListResponse)
-	err := c.cc.Invoke(ctx, CreationService_GetHomeCreationList_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *creationServiceClient) GetSimilarCreationList(ctx context.Context, in *GetPublicCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetCreationListResponse)
-	err := c.cc.Invoke(ctx, CreationService_GetSimilarCreationList_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, CreationService_GetPublicCreationList_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -162,16 +144,9 @@ type CreationServiceServer interface {
 	UploadCreation(context.Context, *UploadCreationRequest) (*UploadCreationResponse, error)
 	// GET
 	GetCreation(context.Context, *GetCreationRequest) (*GetCreationResponse, error)
-	// 作者的作品
-	GetSpaceCreationList(context.Context, *GetPublicCreationListRequest) (*GetCreationListResponse, error)
-	// 收藏夹
-	GetCollectionCreationList(context.Context, *GetSpecificCreationListRequest) (*GetCreationListResponse, error)
-	// 推荐列表在creation处获取，但写入由interaction负责，不够则发布事件进行重新计算
-	// 主页
-	GetHomeCreationList(context.Context, *GetSpecificCreationListRequest) (*GetCreationListResponse, error)
-	// 相似列表在creation处获取，但写入由interaction负责，不存在则直接调取api然后直接返回，同时存入redis
-	// 作品的相似作品列表
-	GetSimilarCreationList(context.Context, *GetPublicCreationListRequest) (*GetCreationListResponse, error)
+	GetSpaceCreations(context.Context, *GetSpaceCreationsRequest) (*GetCreationListResponse, error)
+	GetCreationList(context.Context, *GetCreationListRequest) (*GetCreationListResponse, error)
+	GetPublicCreationList(context.Context, *GetCreationListRequest) (*GetCreationListResponse, error)
 	// DELETE
 	DeleteCreation(context.Context, *DeleteCreationRequest) (*emptypb.Empty, error)
 	// UPDATE
@@ -193,17 +168,14 @@ func (UnimplementedCreationServiceServer) UploadCreation(context.Context, *Uploa
 func (UnimplementedCreationServiceServer) GetCreation(context.Context, *GetCreationRequest) (*GetCreationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCreation not implemented")
 }
-func (UnimplementedCreationServiceServer) GetSpaceCreationList(context.Context, *GetPublicCreationListRequest) (*GetCreationListResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSpaceCreationList not implemented")
+func (UnimplementedCreationServiceServer) GetSpaceCreations(context.Context, *GetSpaceCreationsRequest) (*GetCreationListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSpaceCreations not implemented")
 }
-func (UnimplementedCreationServiceServer) GetCollectionCreationList(context.Context, *GetSpecificCreationListRequest) (*GetCreationListResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetCollectionCreationList not implemented")
+func (UnimplementedCreationServiceServer) GetCreationList(context.Context, *GetCreationListRequest) (*GetCreationListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCreationList not implemented")
 }
-func (UnimplementedCreationServiceServer) GetHomeCreationList(context.Context, *GetSpecificCreationListRequest) (*GetCreationListResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetHomeCreationList not implemented")
-}
-func (UnimplementedCreationServiceServer) GetSimilarCreationList(context.Context, *GetPublicCreationListRequest) (*GetCreationListResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetSimilarCreationList not implemented")
+func (UnimplementedCreationServiceServer) GetPublicCreationList(context.Context, *GetCreationListRequest) (*GetCreationListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPublicCreationList not implemented")
 }
 func (UnimplementedCreationServiceServer) DeleteCreation(context.Context, *DeleteCreationRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteCreation not implemented")
@@ -271,74 +243,56 @@ func _CreationService_GetCreation_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CreationService_GetSpaceCreationList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetPublicCreationListRequest)
+func _CreationService_GetSpaceCreations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSpaceCreationsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CreationServiceServer).GetSpaceCreationList(ctx, in)
+		return srv.(CreationServiceServer).GetSpaceCreations(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CreationService_GetSpaceCreationList_FullMethodName,
+		FullMethod: CreationService_GetSpaceCreations_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CreationServiceServer).GetSpaceCreationList(ctx, req.(*GetPublicCreationListRequest))
+		return srv.(CreationServiceServer).GetSpaceCreations(ctx, req.(*GetSpaceCreationsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CreationService_GetCollectionCreationList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSpecificCreationListRequest)
+func _CreationService_GetCreationList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCreationListRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CreationServiceServer).GetCollectionCreationList(ctx, in)
+		return srv.(CreationServiceServer).GetCreationList(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CreationService_GetCollectionCreationList_FullMethodName,
+		FullMethod: CreationService_GetCreationList_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CreationServiceServer).GetCollectionCreationList(ctx, req.(*GetSpecificCreationListRequest))
+		return srv.(CreationServiceServer).GetCreationList(ctx, req.(*GetCreationListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CreationService_GetHomeCreationList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetSpecificCreationListRequest)
+func _CreationService_GetPublicCreationList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCreationListRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CreationServiceServer).GetHomeCreationList(ctx, in)
+		return srv.(CreationServiceServer).GetPublicCreationList(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CreationService_GetHomeCreationList_FullMethodName,
+		FullMethod: CreationService_GetPublicCreationList_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CreationServiceServer).GetHomeCreationList(ctx, req.(*GetSpecificCreationListRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _CreationService_GetSimilarCreationList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetPublicCreationListRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(CreationServiceServer).GetSimilarCreationList(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: CreationService_GetSimilarCreationList_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CreationServiceServer).GetSimilarCreationList(ctx, req.(*GetPublicCreationListRequest))
+		return srv.(CreationServiceServer).GetPublicCreationList(ctx, req.(*GetCreationListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -413,20 +367,16 @@ var CreationService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CreationService_GetCreation_Handler,
 		},
 		{
-			MethodName: "GetSpaceCreationList",
-			Handler:    _CreationService_GetSpaceCreationList_Handler,
+			MethodName: "GetSpaceCreations",
+			Handler:    _CreationService_GetSpaceCreations_Handler,
 		},
 		{
-			MethodName: "GetCollectionCreationList",
-			Handler:    _CreationService_GetCollectionCreationList_Handler,
+			MethodName: "GetCreationList",
+			Handler:    _CreationService_GetCreationList_Handler,
 		},
 		{
-			MethodName: "GetHomeCreationList",
-			Handler:    _CreationService_GetHomeCreationList_Handler,
-		},
-		{
-			MethodName: "GetSimilarCreationList",
-			Handler:    _CreationService_GetSimilarCreationList_Handler,
+			MethodName: "GetPublicCreationList",
+			Handler:    _CreationService_GetPublicCreationList_Handler,
 		},
 		{
 			MethodName: "DeleteCreation",

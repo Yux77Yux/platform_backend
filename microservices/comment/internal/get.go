@@ -9,13 +9,37 @@ import (
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
+func GetComments(ctx context.Context, req *generated.GetCommentsRequest) (*generated.GetCommentsResponse, error) {
+	ids := req.GetIds()
+
+	comments, err := db.GetComments(ctx, ids)
+	if err != nil {
+		return &generated.GetCommentsResponse{
+			Msg: &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    "500",
+				Message: err.Error(),
+				Details: err.Error(),
+			},
+		}, nil
+	}
+
+	return &generated.GetCommentsResponse{
+		Comments: comments,
+		Msg: &common.ApiResponse{
+			Status: common.ApiResponse_SUCCESS,
+			Code:   "200",
+		},
+	}, nil
+}
+
 // 第一次请求
-func InitalComments(ctx context.Context, req *generated.InitalCommentsRequest) (*generated.InitalCommentsResponse, error) {
+func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest) (*generated.InitialCommentsResponse, error) {
 	creationId := req.GetCreationId()
 
 	area, comments, err := db.GetFirstCommentsInTransaction(ctx, creationId)
 	if err != nil {
-		return &generated.InitalCommentsResponse{
+		return &generated.InitialCommentsResponse{
 			Msg: &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,
 				Code:    "404",
@@ -25,7 +49,7 @@ func InitalComments(ctx context.Context, req *generated.InitalCommentsRequest) (
 		}, nil
 	}
 
-	return &generated.InitalCommentsResponse{
+	return &generated.InitialCommentsResponse{
 		Comments:    comments,
 		CommentArea: area,
 		Msg: &common.ApiResponse{

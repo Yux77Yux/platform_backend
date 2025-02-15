@@ -370,6 +370,59 @@ func UserGetInfoInTransaction(ctx context.Context, id int64, fields []string) (m
 	return result, nil
 }
 
+func GetUsers(ctx context.Context, userIds []int64) ([]*common.UserCreationComment, error) {
+	count := len(userIds)
+	sqlStr := make([]string, count)
+	values := make([]any, count)
+	users := make([]*common.UserCreationComment, 0, count)
+	for i := 0; i < count; i++ {
+		sqlStr[i] = "?"
+		values[i] = userIds[i]
+	}
+
+	query := fmt.Sprintf(`
+		SELECT 
+			id,
+			name,
+			avatar,
+			bio
+		FROM 
+			db_user_1.User
+		WHERE IN (%s)`, strings.Join(sqlStr, ","))
+
+	rows, err := db.QueryContext(ctx, query, values...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id int64
+		var name, avatar, bio string
+
+		if err := rows.Scan(&id, &name, &avatar, &bio); err != nil {
+			log.Printf("error: row Scan %v", err) // 处理扫描错误
+			return nil, err
+		}
+		users = append(users, &common.UserCreationComment{
+			UserDefault: &common.UserDefault{
+				UserId:   id,
+				UserName: name,
+			},
+			UserAvatar: avatar,
+			UserBio:    bio,
+		})
+	}
+
+	// 检查是否有错误发生在遍历过程中
+	if err := rows.Err(); err != nil {
+		log.Printf("error: rows iteration %v", err)
+		return nil, err
+	}
+
+	return users, nil
+}
+
 func GetFolloweers(ctx context.Context, userId int64, page int32) ([]*common.UserCreationComment, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
