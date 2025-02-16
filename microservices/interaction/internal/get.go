@@ -2,35 +2,52 @@ package internal
 
 import (
 	"context"
+	"log"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
-
-	// mq "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
-	recommend "github.com/Yux77Yux/platform_backend/microservices/interaction/recommend"
-	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
+
+	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
 )
 
 func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequest) (*generated.GetCreationInteractionResponse, error) {
 	var response = new(generated.GetCreationInteractionResponse)
+	token := req.GetAccessToken().GetValue()
+	pass, userId, err := auth.Auth("get", "interaction", token)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Code:    "500",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if !pass {
+		response.Msg = &common.ApiResponse{
+			Code:   "403",
+			Status: common.ApiResponse_ERROR,
+		}
+		return response, nil
+	}
+
 	base := req.GetBase()
+	base.UserId = userId
 	interaction, err := cache.GetInteraction(ctx, base)
 	if err != nil {
-		response.Interaction = interaction
 		response.Msg = &common.ApiResponse{
 			Status: common.ApiResponse_ERROR,
 			Code:   "500",
 		}
-		interaction, err := db.GetActionTag(ctx, base)
+		interaction, err = db.GetActionTag(ctx, base)
 		if err != nil {
 			return response, nil
 		}
-
-		response.Interaction = interaction
 	}
 
+	response.Interaction = interaction
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",
@@ -41,24 +58,7 @@ func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequ
 func GetCollections(ctx context.Context, req *generated.GetCollectionsRequest) (*generated.GetInteractionsResponse, error) {
 	var response = new(generated.GetInteractionsResponse)
 	pageNum := req.GetPage()
-	token := req.GetAccessToken().GetValue()
-	pass, userId, err := auth.Auth("get", "interaction", token)
-	if err != nil {
-		return &generated.GetInteractionsResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_FAILED,
-				Code:   "500",
-			},
-		}, err
-	}
-	if !pass {
-		return &generated.GetInteractionsResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_ERROR,
-				Code:   "403",
-			},
-		}, nil
-	}
+	userId := req.GetUserId()
 
 	interactions, err := cache.GetCollections(ctx, userId, pageNum)
 	if err != nil {
@@ -88,24 +88,7 @@ func GetCollections(ctx context.Context, req *generated.GetCollectionsRequest) (
 func GetHistories(ctx context.Context, req *generated.GetHistoriesRequest) (*generated.GetInteractionsResponse, error) {
 	var response = new(generated.GetInteractionsResponse)
 	pageNum := req.GetPage()
-	token := req.GetAccessToken().GetValue()
-	pass, userId, err := auth.Auth("get", "interaction", token)
-	if err != nil {
-		return &generated.GetInteractionsResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_FAILED,
-				Code:   "500",
-			},
-		}, err
-	}
-	if !pass {
-		return &generated.GetInteractionsResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_ERROR,
-				Code:   "403",
-			},
-		}, nil
-	}
+	userId := req.GetUserId()
 
 	interactions, err := cache.GetHistories(ctx, userId, pageNum)
 	if err != nil {
@@ -130,37 +113,63 @@ func GetHistories(ctx context.Context, req *generated.GetHistoriesRequest) (*gen
 	return response, nil
 }
 
-func GetRecommend(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
+func GetRecommendBaseUser(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
 	var response = new(generated.GetRecommendResponse)
-	// token := req.GetAccessToken().GetValue()
-	// pass, userId, err := auth.Auth("get", "interaction", token)
-	// if err != nil {
-	// 	return &generated.GetRecommendResponse{
-	// 		Msg: &common.ApiResponse{
-	// 			Status: common.ApiResponse_FAILED,
-	// 			Code:   "500",
-	// 		},
-	// 	}, err
-	// }
-	// if !pass {
-	// 	return &generated.GetRecommendResponse{
-	// 		Msg: &common.ApiResponse{
-	// 			Status: common.ApiResponse_ERROR,
-	// 			Code:   "403",
-	// 		},
-	// 	}, nil
-	// }
 
 	userId := req.GetId()
-	interactions, err := recommend.Recommend(userId)
+	interactions, count, err := cache.GetRecommendBaseUser(ctx, userId)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status: common.ApiResponse_ERROR,
 			Code:   "500",
 		}
+		return response, err
 	}
-	response.Creations = interactions
 
+	go func() {
+		if count <= 17 {
+			err = messaging.SendMessage(messaging.ComputeUser, messaging.ComputeUser, &common.UserDefault{
+				UserId: userId,
+			})
+			if err != nil {
+				log.Printf("error:GetRecommendBaseUser SendMessage %v", err)
+			}
+		}
+	}()
+
+	response.Creations = interactions
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
+}
+
+func GetRecommendBaseCreation(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
+	var response = new(generated.GetRecommendResponse)
+
+	id := req.GetId()
+	creations, reset, err := cache.GetRecommendBaseItem(ctx, id)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "500",
+		}
+		return response, err
+	}
+
+	go func() {
+		if reset {
+			err = messaging.SendMessage(messaging.ComputeSimilarCreation, messaging.ComputeSimilarCreation, &common.CreationId{
+				Id: id,
+			})
+			if err != nil {
+				log.Printf("error:GetRecommendBaseItem SendMessage %v", err)
+			}
+		}
+	}()
+
+	response.Creations = creations
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",

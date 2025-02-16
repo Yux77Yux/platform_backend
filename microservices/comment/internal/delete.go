@@ -24,7 +24,7 @@ func DeleteComment(req *generated.DeleteCommentRequest) error {
 		CommentId:  req.GetCommentId(),
 		CreationId: req.GetCreationId(),
 	}
-	err = messaging.SendMessage("DeleteComment", "DeleteComment", afterAuth)
+	err = messaging.SendMessage(messaging.DeleteComment, messaging.DeleteComment, afterAuth)
 	if err != nil {
 		err = fmt.Errorf("error: SendMessage DeleteComment error %w", err)
 		return err

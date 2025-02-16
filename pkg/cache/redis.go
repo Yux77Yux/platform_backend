@@ -446,6 +446,15 @@ func (r *RedisClient) GetMembersSet(ctx context.Context, kind string, unique str
 	return members, nil
 }
 
+func (r *RedisClient) GetPopNSet(ctx context.Context, kind string, unique string, count int64) ([]string, error) {
+	key := fmt.Sprintf("Set_%s_%s", kind, unique)
+	members, err := r.redisClient.SPopN(ctx, key, count).Result()
+	if err != nil {
+		return nil, err
+	}
+	return members, nil
+}
+
 // ZSet
 
 // 没做 ZInter交集 ZDiff差集 ZPopMax弹出最高分数成员 ZPopMin弹出最低分数成员 ZCard获取成员总数

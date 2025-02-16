@@ -26,7 +26,17 @@ func Space(ctx context.Context, req *generated.SpaceRequest) (*generated.SpaceRe
 	}
 	user, err := user_client.GetUser(ctx, userId)
 	if err != nil {
-		response.Msg = user.GetMsg()
+		var msg *common.ApiResponse
+		if user != nil {
+			msg = user.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
@@ -44,7 +54,17 @@ func Space(ctx context.Context, req *generated.SpaceRequest) (*generated.SpaceRe
 		UserId: userId,
 	})
 	if err != nil {
-		response.Msg = user.GetMsg()
+		var msg *common.ApiResponse
+		if creation_list != nil {
+			msg = creation_list.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/aggregator"
-	"github.com/Yux77Yux/platform_backend/generated/comment"
+	comment "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	creation "github.com/Yux77Yux/platform_backend/generated/creation"
 	interaction "github.com/Yux77Yux/platform_backend/generated/interaction"
@@ -30,7 +30,17 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 		CreationId: id,
 	})
 	if err != nil {
-		response.Msg = creationResponse.GetMsg()
+		var msg *common.ApiResponse
+		if creationResponse != nil {
+			msg = creationResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
@@ -48,7 +58,17 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 	}
 	userResponse, err := user_client.GetUser(ctx, userId)
 	if err != nil {
-		response.Msg = userResponse.GetMsg()
+		var msg *common.ApiResponse
+		if userResponse != nil {
+			msg = userResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
@@ -91,7 +111,17 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 		Id: id,
 	})
 	if err != nil {
-		response.Msg = interactionResponse.GetMsg()
+		var msg *common.ApiResponse
+		if interactionResponse != nil {
+			msg = interactionResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 	creationIds := interactionResponse.GetCreations()
@@ -110,7 +140,17 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 		Ids: creationIds,
 	})
 	if err != nil {
-		response.Msg = creationResponse.GetMsg()
+		var msg *common.ApiResponse
+		if creationResponse != nil {
+			msg = creationResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
@@ -134,31 +174,40 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 	}
 	userResponse, err := user_client.GetUsers(ctx, userIds)
 	if err != nil {
-		response.Msg = userResponse.GetMsg()
+		var msg *common.ApiResponse
+		if userResponse != nil {
+			msg = userResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
 	// 构建 userId -> 用户信息的映射表
 	users := userResponse.GetUsers()
 	limit := len(users)
-	userMap := make(map[int64]*common.UserCreationComment, limit)
+	userMap := make(map[int64]*common.UserDefault, limit)
 	for _, user := range users {
-		userMap[user.GetUserDefault().GetUserId()] = user
+		userMap[user.GetUserDefault().GetUserId()] = user.GetUserDefault()
 	}
 
 	cards := make([]*generated.CreationCard, 0, length)
 	for _, info := range creationInfos {
 		creation := info.GetCreation()
 		authorId := creation.GetBaseInfo().GetAuthorId()
-
-		if user, exists := userMap[authorId]; exists {
-			card := &generated.CreationCard{
-				Creation:           creation,
-				User:               user,
-				CreationEngagement: info.GetCreationEngagement(),
-			}
-			cards = append(cards, card)
+		card := &generated.CreationCard{
+			Creation:           creation,
+			CreationEngagement: info.GetCreationEngagement(),
 		}
+		if user, exists := userMap[authorId]; exists {
+			card.User = user
+		}
+		cards = append(cards, card)
 	}
 
 	response.Cards = cards
@@ -188,7 +237,17 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 		CreationId: creationId,
 	})
 	if err != nil {
-		response.Msg = commentsResponse.GetMsg()
+		var msg *common.ApiResponse
+		if commentsResponse != nil {
+			msg = commentsResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
@@ -233,7 +292,17 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 		Page:       request.GetPage(),
 	})
 	if err != nil {
-		response.Msg = commentsResponse.GetMsg()
+		var msg *common.ApiResponse
+		if commentsResponse != nil {
+			msg = commentsResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
@@ -278,7 +347,17 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 		Page:       request.GetPage(),
 	})
 	if err != nil {
-		response.Msg = commentsResponse.GetMsg()
+		var msg *common.ApiResponse
+		if commentsResponse != nil {
+			msg = commentsResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 

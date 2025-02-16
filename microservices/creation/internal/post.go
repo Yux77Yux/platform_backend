@@ -30,9 +30,9 @@ func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCrea
 
 	// 异步处理
 	if req.GetBaseInfo().GetStatus() == generated.CreationStatus_DRAFT {
-		messaging.SendMessage("draftCreation", "draftCreation", req.GetBaseInfo())
+		messaging.SendMessage(messaging.DraftCreation, messaging.DraftCreation, req.GetBaseInfo())
 	} else if req.GetBaseInfo().GetStatus() == generated.CreationStatus_PENDING {
-		messaging.SendMessage("pendingCreation", "pendingCreation", req.GetBaseInfo())
+		messaging.SendMessage(messaging.PendingCreation, messaging.PendingCreation, req.GetBaseInfo())
 	}
 
 	return &generated.UploadCreationResponse{

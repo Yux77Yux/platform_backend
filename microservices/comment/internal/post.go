@@ -33,7 +33,7 @@ func PublishComment(req *generated.PublishCommentRequest) (*generated.PublishCom
 	comment.UserId = user_id
 
 	// 异步处理
-	err = messaging.SendMessage("PublishComment", "PublishComment", comment)
+	err = messaging.SendMessage(messaging.PublishComment, messaging.PublishComment, comment)
 	if err != nil {
 		err = fmt.Errorf("error: SendMessage PublishComment error %w", err)
 		response.Msg = &common.ApiResponse{

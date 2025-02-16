@@ -46,15 +46,29 @@ func (s *Server) GetHistories(ctx context.Context, req *generated.GetHistoriesRe
 	log.Println("info: GetHistories success")
 	return response, nil
 }
-func (s *Server) GetRecommend(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
-	log.Println("info: GetRecommend service start")
 
-	response, err := internal.GetRecommend(ctx, req)
+func (s *Server) GetRecommendBaseUser(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
+	log.Println("info: GetRecommendBaseUser service start")
+
+	response, err := internal.GetRecommendBaseUser(ctx, req)
+	if err != nil {
+		log.Println("error: GetRecommendBaseUser fail: ", err)
+		return response, nil
+	}
+
+	log.Println("info: GetRecommendBaseUser success")
+	return response, nil
+}
+
+func (s *Server) GetRecommendBaseCreation(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
+	log.Println("info: GetRecommendBaseCreation service start")
+
+	response, err := internal.GetRecommendBaseCreation(ctx, req)
 	if err != nil {
 		log.Println("error: GetHistories fail: ", err)
 		return response, nil
 	}
 
-	log.Println("info: GetHistories success")
+	log.Println("info: GetRecommendBaseCreation success")
 	return response, nil
 }

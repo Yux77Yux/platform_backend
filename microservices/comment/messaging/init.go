@@ -7,6 +7,11 @@ import (
 	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue"
 )
 
+const (
+	PublishComment = "PublishComment"
+	DeleteComment  = "DeleteComment"
+)
+
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
@@ -49,10 +54,10 @@ func Init() {
 
 		switch exchange {
 		// 不同的exchange使用不同函数
-		case "PublishComment":
-			go ListenToQueue(exchange, "PublishComment", "PublishComment", JoinCommentProcessor)
-		case "DeleteComment":
-			go ListenToQueue(exchange, "DeleteComment", "DeleteComment", DeleteCommentProcessor)
+		case PublishComment:
+			go ListenToQueue(exchange, PublishComment, PublishComment, JoinCommentProcessor)
+		case DeleteComment:
+			go ListenToQueue(exchange, DeleteComment, DeleteComment, DeleteCommentProcessor)
 		}
 	}
 }

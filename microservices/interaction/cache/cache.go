@@ -249,10 +249,10 @@ func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction)
 
 		action_tag := int32(1)
 		if likeScore != -1 {
-			action_tag = action_tag | 2
+			action_tag |= 2
 		}
 		if collectionScore != -1 {
-			action_tag = action_tag | 4
+			action_tag |= 4
 		}
 		resultCh <- &ActionResult{
 			action_tag: action_tag,
@@ -271,6 +271,81 @@ func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction)
 			ActionTag: result.action_tag,
 		}, nil
 	}
+}
+
+// RemSet
+// CountSet
+// GetMembersSet
+
+func GetRecommendBaseUser(ctx context.Context, id int64) ([]int64, int64, error) {
+	const popCount = 16
+	pipe := CacheClient.Pipeline()
+
+	sliceCmd := pipe.SPopN(ctx, fmt.Sprintf("Set_RecommendBaseUser_%d", id), popCount)
+	intCmd := pipe.SCard(ctx, fmt.Sprintf("Set_RecommendBaseUser_%d", id))
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return nil, -1, err
+	}
+
+	strs, err := sliceCmd.Result()
+	if err != nil {
+		return nil, -1, err
+	}
+	count, err := intCmd.Result()
+	if err != nil {
+		return nil, -1, err
+	}
+
+	ids := make([]int64, len(strs))
+	for i, str := range strs {
+		creationId, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return nil, -1, err
+		}
+		ids[i] = creationId
+	}
+
+	return ids, count, nil
+}
+
+func GetRecommendBaseItem(ctx context.Context, id int64) ([]int64, bool, error) {
+	const popCount = 50
+	pipe := CacheClient.Pipeline()
+
+	sliceCmd := pipe.SRandMemberN(ctx, fmt.Sprintf("Set_RecommendBaseItem_%d", id), popCount)
+	floatCmd := pipe.ZScore(ctx, "Set_RecommendBaseItem_Creation", strconv.FormatInt(id, 10))
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+
+	strs, err := sliceCmd.Result()
+	if err != nil {
+		return nil, false, err
+	}
+
+	score, err := floatCmd.Result()
+	if err != nil {
+		return nil, false, err
+	}
+
+	// 获取当前时间戳（秒）
+	now := time.Now().Unix()
+	reset := now-int64(score) >= 86400
+
+	ids := make([]int64, len(strs))
+	for i, str := range strs {
+		creationId, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			return nil, false, err
+		}
+		ids[i] = creationId
+	}
+
+	return ids, reset, nil
 }
 
 // 查看是否过期，是否重新计算
@@ -299,10 +374,18 @@ func SetRecommendBaseItem(id int64, ids []int64) error {
 		values[i] = val
 	}
 
-	err := CacheClient.AddToSet(ctx, "RecommendBaseItem", strconv.FormatInt(id, 10), values...)
+	pipe := CacheClient.Pipeline()
+	pipe.SAdd(ctx, fmt.Sprintf("Set_RecommendBaseItem_%d", id), values...)
+	pipe.ZAdd(ctx, "ZSet_RecommendBaseItem_Creation", &redis.Z{
+		Member: id,
+		Score:  float64(time.Now().Unix()),
+	})
+
+	_, err := pipe.Exec(ctx)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

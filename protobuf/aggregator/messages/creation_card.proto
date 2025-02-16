@@ -5,11 +5,14 @@ package aggregator.messages;
 option go_package = "github.com/Yux77Yux/platform_backend/generated/aggregator";
 
 import "creation/messages/creation.proto";
-import "common/user_creation_comment.proto";
+import "common/user_default.proto";
+
+import "google/protobuf/timestamp.proto";
 
 message CreationCard {
   creation.messages.Creation creation = 1;
   creation.messages.CreationEngagement creation_engagement = 2;
-
-  common.UserCreationComment user = 3;
+  
+  common.UserDefault user = 3;
+  google.protobuf.Timestamp time_at = 4;
 }

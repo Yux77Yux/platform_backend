@@ -94,7 +94,17 @@ func GetUserReviews(ctx context.Context, req *generated.GetReviewsRequest) (*gen
 		ReviewerId: reviewerId,
 	})
 	if err != nil {
-		response.Msg = reviewResponse.GetMsg()
+		var msg *common.ApiResponse
+		if reviewResponse != nil {
+			msg = reviewResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
@@ -152,7 +162,17 @@ func GetNewUserReviews(ctx context.Context, req *generated.GetNewReviewsRequest)
 		ReviewerId: reviewerId,
 	})
 	if err != nil {
-		response.Msg = reviewResponse.GetMsg()
+		var msg *common.ApiResponse
+		if reviewResponse != nil {
+			msg = reviewResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
@@ -256,7 +276,17 @@ func GetCreationReviews(ctx context.Context, req *generated.GetReviewsRequest) (
 		ReviewerId: reviewerId,
 	})
 	if err != nil {
-		response.Msg = reviewResponse.GetMsg()
+		var msg *common.ApiResponse
+		if reviewResponse != nil {
+			msg = reviewResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
@@ -314,7 +344,17 @@ func GetNewCreationReviews(ctx context.Context, req *generated.GetNewReviewsRequ
 		ReviewerId: reviewerId,
 	})
 	if err != nil {
-		response.Msg = reviewResponse.GetMsg()
+		var msg *common.ApiResponse
+		if reviewResponse != nil {
+			msg = reviewResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
@@ -418,7 +458,17 @@ func GetCommentReviews(ctx context.Context, req *generated.GetReviewsRequest) (*
 		ReviewerId: reviewerId,
 	})
 	if err != nil {
-		response.Msg = reviewResponse.GetMsg()
+		var msg *common.ApiResponse
+		if reviewResponse != nil {
+			msg = reviewResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 
@@ -476,7 +526,17 @@ func GetNewCommentReviews(ctx context.Context, req *generated.GetNewReviewsReque
 		ReviewerId: reviewerId,
 	})
 	if err != nil {
-		response.Msg = reviewResponse.GetMsg()
+		var msg *common.ApiResponse
+		if reviewResponse != nil {
+			msg = reviewResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
 		return response, err
 	}
 

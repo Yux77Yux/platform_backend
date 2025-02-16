@@ -13,10 +13,6 @@ const (
 	UpdateCreation       = "UpdateCreation"
 	StoreCreationInfo    = "StoreCreationInfo"
 	UpdateCreationStatus = "UpdateCreationStatus"
-
-	// 发布至其他服务
-	ComputeSimilarCreation = "ComputeSimilarCreation"
-	ComputeUser            = "ComputeUser"
 )
 
 var (

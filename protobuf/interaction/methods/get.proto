@@ -30,12 +30,12 @@ message GetCreationInteractionResponse {
 }
 
 message GetHistoriesRequest {
-  common.AccessToken access_token = 1;
+  int64 user_id = 1;
   int32 page = 2;
 }
 
 message GetCollectionsRequest {
-  common.AccessToken access_token = 1;
+  int64 user_id = 1;
   int32 page = 2; 
 }
 

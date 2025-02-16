@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"fmt"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/aggregator"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
@@ -10,41 +9,58 @@ import (
 )
 
 func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginResponse, error) {
+	response := new(generated.LoginResponse)
 	auth_client, err := client.NewAuthClient()
 	if err != nil {
-		return nil, fmt.Errorf("error: auth client %v", err)
+		response.Msg = &common.ApiResponse{
+			Code:    "500",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
 	}
 	user_client, err := client.NewUserClient()
 	if err != nil {
-		return nil, fmt.Errorf("error: user client %v", err)
+		response.Msg = &common.ApiResponse{
+			Code:    "500",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
 	}
 
 	// 登录服务，拿用户信息
 	user_response, err := user_client.Login(ctx, req.GetUserCredentials())
 	if err != nil {
-		return &generated.LoginResponse{
-			Msg: user_response.GetMsg(),
-		}, fmt.Errorf("error: user client %v", err)
-	}
-
-	// 检查是否有错
-	msg := user_response.GetMsg()
-	if msg.GetStatus() == common.ApiResponse_ERROR || msg.GetStatus() == common.ApiResponse_FAILED {
-		return &generated.LoginResponse{Msg: msg}, fmt.Errorf("error: error of other cause in user service")
+		var msg *common.ApiResponse
+		if user_response != nil {
+			msg = user_response.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
+		return response, err
 	}
 
 	// 传递user_id至Auth Service 生成token并返回
 	auth_response, err := auth_client.Login(ctx, user_response.GetUserLogin())
 	if err != nil {
-		return &generated.LoginResponse{Msg: auth_response.GetMsg()}, fmt.Errorf("error: auth client %v", err)
-	}
-
-	// 检查是否有错
-	msg = auth_response.GetMsg()
-	if msg.GetStatus() == common.ApiResponse_ERROR || msg.GetStatus() == common.ApiResponse_FAILED {
-		return &generated.LoginResponse{
-			Msg: msg,
-		}, fmt.Errorf("error: error of other cause in auth service")
+		var msg *common.ApiResponse
+		if auth_response != nil {
+			msg = auth_response.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
+		return response, err
 	}
 
 	// 组装返回至前端

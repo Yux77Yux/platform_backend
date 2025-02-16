@@ -11,7 +11,7 @@ var (
 	connStr         string
 	messageQueue    MessagequeueInterface
 	ExchangesConfig = map[string]string{
-		"register": "direct",
+		// : "direct",
 		// Add more exchanges here
 	}
 )

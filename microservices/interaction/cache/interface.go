@@ -12,6 +12,7 @@ type CacheInterface interface {
 
 	ScanSet(ctx context.Context, kind string, fliter string, cursor uint64, count int64) ([]string, uint64, error)
 	AddToSet(ctx context.Context, kind string, unique string, values ...interface{}) error
+	GetPopNSet(ctx context.Context, kind string, unique string, count int64) ([]string, error)
 	RemSet(ctx context.Context, kind string, unique string, values ...interface{}) error
 	ExistsInSet(ctx context.Context, kind string, unique string, value interface{}) (bool, error)
 	CountSet(ctx context.Context, kind string, unique string) (int64, error)
