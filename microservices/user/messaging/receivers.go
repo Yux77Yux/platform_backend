@@ -175,10 +175,13 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 
 		log.Printf("Map UserInfo %v", result)
 		// 调用函数，传递转换后的 map
-		user_info = tools.MapUserByString(result)
+		user_info, err = tools.MapUserByString(result)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		// redis未存有，则从数据库取信息
-		result, err := db.UserGetInfoInTransaction(ctx, user_id, nil)
+		result, err := db.UserGetInfoInTransaction(ctx, user_id)
 		if err != nil {
 			return &generated.GetUserResponse{
 				Msg: &common.ApiResponse{
@@ -201,8 +204,7 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 			}, nil
 		}
 
-		user_info = tools.MapUser(result)
-		go SendMessage("storeUser", "storeUser", user_info)
+		go SendMessage("storeUser", "storeUser", result)
 	}
 
 	user_info.UserDefault.UserId = user_id

@@ -49,8 +49,6 @@ CREATE TABLE IF NOT EXISTS Follow (
     views INT DEFAULT 0,                            -- 访问次数
     
     PRIMARY KEY (follower_id,followee_id),          -- follower_id作为主键
-    INDEX idx_follower_views (follower_id,views),
-    INDEX idx_followee_views (followee_id,views),
     INDEX idx_follower_created (follower_id,created_at),
     INDEX idx_followee_created (followee_id,created_at)
 );

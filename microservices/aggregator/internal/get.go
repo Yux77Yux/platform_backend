@@ -60,11 +60,25 @@ func HomePage(ctx context.Context, req *generated.HomeRequest) (*generated.GetCa
 		response.Msg = msg
 		return response, err
 	}
+	if interactionResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = interactionResponse.Msg
+		return response, err
+	}
+
 	creationIds := interactionResponse.GetCreations()
 	userMap, creationInfos, err := getUserMap(ctx, creationIds)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Code:    "500",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if len(userMap) <= 0 || len(creationInfos) <= 0 {
+		err := fmt.Errorf("error: no member in data")
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
 			Status:  common.ApiResponse_ERROR,
 			Details: err.Error(),
 		}
@@ -143,9 +157,22 @@ func Collections(ctx context.Context, req *generated.CollectionsRequest) (*gener
 		response.Msg = msg
 		return response, err
 	}
+	if interactionResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = interactionResponse.Msg
+		return response, err
+	}
 
 	interactions := interactionResponse.GetAnyInteraction().GetAnyInterction()
 	length := len(interactions)
+	if length <= 0 {
+		err := fmt.Errorf("error: no interactions")
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
+	}
 	creationIds := make([]int64, length)
 	creationMap := make(map[int64]*creation.CreationInfo)
 	for i, _interaction := range interactions {
@@ -165,6 +192,15 @@ func Collections(ctx context.Context, req *generated.CollectionsRequest) (*gener
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Code:    "500",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if len(userMap) <= 0 || len(creationInfos) <= 0 {
+		err := fmt.Errorf("error: no member in data")
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
 			Status:  common.ApiResponse_ERROR,
 			Details: err.Error(),
 		}
@@ -253,10 +289,23 @@ func History(ctx context.Context, req *generated.HistoryRequest) (*generated.Get
 		response.Msg = msg
 		return response, err
 	}
+	if interactionResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = interactionResponse.Msg
+		return response, err
+	}
 
 	interactions := interactionResponse.GetAnyInteraction().GetAnyInterction()
 
 	length := len(interactions)
+	if length <= 0 {
+		err := fmt.Errorf("error: no interactions")
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
+	}
 	creationIds := make([]int64, length)
 	creationMap := make(map[int64]*creation.CreationInfo)
 	for i, _interaction := range interactions {
@@ -276,6 +325,15 @@ func History(ctx context.Context, req *generated.HistoryRequest) (*generated.Get
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Code:    "500",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if len(userMap) <= 0 || len(creationInfos) <= 0 {
+		err := fmt.Errorf("error: no member in data")
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
 			Status:  common.ApiResponse_ERROR,
 			Details: err.Error(),
 		}
@@ -328,10 +386,16 @@ func getUserMap(ctx context.Context, creationIds []int64) (map[int64]*common.Use
 	if err != nil {
 		return nil, nil, err
 	}
+	if creationResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		return nil, nil, fmt.Errorf("error: %s", creationResponse.Msg.GetDetails())
+	}
 
 	creationInfos := creationResponse.GetCreationInfoGroup()
 
 	length := len(creationInfos)
+	if length <= 0 {
+		return nil, nil, nil
+	}
 	userIds := make([]int64, length)
 	for i, info := range creationInfos {
 		userIds[i] = info.GetCreation().GetBaseInfo().GetAuthorId()
@@ -346,9 +410,15 @@ func getUserMap(ctx context.Context, creationIds []int64) (map[int64]*common.Use
 	if err != nil {
 		return nil, nil, err
 	}
+	if userResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		return nil, nil, fmt.Errorf("%s", userResponse.Msg.GetDetails())
+	}
 
 	// 构建 userId -> 用户信息的映射表
 	users := userResponse.GetUsers()
+	if len(users) <= 0 {
+		return nil, nil, nil
+	}
 	limit := len(users)
 	userMap := make(map[int64]*common.UserDefault, limit)
 	for _, user := range users {

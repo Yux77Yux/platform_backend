@@ -1,4 +1,4 @@
-package main
+package other
 
 import (
 	"encoding/json"
@@ -19,7 +19,7 @@ const (
 	PrefixName   = "Media/"
 )
 
-func main() {
+func Run() {
 	Endpoint := "https://oss-cn-guangzhou.aliyuncs.com"
 	Region := "cn-guangzhou"
 	// 初始化OSS客户端

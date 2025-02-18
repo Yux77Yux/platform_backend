@@ -244,6 +244,9 @@ func StoreUserInfo(users []*generated.User) error {
 					"user_bday", userBday,
 					"user_created_at", user.GetUserCreatedAt().AsTime(),
 					"user_updated_at", user.GetUserUpdatedAt().AsTime(),
+
+					"followers", 0,
+					"followees", 0,
 				)
 			}
 			_, err := pipe.Exec(ctx)

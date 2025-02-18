@@ -108,7 +108,7 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 		}
 	} else {
 		// redis未存有，则从数据库取信息
-		result, err := db.UserGetInfoInTransaction(ctx, user_id, nil)
+		result, err := db.UserGetInfoInTransaction(ctx, user_id)
 		if err != nil {
 			return &generated.LoginResponse{
 				Msg: &common.ApiResponse{
@@ -133,10 +133,10 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 
 		user_info = &generated.UserLogin{
 			UserDefault: &common.UserDefault{
-				UserId:   result["id"].(int64),
-				UserName: result["name"].(string),
+				UserId:   result.UserDefault.GetUserId(),
+				UserName: result.UserDefault.GetUserName(),
 			},
-			UserAvatar: result["avatar"].(string),
+			UserAvatar: result.GetUserAvatar(),
 			UserRole:   user_part_info.GetUserRole(),
 		}
 

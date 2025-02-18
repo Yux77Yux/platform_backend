@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package creation.event;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/creation/event;";
+
+enum Exchange {
+  EXCHANGE_DRAFT_CREATION = 0;
+  EXCHANGE_PENDING_CREATION = 1;
+  EXCHANGE_UPDATE_CREATION = 2;
+  EXCHANGE_STORE_CREATION_INFO = 3;
+  EXCHANGE_UPDATE_CREATION_STATUS = 4;
+}
+
+enum RoutingKey {
+  KEY_DRAFT_CREATION = 0;
+  KEY_PENDING_CREATION = 1;
+  KEY_UPDATE_CREATION = 2;
+  KEY_STORE_CREATION_INFO = 3;
+  KEY_UPDATE_CREATION_STATUS = 4;
+}

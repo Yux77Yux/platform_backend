@@ -23,6 +23,9 @@ message User {
   google.protobuf.Timestamp user_bday = 7;
   google.protobuf.Timestamp user_created_at = 8;
   google.protobuf.Timestamp user_updated_at = 9;
+
+  int32 followers = 10;   // 粉丝数量
+  int32 followees = 11;   // 关注数量
 }
 
 message AnyUser {

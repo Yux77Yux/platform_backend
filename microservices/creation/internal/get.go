@@ -10,6 +10,7 @@ import (
 	cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
 	"github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
+	"github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 )
 
 func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {
@@ -121,8 +122,14 @@ func GetPublicCreationList(ctx context.Context, req *generated.GetCreationListRe
 func GetSpaceCreations(ctx context.Context, req *generated.GetSpaceCreationsRequest) (*generated.GetCreationListResponse, error) {
 	response := new(generated.GetCreationListResponse)
 	id := req.GetUserId()
+	page := req.GetPage()
+	if page == 0 {
+		page = 1
+	}
+	byWhat := req.GetByWhat()
+	typeStr := tools.GetSpaceCreationCountType(byWhat)
 
-	ids, err := cache.GetSpaceCreationList(ctx, id)
+	ids, count, err := cache.GetSpaceCreationList(ctx, id, page, typeStr)
 	if err != nil {
 		log.Printf("error: cache GetSpaceCreationList %v", err)
 		response.Msg = &common.ApiResponse{
@@ -144,6 +151,7 @@ func GetSpaceCreations(ctx context.Context, req *generated.GetSpaceCreationsRequ
 	}
 
 	response.CreationInfoGroup = infos
+	response.Count = count
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",

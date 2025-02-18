@@ -19,8 +19,6 @@ static_resources:
                 stat_prefix: ingress_http
                 codec_type: AUTO
                 http_filters:
-                  # 难度太高，先去掉
-                  # 改为简单的jwt生成
                   # - name: envoy.filters.http.ext_authz
                   #   typed_config:
                   #     "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
@@ -38,6 +36,9 @@ static_resources:
                       services:
                         - "auth.AuthService"
                         - "user.UserService"
+                        - "interaction.InteractionService"
+                        - "comment.CommentService"
+                        - "review.ReviewService"
                         - "creation.CreationService"
                         - "aggregator.AggregatorService"
                       print_options:
@@ -61,7 +62,7 @@ static_resources:
                             - safe_regex:
                                 regex: \*
                           allow_methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-                          allow_headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,Access-Control-Allow-Origin,Cookie"
+                          allow_headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,Access-Control-Allow-Origin,Cookie,x-forwarded-for"
                           allow_credentials: true
                           max_age: "1728000"
                       routes:
@@ -82,6 +83,10 @@ static_resources:
                             prefix: "/aggregator.AggregatorService" # 登录 路径
                           route:
                             cluster: aggregator_service # 指定 gRPC aggregator 集群
+                          request_headers_to_add:
+                            - header:
+                                key: "x-forwarded-for"
+                                value: "%REQ(x-forwarded-for)%"
                         - match:
                             prefix: "/creation.CreationService" # 登录 路径
                           route:
@@ -95,9 +100,9 @@ static_resources:
                           route:
                             cluster: auth_service # 指定 gRPC auth 集群
                         - match:
-                            prefix: "/creation.CreationService" # grpc 授权 路径
+                            prefix: "/comment.CommentService" # grpc 授权 路径
                           route:
-                            cluster: creation_service # 指定 gRPC creation 集群
+                            cluster: comment_service # 指定 gRPC creation 集群
                         - match:
                             prefix: "/interaction.InteractionService" # grpc 授权 路径
                           route:
@@ -234,6 +239,32 @@ static_resources:
             max_requests: 1000
             max_retries: 3
       per_connection_buffer_limit_bytes: 32768 # 每个连接的缓冲区限制，单位字节
+    
+    - name: comment_service # gRPC comment 服务集群
+      connect_timeout: 5s
+      lb_policy: ROUND_ROBIN
+      type: LOGICAL_DNS
+      http2_protocol_options: # 对于 HTTP/2 配置
+        initial_connection_window_size: 1048576 # 初始连接窗口大小
+        initial_stream_window_size: 1048576 # 初始流窗口大小
+        max_concurrent_streams: 1000
+      load_assignment:
+        cluster_name: comment_service
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 172.28.96.1
+                      port_value: 50020
+      circuit_breakers:
+        thresholds:
+          - priority: default
+            max_connections: 1000
+            max_pending_requests: 1000
+            max_requests: 1000
+            max_retries: 3
+      per_connection_buffer_limit_bytes: 32768 # 每个连接的缓冲区限制，单位字节
 
     - name: interaction_service # gRPC interaction 服务集群
       connect_timeout: 5s
@@ -277,7 +308,7 @@ static_resources:
                   address:
                     socket_address:
                       address: 172.28.96.1
-                      port_value: 50020
+                      port_value: 50050
       circuit_breakers:
         thresholds:
           - priority: default

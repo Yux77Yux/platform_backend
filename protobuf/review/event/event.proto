@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package review.event;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/review/event;";
+
+enum Exchange {
+  EXCHANGE_NEW_REVIEW = 0;
+  EXCHANGE_COMMENT_REVIEW = 1;
+  EXCHANGE_USER_REVIEW = 2;
+  EXCHANGE_CREATION_REVIEW = 3;
+}
+
+enum RoutingKey {
+  KEY_NEW_REVIEW = 0;
+  KEY_COMMENT_REVIEW = 1;
+  KEY_USER_REVIEW = 2;
+  KEY_CREATION_REVIEW = 3;
+}

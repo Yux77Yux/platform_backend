@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
@@ -132,9 +133,10 @@ func GetCreationInfo(ctx context.Context, creation_id int64) (*generated.Creatio
 		log.Printf("error: GetCreationInfo GetCreationInfoFields %v", err)
 		return nil, err
 	}
+	log.Printf("creationInfo %v", results)
 	creationInfo := tools.MapCreationInfoByString(results)
 	if creationInfo == nil {
-		return nil, fmt.Errorf("error: MapCreationInfoByString %v", err)
+		return nil, fmt.Errorf("warning: MapCreationInfoByString %v", err)
 	}
 
 	return creationInfo, nil
@@ -234,28 +236,47 @@ func GetSimilarCreationList(ctx context.Context, creation_id int64) ([]int64, er
 	return ids, nil
 }
 
-func GetSpaceCreationList(ctx context.Context, user_id int64) ([]int64, error) {
-	strs, err := CacheClient.RevRangeZSet(ctx, "SpaceCreation", strconv.FormatInt(user_id, 10), 0, 149)
+func GetSpaceCreationList(ctx context.Context, user_id int64, page int32, typeStr string) ([]int64, int32, error) {
+	const LIMIT = 25
+	start := int64((page - 1) * LIMIT)
+	stop := start + 24
+
+	pipe := CacheClient.Pipeline()
+
+	strsCmd := pipe.ZRevRange(ctx, fmt.Sprintf("ZSet_SpaceCreation_%s_%d", typeStr, user_id), start, stop)
+	countCmd := pipe.ZCard(ctx, fmt.Sprintf("ZSet_SpaceCreation_%s_%d", typeStr, user_id))
+
+	_, err := pipe.Exec(ctx)
 	if err != nil {
-		log.Printf("error: GetSpaceCreationList RevRangeZSet %v", err)
-		return nil, err
+		return nil, -1, err
 	}
 
-	count := len(strs)
-	if count == 0 {
-		return nil, nil // 返回空结果
+	strs, err := strsCmd.Result()
+	if err != nil {
+		return nil, -1, err
+	}
+
+	length := len(strs)
+	if length == 0 {
+		return nil, 0, nil // 返回空结果
+	}
+
+	count, err := countCmd.Result()
+	if err != nil {
+		return nil, -1, err
 	}
 
 	ids := make([]int64, count)
 	for i, str := range strs {
 		id, err := strconv.ParseInt(str, 10, 64)
 		if err != nil {
-			return nil, err
+			return nil, -1, err
 		}
 		ids[i] = id
 	}
 
-	return ids, nil
+	pagesNum := int32(math.Ceil(float64(count) / float64(LIMIT)))
+	return ids, pagesNum, nil
 }
 
 func GetHistoryCreationList(ctx context.Context, user_id int64) ([]int64, error) {

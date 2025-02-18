@@ -3,16 +3,34 @@ package internal
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/aggregator"
 	comment "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
+	event "github.com/Yux77Yux/platform_backend/generated/common/event"
 	creation "github.com/Yux77Yux/platform_backend/generated/creation"
 	interaction "github.com/Yux77Yux/platform_backend/generated/interaction"
 	client "github.com/Yux77Yux/platform_backend/microservices/aggregator/client"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/aggregator/messaging"
+	"google.golang.org/grpc/metadata"
 )
 
 func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*generated.WatchCreationResponse, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	ipv4 := ""
+	if ok {
+		ipv4s := md.Get("x-forwarded-for")
+		if len(ipv4s) > 0 {
+			ipv4 = strings.Split(ipv4s[0], ",")[0]
+			ipv4 = strings.TrimSpace(ipv4) // 清理首尾空格
+			log.Printf("ipv4: %s", ipv4)
+		} else {
+			log.Println("warning: x-forwarded-for not found in metadata")
+		}
+	}
+
 	response := new(generated.WatchCreationResponse)
 	id := req.GetCreationId()
 
@@ -43,6 +61,10 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 		response.Msg = msg
 		return response, err
 	}
+	if creationResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = creationResponse.Msg
+		return response, err
+	}
 
 	creationInfo := creationResponse.GetCreationInfo()
 	userId := creationInfo.GetCreation().GetBaseInfo().GetAuthorId()
@@ -70,6 +92,31 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 		}
 		response.Msg = msg
 		return response, err
+	}
+	if userResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = userResponse.Msg
+		return response, err
+	}
+
+	// 事件发布
+	// 播放数
+	if ipv4 == "" {
+		log.Println("info: event not sent because ipv4 is empty")
+	} else {
+		go func(id int64, ipv4 string) {
+			err := messaging.SendMessage(
+				event.Exchange_EXCHANGE_ADD_VIEW.String(),
+				event.RoutingKey_KEY_ADD_VIEW.String(),
+				&common.ViewCreation{
+					Id:   id,
+					Ipv4: ipv4,
+				},
+			)
+			if err != nil {
+				log.Printf("error: SendMessage ADD_VIEW %v", err)
+			}
+
+		}(id, ipv4)
 	}
 
 	// 组装开始
@@ -124,7 +171,20 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 		response.Msg = msg
 		return response, err
 	}
+	if interactionResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = interactionResponse.Msg
+		return response, err
+	}
+
 	creationIds := interactionResponse.GetCreations()
+	if len(creationIds) <= 0 {
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no member",
+		}
+		return response, nil
+	}
 
 	creation_client, err := client.NewCreationClient()
 	if err != nil {
@@ -153,10 +213,22 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 		response.Msg = msg
 		return response, err
 	}
+	if creationResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = creationResponse.Msg
+		return response, err
+	}
 
 	creationInfos := creationResponse.GetCreationInfoGroup()
-
 	length := len(creationInfos)
+	if length <= 0 {
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no member",
+		}
+		return response, nil
+	}
+
 	userIds := make([]int64, length)
 	for i, info := range creationInfos {
 		userIds[i] = info.GetCreation().GetBaseInfo().GetAuthorId()
@@ -187,10 +259,23 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 		response.Msg = msg
 		return response, err
 	}
+	if userResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = userResponse.Msg
+		return response, err
+	}
 
 	// 构建 userId -> 用户信息的映射表
 	users := userResponse.GetUsers()
 	limit := len(users)
+	if limit <= 0 {
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no member",
+		}
+		return response, nil
+	}
+
 	userMap := make(map[int64]*common.UserDefault, limit)
 	for _, user := range users {
 		userMap[user.GetUserDefault().GetUserId()] = user.GetUserDefault()
@@ -250,8 +335,21 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 		response.Msg = msg
 		return response, err
 	}
+	if commentsResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = commentsResponse.Msg
+		return response, err
+	}
 
 	comments := commentsResponse.GetComments()
+	if len(comments) <= 0 {
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no comment",
+		}
+		return response, nil
+	}
+
 	cards, err := getCards(ctx, comments)
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
@@ -259,6 +357,14 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 			Status:  common.ApiResponse_ERROR,
 			Code:    "500",
 			Details: err.Error(),
+		}
+		return response, nil
+	}
+	if len(cards) <= 0 {
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no comment",
 		}
 		return response, nil
 	}
@@ -305,8 +411,21 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 		response.Msg = msg
 		return response, err
 	}
+	if commentsResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = commentsResponse.Msg
+		return response, err
+	}
 
 	comments := commentsResponse.GetComments()
+	if len(comments) <= 0 {
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no comment",
+		}
+		return response, nil
+	}
+
 	cards, err := getCards(ctx, comments)
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
@@ -314,6 +433,14 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 			Status:  common.ApiResponse_ERROR,
 			Code:    "500",
 			Details: err.Error(),
+		}
+		return response, nil
+	}
+	if len(cards) <= 0 {
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no comment",
 		}
 		return response, nil
 	}
@@ -360,8 +487,21 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 		response.Msg = msg
 		return response, err
 	}
+	if commentsResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = commentsResponse.Msg
+		return response, err
+	}
 
 	comments := commentsResponse.GetComments()
+	if len(comments) <= 0 {
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no comment",
+		}
+		return response, nil
+	}
+
 	cards, err := getCards(ctx, comments)
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
@@ -369,6 +509,14 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 			Status:  common.ApiResponse_ERROR,
 			Code:    "500",
 			Details: err.Error(),
+		}
+		return response, nil
+	}
+	if len(cards) <= 0 {
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no comment",
 		}
 		return response, nil
 	}
@@ -383,6 +531,9 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 
 func getCards(ctx context.Context, comments []*comment.Comment) ([]*generated.CommentInfo, error) {
 	length := len(comments)
+	if length <= 0 {
+		return nil, nil
+	}
 	userMap := make(map[int64]*common.UserCreationComment)
 
 	for _, comment := range comments {
@@ -406,7 +557,14 @@ func getCards(ctx context.Context, comments []*comment.Comment) ([]*generated.Co
 	if err != nil {
 		return nil, err
 	}
+	if userResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		return nil, fmt.Errorf("error: %s", userResponse.Msg.GetDetails())
+	}
+
 	users := userResponse.GetUsers()
+	if len(users) <= 0 {
+		return nil, nil
+	}
 
 	for _, user := range users {
 		userId := user.GetUserDefault().GetUserId()

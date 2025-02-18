@@ -22,17 +22,22 @@ service CreationService {
   }
 
   // GET
-  rpc GetCreation(creation.methods.GetCreationRequest) returns (creation.methods.GetCreationResponse) ;
-  
-  rpc GetSpaceCreations(creation.methods.GetSpaceCreationsRequest) returns (creation.methods.GetCreationListResponse) ;
+  rpc GetCreation(creation.methods.GetCreationRequest) returns (creation.methods.GetCreationResponse);
+
+  rpc GetSpaceCreations(creation.methods.GetSpaceCreationsRequest) returns (creation.methods.GetCreationListResponse) {
+    option (google.api.http) = {
+      get: "/api/creation/space/{user_id}/{page}/{by_what}"
+    };
+  }
+
   rpc GetCreationList(creation.methods.GetCreationListRequest) returns (creation.methods.GetCreationListResponse);
   rpc GetPublicCreationList(creation.methods.GetCreationListRequest) returns (creation.methods.GetCreationListResponse);
-
 
   // DELETE
   rpc DeleteCreation(creation.methods.DeleteCreationRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      delete: "/api/creation/{creation_id}/{access_token.value=*}"
+      post: "/api/creation/delete"
+      body: "*"
     };
   }
 

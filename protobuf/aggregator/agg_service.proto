@@ -9,7 +9,6 @@ import "google/api/annotations.proto";
 import "aggregator/methods/get.proto";
 import "aggregator/methods/review.proto";
 import "aggregator/methods/login.proto";
-import "aggregator/methods/space.proto";
 import "aggregator/methods/watch.proto";
 
 service AggregatorService {
@@ -18,13 +17,6 @@ service AggregatorService {
     option (google.api.http) = {
       post: "/api/user/login"
       body: "user_credentials"
-    };
-  }
-
-  // Space OK
-  rpc Space(aggregator.methods.SpaceRequest) returns (aggregator.methods.SpaceResponse) {
-    option (google.api.http) = {
-      get: "/api/space/{user_id}"
     };
   }
 
@@ -107,21 +99,24 @@ service AggregatorService {
   // 主页
   rpc HomePage(aggregator.methods.HomeRequest) returns (aggregator.methods.GetCardsResponse){
     option (google.api.http) = {
-      get: "/api/home/{access_token.value=*}"
+      post: "/api/home/fetch"
+      body: "*"
     };
   }
 
   // 收藏夹
   rpc Collections(aggregator.methods.CollectionsRequest) returns (aggregator.methods.GetCardsResponse){
     option (google.api.http) = {
-      get: "/api/collections/{access_token.value=*}/{page}"
+      post: "/api/collections/fetch"
+      body: "*"
     };
   }
 
   // 历史
   rpc History(aggregator.methods.HistoryRequest) returns (aggregator.methods.GetCardsResponse){
     option (google.api.http) = {
-      get: "/api/history/{access_token.value=*}/{page}"
+      post: "/api/history/fetch"
+      body: "*"
     };
   }
 }

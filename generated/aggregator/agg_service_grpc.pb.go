@@ -20,7 +20,6 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	AggregatorService_Login_FullMethodName                 = "/aggregator.AggregatorService/Login"
-	AggregatorService_Space_FullMethodName                 = "/aggregator.AggregatorService/Space"
 	AggregatorService_WatchCreation_FullMethodName         = "/aggregator.AggregatorService/WatchCreation"
 	AggregatorService_SimilarCreations_FullMethodName      = "/aggregator.AggregatorService/SimilarCreations"
 	AggregatorService_InitialComments_FullMethodName       = "/aggregator.AggregatorService/InitialComments"
@@ -43,8 +42,6 @@ const (
 type AggregatorServiceClient interface {
 	// User OK
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
-	// Space OK
-	Space(ctx context.Context, in *SpaceRequest, opts ...grpc.CallOption) (*SpaceResponse, error)
 	// WatchCreation OK
 	WatchCreation(ctx context.Context, in *WatchCreationRequest, opts ...grpc.CallOption) (*WatchCreationResponse, error)
 	// 相似视频 OK
@@ -80,16 +77,6 @@ func (c *aggregatorServiceClient) Login(ctx context.Context, in *LoginRequest, o
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LoginResponse)
 	err := c.cc.Invoke(ctx, AggregatorService_Login_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *aggregatorServiceClient) Space(ctx context.Context, in *SpaceRequest, opts ...grpc.CallOption) (*SpaceResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SpaceResponse)
-	err := c.cc.Invoke(ctx, AggregatorService_Space_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -242,8 +229,6 @@ func (c *aggregatorServiceClient) History(ctx context.Context, in *HistoryReques
 type AggregatorServiceServer interface {
 	// User OK
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
-	// Space OK
-	Space(context.Context, *SpaceRequest) (*SpaceResponse, error)
 	// WatchCreation OK
 	WatchCreation(context.Context, *WatchCreationRequest) (*WatchCreationResponse, error)
 	// 相似视频 OK
@@ -277,9 +262,6 @@ type UnimplementedAggregatorServiceServer struct{}
 
 func (UnimplementedAggregatorServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
-}
-func (UnimplementedAggregatorServiceServer) Space(context.Context, *SpaceRequest) (*SpaceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Space not implemented")
 }
 func (UnimplementedAggregatorServiceServer) WatchCreation(context.Context, *WatchCreationRequest) (*WatchCreationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WatchCreation not implemented")
@@ -358,24 +340,6 @@ func _AggregatorService_Login_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AggregatorServiceServer).Login(ctx, req.(*LoginRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AggregatorService_Space_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SpaceRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AggregatorServiceServer).Space(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AggregatorService_Space_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AggregatorServiceServer).Space(ctx, req.(*SpaceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -642,10 +606,6 @@ var AggregatorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Login",
 			Handler:    _AggregatorService_Login_Handler,
-		},
-		{
-			MethodName: "Space",
-			Handler:    _AggregatorService_Space_Handler,
 		},
 		{
 			MethodName: "WatchCreation",

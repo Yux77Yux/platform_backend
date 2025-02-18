@@ -46,23 +46,27 @@ service UserService {
 
   rpc GetFolloweesByTime(user.methods.GetFollowRequest) returns (user.methods.GetFollowResponse) {
     option (google.api.http) = {
-      get: "/api/user/followee/time/{user_id}/{access_token.value=*}"
+      get: "/api/user/followee/time/{user_id}/{page}"
     };
   }
 
   rpc GetFolloweesByViews(user.methods.GetFollowRequest) returns (user.methods.GetFollowResponse) {
     option (google.api.http) = {
-      get: "/api/user/followee/views/{user_id}/{access_token.value=*}"
+      get: "/api/user/followee/views/{user_id}/{page}"
     };
   }
 
   rpc GetFollowers(user.methods.GetFollowRequest) returns (user.methods.GetFollowResponse) {
     option (google.api.http) = {
-      get: "/api/user/follower/{user_id}/{access_token.value=*}"
+      get: "/api/user/follower/{user_id}/{page}"
     };
   }
 
-  rpc GetUser(user.methods.GetUserRequest) returns (user.methods.GetUserResponse);
+  rpc GetUser(user.methods.GetUserRequest) returns (user.methods.GetUserResponse){
+    option (google.api.http) = {
+      get: "/api/user/{user_id}"
+    };
+  }
   rpc GetUsers(user.methods.GetUsersRequest) returns (user.methods.GetUsersResponse);
 
   // UPDATE

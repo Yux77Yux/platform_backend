@@ -45,6 +45,10 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 		response.Msg = msg
 		return response, err
 	}
+	if user_response.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = user_response.Msg
+		return response, err
+	}
 
 	// 传递user_id至Auth Service 生成token并返回
 	auth_response, err := auth_client.Login(ctx, user_response.GetUserLogin())
@@ -60,6 +64,10 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 			}
 		}
 		response.Msg = msg
+		return response, err
+	}
+	if auth_response.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = auth_response.Msg
 		return response, err
 	}
 

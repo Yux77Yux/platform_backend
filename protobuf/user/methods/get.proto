@@ -9,14 +9,12 @@ import "user/messages/user_login.proto";
 import "user/messages/user_credentials.proto";
 
 import "common/user_creation_comment.proto";
-import "common/access_token.proto";
 import "common/api_response.proto";
 
 
 message GetFollowRequest {
   int64 user_id = 1;
-  common.AccessToken access_token = 2;
-  int32 page = 3;
+  int32 page = 2;
 }
 
 message GetFollowResponse{

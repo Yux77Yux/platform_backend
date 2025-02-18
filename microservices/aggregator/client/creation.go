@@ -66,16 +66,3 @@ func (c *CreationClient) GetPublicCreationList(ctx context.Context, req *generat
 
 	return response, nil
 }
-
-func (c *CreationClient) GetSpaceCreations(ctx context.Context, req *generated.GetSpaceCreationsRequest) (*generated.GetCreationListResponse, error) {
-	defer c.connection.Close()
-	// 创建客户端
-	client := generated.NewCreationServiceClient(c.connection)
-
-	response, err := client.GetSpaceCreations(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("could not greet: %v", err)
-	}
-
-	return response, nil
-}

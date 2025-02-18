@@ -34,6 +34,19 @@ func (s *Server) GetUser(ctx context.Context, req *generated.GetUserRequest) (*g
 	return response, nil
 }
 
+func (s *Server) GetUsers(ctx context.Context, req *generated.GetUsersRequest) (*generated.GetUsersResponse, error) {
+	log.Println("info: get user service start")
+
+	response, err := internal.GetUsers(ctx, req)
+	if err != nil {
+		log.Println("error: get user occur fail: ", err)
+		return response, nil
+	}
+
+	log.Println("info: get user occur success")
+	return response, nil
+}
+
 func (s *Server) GetFolloweesByTime(ctx context.Context, req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
 	log.Println("info: GetFolloweesByTime service start")
 

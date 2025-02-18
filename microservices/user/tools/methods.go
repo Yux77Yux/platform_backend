@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
+	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
@@ -126,7 +127,7 @@ func ensureTimestampPB(input interface{}) (*timestamppb.Timestamp, error) {
 	}
 }
 
-func MapUserByString(result map[string]string) *generated.User {
+func MapUserByString(result map[string]string) (*generated.User, error) {
 	converted := make(map[string]interface{})
 	// 将 map[string]string 转换为 map[string]interface{}
 	for key, value := range result {
@@ -135,7 +136,7 @@ func MapUserByString(result map[string]string) *generated.User {
 	return MapUser(converted)
 }
 
-func MapUser(result map[string]interface{}) *generated.User {
+func MapUser(result map[string]interface{}) (*generated.User, error) {
 	statusStr := result["user_status"].(string)
 	genderStr := result["user_gender"].(string)
 
@@ -147,21 +148,31 @@ func MapUser(result map[string]interface{}) *generated.User {
 		var err error
 		bday, err = ensureTimestampPB(result["user_bday"])
 		if err != nil {
-			log.Println("error: user_bday ", err)
-			return nil
+			return nil, err
 		}
 	}
 
 	createdAt, err := ensureTimestampPB(result["user_created_at"])
 	if err != nil {
-		log.Println("error: user_created_at ", err)
-		return nil
+		return nil, err
 	}
 
 	updatedAt, err := ensureTimestampPB(result["user_updated_at"])
 	if err != nil {
 		log.Println("error: user_updated_at ", err)
-		return nil
+		return nil, err
+	}
+
+	followersStr := result["followers"].(string)
+	followeesStr := result["followees"].(string)
+
+	followers, err := strconv.ParseInt(followersStr, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	followees, err := strconv.ParseInt(followeesStr, 10, 64)
+	if err != nil {
+		return nil, err
 	}
 
 	return &generated.User{
@@ -175,5 +186,7 @@ func MapUser(result map[string]interface{}) *generated.User {
 		UserBday:      bday,
 		UserCreatedAt: createdAt,
 		UserUpdatedAt: updatedAt,
-	}
+		Followers:     int32(followers),
+		Followees:     int32(followees),
+	}, nil
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -256,118 +257,72 @@ func Follow(subs []*generated.Follow) error {
 }
 
 // GET
-func UserGetInfoInTransaction(ctx context.Context, id int64, fields []string) (map[string]interface{}, error) {
-	var query string
-	if len(fields) > 0 {
-		// 查询指定字段
-		query = fmt.Sprintf("SELECT %s FROM db_user_1.User WHERE id = ?", strings.Join(fields, ", "))
-	} else {
-		// 查询全部字段
-		query = "SELECT * FROM db_user_1.User WHERE id = ?"
-	}
+func UserGetInfoInTransaction(ctx context.Context, id int64) (*generated.User, error) {
+	query := `
+    	SELECT 
+    		u.name,
+    		u.avatar,
+    		u.bio,
+    		u.status,
+    		u.gender,
+    		u.bday,
+    		u.created_at,
+    		u.updated_at,
+    		(SELECT COUNT(*) FROM db_user_1.Follow WHERE followee_id = u.id) AS followers,
+    		(SELECT COUNT(*) FROM db_user_1.Follow WHERE follower_id = u.id) AS followees
+		FROM db_user_1.User u
+		WHERE u.id = ?;`
 
-	var result map[string]interface{}
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
-		rows, err := db.QueryContext(ctx, query, id)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close()
-
-		// 获取列名
-		cols, err := rows.Columns()
-		if err != nil {
-			err = fmt.Errorf("failed to get columns: %v", err)
-			return nil, err
-		}
-
-		// 确保有结果,无结果直接返回
-		if !rows.Next() {
-			return nil, nil
-		}
-
-		// 创建一个存储列值的切片
-		values := make([]interface{}, len(cols))
-		pointers := make([]interface{}, len(cols))
-		for i := range values {
-			pointers[i] = &values[i]
-		}
-
-		// 扫描结果到指针数组
-		if err := rows.Scan(pointers...); err != nil {
-			return nil, err
-		}
-
-		// 将结果填充到 map 中
-		result = make(map[string]interface{})
-		for i, colName := range cols {
-			switch colName {
-			case "id":
-				result[colName] = id
-			case "bday":
-				if values[i] == nil {
-					result[colName] = "none"
-				} else {
-					if value, ok := values[i].([]byte); ok {
-						// 将字符串解析为 time.Time（假设格式是 "YYYY-MM-DD"）
-						parsedTime, err := time.Parse("2006-01-02", string(value))
-						if err != nil {
-							return nil, err
-						}
-
-						result[colName] = timestamppb.New(parsedTime)
-					} else {
-						return nil, err
-					}
-				}
-			case "created_at", "updated_at":
-				if value, ok := values[i].([]byte); ok {
-					// 将字符串解析为 time.Time（假设格式是 "YYYY-MM-DD HH:MM:SS"）
-					parsedTime, err := time.Parse("2006-01-02 15:04:05", string(value))
-					if err != nil {
-						return nil, err
-					}
-
-					result[colName] = timestamppb.New(parsedTime)
-				} else {
-					return nil, err
-				}
-			default:
-				if value, ok := values[i].([]byte); ok {
-					result[colName] = string(value)
-				} else {
-					return nil, err
-				}
-			}
-		}
-
-		// 再查UserCredentials拿身份和邮箱
 		var (
-			email interface{}
-			role  string
+			name       string
+			avatar     string
+			bio        string
+			statusStr  string
+			genderStr  string
+			bdayOrNull sql.NullTime
+			created_at time.Time
+			updated_at time.Time
+			followers  int32
+			followees  int32
 		)
-		query = "SELECT email,role FROM db_user_credentials_1.UserCredentials WHERE id = ?"
-		if err := db.QueryRow(query, id).Scan(&email, &role); err != nil {
+		err := db.QueryRowContext(ctx, query, id).Scan(
+			&name, &avatar, &bio, &statusStr, &genderStr,
+			&bdayOrNull, &created_at, &updated_at, &followers,
+			&followees,
+		)
+		if err != nil {
 			return nil, err
 		}
 
-		log.Printf("email %v", email)
-		if email == nil {
-			result["email"] = ""
-		} else {
-			if value, ok := email.([]byte); ok {
-				result["email"] = string(value)
-			} else {
-				err = fmt.Errorf("assert email type failed ")
-				return nil, err
-			}
+		status, ok := generated.UserStatus_value[statusStr]
+		if !ok {
+			status = int32(generated.UserStatus_INACTIVE) // 设默认值
 		}
-		result["role"] = role
+
+		gender, ok := generated.UserGender_value[genderStr]
+		if !ok {
+			gender = int32(generated.UserGender_UNDEFINED)
+		}
+		bday := bdayOrNull.Time
+
+		return &generated.User{
+			UserDefault: &common.UserDefault{
+				UserId:   id,
+				UserName: name,
+			},
+			UserAvatar:    avatar,
+			UserBio:       bio,
+			UserStatus:    generated.UserStatus(status),
+			UserGender:    generated.UserGender(gender),
+			UserBday:      timestamppb.New(bday),
+			UserCreatedAt: timestamppb.New(created_at),
+			UserUpdatedAt: timestamppb.New(updated_at),
+		}, nil
 	}
-	return result, nil
 }
 
 func GetUsers(ctx context.Context, userIds []int64) ([]*common.UserCreationComment, error) {

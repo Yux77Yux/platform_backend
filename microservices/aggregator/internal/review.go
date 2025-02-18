@@ -23,6 +23,9 @@ func getUserReviewCards(ctx context.Context, reviews []*review.Review) ([]*gener
 		}
 	}
 	length := len(userMap)
+	if length <= 0 {
+		return nil, nil
+	}
 	userIds := make([]int64, 0, length)
 	for id := range userMap {
 		userIds = append(userIds, id)
@@ -37,7 +40,14 @@ func getUserReviewCards(ctx context.Context, reviews []*review.Review) ([]*gener
 	if err != nil {
 		return nil, err
 	}
+	if userResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		return nil, fmt.Errorf("error: userResponse %s", userResponse.Msg.GetDetails())
+	}
+
 	users := userResponse.GetUsers()
+	if len(users) <= 0 {
+		return nil, nil
+	}
 	for _, user := range users {
 		userId := user.GetUserDefault().GetUserId()
 		userMap[userId] = user
@@ -107,6 +117,10 @@ func GetUserReviews(ctx context.Context, req *generated.GetReviewsRequest) (*gen
 		response.Msg = msg
 		return response, err
 	}
+	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = reviewResponse.Msg
+		return response, nil
+	}
 
 	reviews := reviewResponse.GetReviews()
 	cards, err := getUserReviewCards(ctx, reviews)
@@ -175,6 +189,10 @@ func GetNewUserReviews(ctx context.Context, req *generated.GetNewReviewsRequest)
 		response.Msg = msg
 		return response, err
 	}
+	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = reviewResponse.Msg
+		return response, nil
+	}
 
 	reviews := reviewResponse.GetReviews()
 	cards, err := getUserReviewCards(ctx, reviews)
@@ -203,6 +221,9 @@ func getCreationReviewCards(ctx context.Context, reviews []*review.Review) ([]*g
 		}
 	}
 	length := len(creationMap)
+	if length <= 0 {
+		return nil, nil
+	}
 	ids := make([]int64, 0, length)
 	for id := range creationMap {
 		ids = append(ids, id)
@@ -219,7 +240,14 @@ func getCreationReviewCards(ctx context.Context, reviews []*review.Review) ([]*g
 	if err != nil {
 		return nil, err
 	}
+	if creationResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		return nil, fmt.Errorf("error: creationResponse %s", creationResponse.Msg.GetDetails())
+	}
+
 	infos := creationResponse.GetCreationInfoGroup()
+	if len(infos) <= 0 {
+		return nil, nil
+	}
 	for _, info := range infos {
 		id := info.GetCreation().GetCreationId()
 		creationMap[id] = info.GetCreation()
@@ -289,6 +317,10 @@ func GetCreationReviews(ctx context.Context, req *generated.GetReviewsRequest) (
 		response.Msg = msg
 		return response, err
 	}
+	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = reviewResponse.Msg
+		return response, nil
+	}
 
 	reviews := reviewResponse.GetReviews()
 	cards, err := getCreationReviewCards(ctx, reviews)
@@ -357,6 +389,10 @@ func GetNewCreationReviews(ctx context.Context, req *generated.GetNewReviewsRequ
 		response.Msg = msg
 		return response, err
 	}
+	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = reviewResponse.Msg
+		return response, nil
+	}
 
 	reviews := reviewResponse.GetReviews()
 	cards, err := getCreationReviewCards(ctx, reviews)
@@ -385,6 +421,9 @@ func getCommentReviewCards(ctx context.Context, reviews []*review.Review) ([]*ge
 		}
 	}
 	length := len(commentMap)
+	if length <= 0 {
+		return nil, nil
+	}
 	ids := make([]int32, 0, length)
 	for id := range commentMap {
 		ids = append(ids, id)
@@ -401,7 +440,14 @@ func getCommentReviewCards(ctx context.Context, reviews []*review.Review) ([]*ge
 	if err != nil {
 		return nil, err
 	}
+	if commentResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		return nil, fmt.Errorf("error: commentResponse %s", commentResponse.Msg.GetDetails())
+	}
+
 	infos := commentResponse.GetComments()
+	if len(infos) <= 0 {
+		return nil, nil
+	}
 	for _, info := range infos {
 		id := info.GetCommentId()
 		commentMap[id] = info
@@ -471,6 +517,10 @@ func GetCommentReviews(ctx context.Context, req *generated.GetReviewsRequest) (*
 		response.Msg = msg
 		return response, err
 	}
+	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = reviewResponse.Msg
+		return response, nil
+	}
 
 	reviews := reviewResponse.GetReviews()
 	cards, err := getCommentReviewCards(ctx, reviews)
@@ -538,6 +588,10 @@ func GetNewCommentReviews(ctx context.Context, req *generated.GetNewReviewsReque
 		}
 		response.Msg = msg
 		return response, err
+	}
+	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = reviewResponse.Msg
+		return response, nil
 	}
 
 	reviews := reviewResponse.GetReviews()

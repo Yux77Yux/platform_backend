@@ -11,6 +11,19 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+func GetSpaceCreationCountType(byWhat generated.GetSpaceCreationsRequest_ByCount) string {
+	typeStr := ""
+	switch byWhat {
+	case generated.GetSpaceCreationsRequest_COLLECTIONS:
+		typeStr = "Collections"
+	case generated.GetSpaceCreationsRequest_VIEWS:
+		typeStr = "Views"
+	default:
+		typeStr = "Published_Time"
+	}
+	return typeStr
+}
+
 func SaveImage(fileBytes []byte, fileName string) error {
 	// 指定保存路径和文件名
 	filePath := fmt.Sprintf("./%s.png", fileName) // 保存为 PNG 格式
@@ -83,6 +96,9 @@ func ensureTimestampPB(input interface{}) (*timestamppb.Timestamp, error) {
 }
 
 func MapCreationInfoByString(result map[string]string) *generated.CreationInfo {
+	if len(result) <= 0 {
+		return nil
+	}
 	converted := make(map[string]interface{})
 	// 将 map[string]string 转换为 map[string]interface{}
 	for key, value := range result {
@@ -92,6 +108,10 @@ func MapCreationInfoByString(result map[string]string) *generated.CreationInfo {
 }
 
 func MapCreationInfo(result map[string]interface{}) *generated.CreationInfo {
+	if len(result) <= 0 {
+		return nil
+	}
+
 	statusStr := result["status"].(string)
 
 	status := generated.CreationStatus(generated.CreationStatus_value[statusStr])

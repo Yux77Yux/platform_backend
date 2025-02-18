@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package common.event;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/common/event;";
+
+enum Exchange {
+  EXCHANGE_ADD_VIEW = 0;
+}
+
+enum RoutingKey {
+  KEY_ADD_VIEW = 0;
+}

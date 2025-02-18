@@ -10,7 +10,6 @@ import (
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
-	jwt "github.com/Yux77Yux/platform_backend/pkg/jwt"
 )
 
 func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.GetUserResponse, error) {
@@ -45,10 +44,19 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 		}
 
 		// 调用函数，传递转换后的 map
-		user_info = tools.MapUserByString(result)
+		user_info, err = tools.MapUserByString(result)
+		if err != nil {
+			return &generated.GetUserResponse{
+				Msg: &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    "500",
+					Details: err.Error(),
+				},
+			}, err
+		}
 	} else {
 		// redis未存有，则从数据库取信息
-		result, err := db.UserGetInfoInTransaction(ctx, user_id, nil)
+		result, err := db.UserGetInfoInTransaction(ctx, user_id)
 		if err != nil {
 			return &generated.GetUserResponse{
 				Msg: &common.ApiResponse{
@@ -71,8 +79,7 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 			}, nil
 		}
 
-		user_info = tools.MapUser(result)
-		go userMQ.SendMessage("storeUser", "storeUser", user_info)
+		go userMQ.SendMessage("storeUser", "storeUser", result)
 	}
 
 	user_info.UserDefault.UserId = user_id
@@ -92,28 +99,6 @@ func GetFolloweesByTime(ctx context.Context, req *generated.GetFollowRequest) (*
 	master := false
 	userId := req.GetUserId()
 	page := req.GetPage()
-	accessToken := req.GetAccessToken()
-	if accessToken.Value != "none" {
-		accessClaims, err := jwt.ParseJWT(accessToken.GetValue())
-		if err != nil {
-			response.Msg = &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
-				Message: "access token error",
-				Details: err.Error(),
-			}
-			return response, fmt.Errorf("error: %v", err)
-		}
-
-		// 是否为登录用户
-		master = accessClaims.UserID == userId
-	} else {
-		page = 1
-	}
-
-	if !master {
-		page = 1
-	}
 
 	cards, err := db.GetFolloweesByTime(ctx, userId, page)
 	if err != nil {
@@ -141,28 +126,6 @@ func GetFolloweesByViews(ctx context.Context, req *generated.GetFollowRequest) (
 	master := false
 	userId := req.GetUserId()
 	page := req.GetPage()
-	accessToken := req.GetAccessToken()
-	if accessToken.Value != "none" {
-		accessClaims, err := jwt.ParseJWT(accessToken.GetValue())
-		if err != nil {
-			response.Msg = &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
-				Message: "access token error",
-				Details: err.Error(),
-			}
-			return response, fmt.Errorf("error: %v", err)
-		}
-
-		// 是否为登录用户
-		master = accessClaims.UserID == userId
-	} else {
-		page = 1
-	}
-
-	if !master {
-		page = 1
-	}
 
 	cards, err := db.GetFolloweesByViews(ctx, userId, page)
 	if err != nil {
@@ -190,28 +153,6 @@ func GetFollowers(ctx context.Context, req *generated.GetFollowRequest) (*genera
 	master := false
 	userId := req.GetUserId()
 	page := req.GetPage()
-	accessToken := req.GetAccessToken()
-	if accessToken.Value != "none" {
-		accessClaims, err := jwt.ParseJWT(accessToken.GetValue())
-		if err != nil {
-			response.Msg = &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
-				Message: "access token error",
-				Details: err.Error(),
-			}
-			return response, fmt.Errorf("error: %v", err)
-		}
-
-		// 是否为登录用户
-		master = accessClaims.UserID == userId
-	} else {
-		page = 1
-	}
-
-	if !master {
-		page = 1
-	}
 
 	cards, err := db.GetFolloweers(ctx, userId, page)
 	if err != nil {
