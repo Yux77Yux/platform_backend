@@ -10,7 +10,7 @@ import (
 
 func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	response := new(generated.LoginResponse)
-	auth_client, err := client.NewAuthClient()
+	auth_client, err := client.GetAuthClient()
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Code:    "500",
@@ -19,7 +19,7 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 		}
 		return response, err
 	}
-	user_client, err := client.NewUserClient()
+	user_client, err := client.GetUserClient()
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Code:    "500",

@@ -15,17 +15,15 @@ FLUSH PRIVILEGES;
 USE db_review_1;
 
 CREATE TABLE IF NOT EXISTS Review (
-    id BIGINT,                -- 审核信息ID，使用 BIGINT
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,                -- 审核信息ID，使用 BIGINT
     target_id BIGINT NOT NULL,    -- 审核对象的ID
     target_type ENUM('USER','COMMENT','CREATION') NOT NULL,          -- 审核类型
     detail varchar(128),                                     -- 举报理由
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    
-    status ENUM('PENDING', 'APPROVED', 'REJECTED','DELETE') NOT NULL DEFAULT 'PENDING', -- 审核状态，
+    status ENUM('PENDING', 'APPROVED', 'REJECTED','DELETED') NOT NULL DEFAULT 'PENDING', -- 审核状态，
     remark varchar(255),       -- 审核备注，最大255字符
     reviewer_id BIGINT, -- 审核人ID
 
-    PRIMARY KEY (id),                   -- 使用 id 作为主键
-    INDEX idx_reviewer (reviewer_id,status),       -- 按审核人 ID 索引
-    INDEX idx_target (target_id, target_type)  -- 针对 target_id 和 target_type 的复合索引
+    INDEX idx_reviewer (reviewer_id,target_type,status)       -- 按审核人 ID 索引
 );

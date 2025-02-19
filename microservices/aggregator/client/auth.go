@@ -3,6 +3,8 @@ package client
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -28,8 +30,14 @@ func NewAuthClient() (*AuthClient, error) {
 	return client, nil
 }
 
+func (c *AuthClient) Close() {
+	err := c.connection.Close()
+	if err != nil {
+		log.Printf("error: grpc client close %v", err)
+	}
+}
+
 func (c *AuthClient) Login(ctx context.Context, userLogin *user.UserLogin) (*auth.LoginResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := auth.NewAuthServiceClient(c.connection)
 

@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -28,8 +29,14 @@ func NewCreationClient() (*CreationClient, error) {
 	return client, nil
 }
 
+func (c *CreationClient) Close() {
+	err := c.connection.Close()
+	if err != nil {
+		log.Printf("error: grpc client close %v", err)
+	}
+}
+
 func (c *CreationClient) GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewCreationServiceClient(c.connection)
 
@@ -42,7 +49,6 @@ func (c *CreationClient) GetCreation(ctx context.Context, req *generated.GetCrea
 }
 
 func (c *CreationClient) GetCreationList(ctx context.Context, req *generated.GetCreationListRequest) (*generated.GetCreationListResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewCreationServiceClient(c.connection)
 
@@ -55,7 +61,6 @@ func (c *CreationClient) GetCreationList(ctx context.Context, req *generated.Get
 }
 
 func (c *CreationClient) GetPublicCreationList(ctx context.Context, req *generated.GetCreationListRequest) (*generated.GetCreationListResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewCreationServiceClient(c.connection)
 

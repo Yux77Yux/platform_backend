@@ -8,5 +8,5 @@ enum ReviewStatus {
   PENDING = 0;
   APPROVED = 1;
   REJECTED = 2;
-  DELETE = 3;
+  DELETED = 3;
 }

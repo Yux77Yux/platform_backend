@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	client "github.com/Yux77Yux/platform_backend/microservices/aggregator/client"
 	_ "github.com/Yux77Yux/platform_backend/microservices/aggregator/config"
 	service "github.com/Yux77Yux/platform_backend/microservices/aggregator/service"
 )
@@ -38,7 +39,9 @@ func main() {
 	// 等待关闭完成或超时
 	select {
 	case <-done:
-
+		log.Println("info: closing grpc client.")
+		client.Close()
+		log.Println("info: close grpc client ok.")
 		os.Exit(0)
 	case <-ctx.Done():
 		log.Println("warning: timeout reached. Forcing shutdown.")

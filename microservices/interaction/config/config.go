@@ -5,7 +5,6 @@ import (
 
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 	mq "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
-	oss "github.com/Yux77Yux/platform_backend/microservices/interaction/oss"
 	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
 	service "github.com/Yux77Yux/platform_backend/microservices/interaction/service"
 )
@@ -32,5 +31,4 @@ func init() {
 	mq.Init()
 	db.Init()
 	cache.Init()
-	oss.Init()
 }

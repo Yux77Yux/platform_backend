@@ -5,7 +5,6 @@ import (
 
 	cache "github.com/Yux77Yux/platform_backend/microservices/comment/cache"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/comment/messaging"
-	oss "github.com/Yux77Yux/platform_backend/microservices/comment/oss"
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
 	service "github.com/Yux77Yux/platform_backend/microservices/comment/service"
 )
@@ -32,5 +31,4 @@ func init() {
 	messaging.Init()
 	db.Init()
 	cache.Init()
-	oss.Init()
 }

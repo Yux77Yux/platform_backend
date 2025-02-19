@@ -33,7 +33,7 @@ func HomePage(ctx context.Context, req *generated.HomeRequest) (*generated.GetCa
 	}
 
 	// 从 用户数据服务 调取相似列表
-	interaction_client, err := client.NewInteractionClient()
+	interaction_client, err := client.GetInteractionClient()
 	if err != nil {
 		err = fmt.Errorf("error: interaction client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -130,7 +130,7 @@ func Collections(ctx context.Context, req *generated.CollectionsRequest) (*gener
 	}
 
 	// 从 用户数据服务 调取相似列表
-	interaction_client, err := client.NewInteractionClient()
+	interaction_client, err := client.GetInteractionClient()
 	if err != nil {
 		err = fmt.Errorf("error: interaction client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -262,7 +262,7 @@ func History(ctx context.Context, req *generated.HistoryRequest) (*generated.Get
 	}
 
 	// 从 用户数据服务 调取相似列表
-	interaction_client, err := client.NewInteractionClient()
+	interaction_client, err := client.GetInteractionClient()
 	if err != nil {
 		err = fmt.Errorf("error: interaction client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -375,7 +375,7 @@ func History(ctx context.Context, req *generated.HistoryRequest) (*generated.Get
 }
 
 func getUserMap(ctx context.Context, creationIds []int64) (map[int64]*common.UserDefault, []*creation.CreationInfo, error) {
-	creation_client, err := client.NewCreationClient()
+	creation_client, err := client.GetCreationClient()
 	if err != nil {
 		err = fmt.Errorf("error: creation client %w", err)
 		return nil, nil, err
@@ -401,7 +401,7 @@ func getUserMap(ctx context.Context, creationIds []int64) (map[int64]*common.Use
 		userIds[i] = info.GetCreation().GetBaseInfo().GetAuthorId()
 	}
 
-	user_client, err := client.NewUserClient()
+	user_client, err := client.GetUserClient()
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
 		return nil, nil, err

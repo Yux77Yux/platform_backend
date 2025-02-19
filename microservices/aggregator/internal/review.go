@@ -31,7 +31,7 @@ func getUserReviewCards(ctx context.Context, reviews []*review.Review) ([]*gener
 		userIds = append(userIds, id)
 	}
 
-	user_client, err := client.NewUserClient()
+	user_client, err := client.GetUserClient()
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
 		return nil, err
@@ -87,7 +87,7 @@ func GetUserReviews(ctx context.Context, req *generated.GetReviewsRequest) (*gen
 		return response, nil
 	}
 
-	review_client, err := client.NewReviewClient()
+	review_client, err := client.GetReviewClient()
 	if err != nil {
 		err = fmt.Errorf("error: review client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -161,7 +161,7 @@ func GetNewUserReviews(ctx context.Context, req *generated.GetNewReviewsRequest)
 		return response, nil
 	}
 
-	review_client, err := client.NewReviewClient()
+	review_client, err := client.GetReviewClient()
 	if err != nil {
 		err = fmt.Errorf("error: review client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -229,7 +229,7 @@ func getCreationReviewCards(ctx context.Context, reviews []*review.Review) ([]*g
 		ids = append(ids, id)
 	}
 
-	creation_client, err := client.NewCreationClient()
+	creation_client, err := client.GetCreationClient()
 	if err != nil {
 		err = fmt.Errorf("error: creation client %w", err)
 		return nil, err
@@ -287,7 +287,7 @@ func GetCreationReviews(ctx context.Context, req *generated.GetReviewsRequest) (
 		return response, nil
 	}
 
-	review_client, err := client.NewReviewClient()
+	review_client, err := client.GetReviewClient()
 	if err != nil {
 		err = fmt.Errorf("error: review client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -361,7 +361,7 @@ func GetNewCreationReviews(ctx context.Context, req *generated.GetNewReviewsRequ
 		return response, nil
 	}
 
-	review_client, err := client.NewReviewClient()
+	review_client, err := client.GetReviewClient()
 	if err != nil {
 		err = fmt.Errorf("error: review client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -429,7 +429,7 @@ func getCommentReviewCards(ctx context.Context, reviews []*review.Review) ([]*ge
 		ids = append(ids, id)
 	}
 
-	comment_client, err := client.NewCommentClient()
+	comment_client, err := client.GetCommentClient()
 	if err != nil {
 		err = fmt.Errorf("error: comment client %w", err)
 		return nil, err
@@ -487,7 +487,7 @@ func GetCommentReviews(ctx context.Context, req *generated.GetReviewsRequest) (*
 		return response, nil
 	}
 
-	review_client, err := client.NewReviewClient()
+	review_client, err := client.GetReviewClient()
 	if err != nil {
 		err = fmt.Errorf("error: review client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -561,7 +561,7 @@ func GetNewCommentReviews(ctx context.Context, req *generated.GetNewReviewsReque
 		return response, nil
 	}
 
-	review_client, err := client.NewReviewClient()
+	review_client, err := client.GetReviewClient()
 	if err != nil {
 		err = fmt.Errorf("error: review client %w", err)
 		response.Msg = &common.ApiResponse{

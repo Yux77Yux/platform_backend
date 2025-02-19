@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -26,6 +27,13 @@ func NewInteractionClient() (*InteractionClient, error) {
 	}
 
 	return client, nil
+}
+
+func (c *InteractionClient) Close() {
+	err := c.connection.Close()
+	if err != nil {
+		log.Printf("error: grpc client close %v", err)
+	}
 }
 
 func (c *InteractionClient) GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequest) (*generated.GetCreationInteractionResponse, error) {

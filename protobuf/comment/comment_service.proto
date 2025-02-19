@@ -23,7 +23,8 @@ service CommentService {
 
   rpc DeleteComment(comment.methods.DeleteCommentRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      delete: "/api/comment/{creation_id}/{comment_id}/{access_token.value=*}"
+      patch: "/api/comment/delete"
+      body: "*"
     };
   }
 

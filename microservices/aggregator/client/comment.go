@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -28,8 +29,14 @@ func NewCommentClient() (*CommentClient, error) {
 	return client, nil
 }
 
+func (c *CommentClient) Close() {
+	err := c.connection.Close()
+	if err != nil {
+		log.Printf("error: grpc client close %v", err)
+	}
+}
+
 func (c *CommentClient) GetComment(ctx context.Context, req *generated.GetCommentRequest) (*generated.GetCommentResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewCommentServiceClient(c.connection)
 
@@ -42,7 +49,6 @@ func (c *CommentClient) GetComment(ctx context.Context, req *generated.GetCommen
 }
 
 func (c *CommentClient) InitialComments(ctx context.Context, req *generated.InitialCommentsRequest) (*generated.InitialCommentsResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewCommentServiceClient(c.connection)
 
@@ -55,7 +61,6 @@ func (c *CommentClient) InitialComments(ctx context.Context, req *generated.Init
 }
 
 func (c *CommentClient) GetComments(ctx context.Context, req *generated.GetCommentsRequest) (*generated.GetCommentsResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewCommentServiceClient(c.connection)
 
@@ -68,7 +73,6 @@ func (c *CommentClient) GetComments(ctx context.Context, req *generated.GetComme
 }
 
 func (c *CommentClient) GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetCommentsResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewCommentServiceClient(c.connection)
 
@@ -81,7 +85,6 @@ func (c *CommentClient) GetTopComments(ctx context.Context, req *generated.GetTo
 }
 
 func (c *CommentClient) GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequest) (*generated.GetCommentsResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewCommentServiceClient(c.connection)
 
@@ -94,7 +97,6 @@ func (c *CommentClient) GetSecondComments(ctx context.Context, req *generated.Ge
 }
 
 func (c *CommentClient) GetReplyComments(ctx context.Context, req *generated.GetReplyCommentsRequest) (*generated.GetCommentsResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewCommentServiceClient(c.connection)
 

@@ -33,10 +33,9 @@ CREATE TABLE IF NOT EXISTS Comment (
     user_id BIGINT NOT NULL,                         -- 发言的用户ID
     creation_id BIGINT NOT NULL,                     -- 作品ID
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
-    status ENUM('PUBLISHED','DELETE') NOT NULL DEFAULT 'PUBLISHED',  -- 公告状态，默认是草稿
+    status ENUM('PUBLISHED','DELETED') NOT NULL DEFAULT 'PUBLISHED',  -- 公告状态，默认是草稿
 
     INDEX idx_creation_root(creation_id, root),  -- 评论索引
-    INDEX idx_status(status, created_at),        -- 主要用于清除DELETE状态行
     INDEX idx_user(user_id, created_at),  -- 与下配合
     INDEX idx_parent(parent, created_at)  -- 回复索引
 );

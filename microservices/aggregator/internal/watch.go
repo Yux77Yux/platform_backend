@@ -34,7 +34,7 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 	response := new(generated.WatchCreationResponse)
 	id := req.GetCreationId()
 
-	creation_client, err := client.NewCreationClient()
+	creation_client, err := client.GetCreationClient()
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -68,7 +68,7 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 
 	creationInfo := creationResponse.GetCreationInfo()
 	userId := creationInfo.GetCreation().GetBaseInfo().GetAuthorId()
-	user_client, err := client.NewUserClient()
+	user_client, err := client.GetUserClient()
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -144,7 +144,7 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 	id := req.GetCreationId()
 
 	// 从 用户数据服务 调取相似列表
-	interaction_client, err := client.NewInteractionClient()
+	interaction_client, err := client.GetInteractionClient()
 	if err != nil {
 		err = fmt.Errorf("error: interaction client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -186,7 +186,7 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 		return response, nil
 	}
 
-	creation_client, err := client.NewCreationClient()
+	creation_client, err := client.GetCreationClient()
 	if err != nil {
 		err = fmt.Errorf("error: creation client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -234,7 +234,7 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 		userIds[i] = info.GetCreation().GetBaseInfo().GetAuthorId()
 	}
 
-	user_client, err := client.NewUserClient()
+	user_client, err := client.GetUserClient()
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -308,7 +308,7 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 	request := req.GetRequest()
 	creationId := request.GetCreationId()
 
-	comment_client, err := client.NewCommentClient()
+	comment_client, err := client.GetCommentClient()
 	if err != nil {
 		err = fmt.Errorf("error: comment client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -383,7 +383,7 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 	request := req.GetRequest()
 	creationId := request.GetCreationId()
 
-	comment_client, err := client.NewCommentClient()
+	comment_client, err := client.GetCommentClient()
 	if err != nil {
 		err = fmt.Errorf("error: comment client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -458,7 +458,7 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 	request := req.GetRequest()
 	creationId := request.GetCreationId()
 
-	comment_client, err := client.NewCommentClient()
+	comment_client, err := client.GetCommentClient()
 	if err != nil {
 		err = fmt.Errorf("error: comment client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -549,7 +549,7 @@ func getCards(ctx context.Context, comments []*comment.Comment) ([]*generated.Co
 		userIds = append(userIds, id)
 	}
 
-	user_client, err := client.NewUserClient()
+	user_client, err := client.GetUserClient()
 	if err != nil {
 		return nil, err
 	}
