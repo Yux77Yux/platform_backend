@@ -40,7 +40,7 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 					media)
 				VALUES%s`, strings.Join(queryContentCount, ","))
 		queryArea = `
-				UPDATE db_comment_areas_1.CommentAreas 
+				UPDATE db_comment_area_1.CommentArea 
 				SET
 					total_comments = total_comments + ?,
 				WHERE creation_id = ?`
@@ -226,18 +226,16 @@ func GetFirstCommentsInTransaction(ctx context.Context, creation_id int64) (*gen
 				c.root = 0
 			AND 
 				c.status = 'PUBLISHED'
-			LIMIT 50
-		`
+			LIMIT 50`
 
 		queryArea = `
 			SELECT 
 				total_comments,
 				areas_status
 			FROM
-				db_comment_areas_1.CommentAreas
+				db_comment_area_1.CommentArea
 			WHERE
-				creation_id = ?
-		`
+				creation_id = ?`
 	)
 
 	var (
@@ -261,7 +259,7 @@ func GetFirstCommentsInTransaction(ctx context.Context, creation_id int64) (*gen
 		}
 
 		// 非公开则直接返回
-		if status != "ACTIVE" {
+		if status != "DEFAULT" {
 			return &generated.CommentArea{
 				AreaStatus: generated.CommentArea_Status(generated.CommentArea_Status_value[status]),
 			}, nil, nil
@@ -709,7 +707,7 @@ func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) (int64, error) {
 				WHERE id 
 				IN (%s)`, strings.Join(queryCount, ","))
 		queryArea = `
-				UPDATE db_comment_areas_1.CommentAreas 
+				UPDATE db_comment_area_1.CommentArea 
 				SET
 					total_comments = total_comments - ?,
 				WHERE creation_id = ?`

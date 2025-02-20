@@ -1,9 +1,9 @@
-CREATE DATABASE IF NOT EXISTS db_comment_areas_1;
+CREATE DATABASE IF NOT EXISTS db_comment_area_1;
 CREATE DATABASE IF NOT EXISTS db_comment_1;
 
 CREATE USER 'yuxyuxx'@'%' IDENTIFIED WITH mysql_native_password BY 'yuxyuxx';
 
-GRANT ALL PRIVILEGES ON db_comment_areas_1.* TO 'yuxyuxx'@'%';
+GRANT ALL PRIVILEGES ON db_comment_area_1.* TO 'yuxyuxx'@'%';
 GRANT ALL PRIVILEGES ON db_comment_1.* TO 'yuxyuxx'@'%';
 
 FLUSH PRIVILEGES;
@@ -12,13 +12,13 @@ ALTER USER 'yuxyuxx'@'%' IDENTIFIED WITH mysql_native_password BY 'yuxyuxx';
 GRANT REPLICATION SLAVE ON *.* TO 'yuxyuxx'@'%';
 FLUSH PRIVILEGES;
 
--- 使用 db_comment_areas_1 数据库
-USE db_comment_areas_1;
+-- 使用 db_comment_area_1 数据库
+USE db_comment_area_1;
 
-CREATE TABLE IF NOT EXISTS CommentAreas (
+CREATE TABLE IF NOT EXISTS CommentArea (
     creation_id BIGINT PRIMARY KEY,
     total_comments INT DEFAULT 0,
-    areas_status ENUM('ACTIVE','INACTIVE','HIDE') DEFAULT 'ACTIVE'
+    areas_status ENUM('DEFAULT','HIDING','CLOSED') DEFAULT 'DEFAULT'
 );
 
 -- 使用 db_comment_1 数据库

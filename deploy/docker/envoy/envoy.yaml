@@ -111,6 +111,10 @@ static_resources:
                             prefix: "/review.ReviewService" # grpc 授权 路径
                           route:
                             cluster: review_service # 指定 gRPC review 集群
+                          request_headers_to_add:
+                            - header:
+                                key: "x-forwarded-for"
+                                value: "%REQ(x-forwarded-for)%"
   clusters:
     # 当需要组装多个服务返回的响应，会使用aggregator（聚合层）
     - name: aggregator_service # gRPC 聚合层 服务集群
