@@ -10,7 +10,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/Yux77Yux/platform_backend/generated/common"
+	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
@@ -343,7 +343,7 @@ func GetUsers(ctx context.Context, userIds []int64) ([]*common.UserCreationComme
 			bio
 		FROM 
 			db_user_1.User
-		WHERE IN (%s)`, strings.Join(sqlStr, ","))
+		WHERE id IN (%s)`, strings.Join(sqlStr, ","))
 
 	rows, err := db.QueryContext(ctx, query, values...)
 	if err != nil {

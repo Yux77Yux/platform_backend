@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"log"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
@@ -33,13 +34,42 @@ func GetComments(ctx context.Context, req *generated.GetCommentsRequest) (*gener
 	}, nil
 }
 
-// 第一次请求
+// 第一次请求评论
 func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest) (*generated.InitialCommentsResponse, error) {
 	creationId := req.GetCreationId()
 
-	area, comments, err := db.GetFirstCommentsInTransaction(ctx, creationId)
+	area, comments, count, err := db.GetInitialTopCommentsInTransaction(ctx, creationId)
 	if err != nil {
+		log.Printf("error: creationId %d %v", creationId, err)
 		return &generated.InitialCommentsResponse{
+			Msg: &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    "404",
+				Message: err.Error(),
+				Details: err.Error(),
+			},
+		}, err
+	}
+
+	return &generated.InitialCommentsResponse{
+		Comments:    comments,
+		CommentArea: area,
+		PageCount:   count,
+		Msg: &common.ApiResponse{
+			Status: common.ApiResponse_SUCCESS,
+			Code:   "200",
+		},
+	}, nil
+}
+
+// 第一次请求二级评论
+func InitialSecondComments(ctx context.Context, req *generated.InitialSecondCommentsRequest) (*generated.InitialSecondCommentsResponse, error) {
+	creationId := req.GetCreationId()
+	root := req.GetRoot()
+
+	comments, count, err := db.GetInitialSecondCommentsInTransaction(ctx, creationId, root)
+	if err != nil {
+		return &generated.InitialSecondCommentsResponse{
 			Msg: &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,
 				Code:    "404",
@@ -49,9 +79,9 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 		}, nil
 	}
 
-	return &generated.InitialCommentsResponse{
-		Comments:    comments,
-		CommentArea: area,
+	return &generated.InitialSecondCommentsResponse{
+		Comments:  comments,
+		PageCount: count,
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
 			Code:   "200",

@@ -52,7 +52,9 @@ func (chain *InsertChain) ExecuteBatch() {
 			// 插入数据库
 			affectedCount, err := db.BatchInsert(insertComments)
 			if err != nil {
-				log.Printf("error: BatchUpdateDeleteStatus error")
+				log.Printf("error: BatchInsert error %v", err)
+				// 入死信
+				return
 			}
 			// 更新Redis
 			id := insertComments[0].GetCreationId()
@@ -81,7 +83,7 @@ func (chain *InsertChain) HandleRequest(data protoreflect.ProtoMessage) {
 func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
 	comment, ok := data.(*generated.Comment)
 	if !ok {
-		log.Printf("invalid type: expected *generated.Comment")
+		log.Printf(": expected *generated.Comment")
 	}
 
 	creationId := comment.GetCreationId()
@@ -143,9 +145,9 @@ func (chain *InsertChain) CreateListener(data protoreflect.ProtoMessage) Listene
 // 销毁监听者
 func (chain *InsertChain) DestroyListener(listener ListenerInterface) {
 	// 找到前一个节点（假设 chain.Head 是链表的头部）
-	current, ok := listener.(*DeleteListener)
+	current, ok := listener.(*InsertListener)
 	if !ok {
-		log.Printf("invalid type: expected *DeleteListener")
+		log.Printf("invalid type: expected *InsertListener")
 	}
 
 	chain.nodeMux.Lock()

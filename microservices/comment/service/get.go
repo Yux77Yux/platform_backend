@@ -34,6 +34,19 @@ func (s *Server) InitialComments(ctx context.Context, req *generated.InitialComm
 	return response, nil
 }
 
+func (s *Server) InitialSecondComments(ctx context.Context, req *generated.InitialSecondCommentsRequest) (*generated.InitialSecondCommentsResponse, error) {
+	log.Println("info: InitialSecondComments service start")
+
+	response, err := internal.InitialSecondComments(ctx, req)
+	if err != nil {
+		log.Println("error: InitialSecondComments occur fail: ", err)
+		return response, nil
+	}
+
+	log.Println("info: InitialSecondComments occur success")
+	return response, nil
+}
+
 func (s *Server) GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetCommentsResponse, error) {
 	log.Println("info: GetTopComment service start")
 

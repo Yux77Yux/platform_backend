@@ -43,9 +43,9 @@ func init() {
 
 func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 	switch typeName {
-	case "insert":
+	case Insert:
 		insertChain.HandleRequest(msg)
-	case "delete":
+	case Delete:
 		deleteChain.HandleRequest(msg)
 	}
 }

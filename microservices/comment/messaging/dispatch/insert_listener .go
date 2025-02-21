@@ -110,7 +110,7 @@ func (listener *InsertListener) RestartTimeoutTimer() {
 		if count == 0 {
 			listener.Cleanup()
 			// 超时后销毁监听者
-			deleteChain.DestroyListener(listener)
+			insertChain.DestroyListener(listener)
 		}
 		listener.RestartTimeoutTimer() // 重启定时器
 	})

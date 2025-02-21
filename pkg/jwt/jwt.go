@@ -69,7 +69,7 @@ func ParseJWT(tokenStr string) (*Claims, error) {
 		} else if strings.Contains(err.Error(), "malformed") || strings.Contains(err.Error(), "invalid number of segments") {
 			return nil, errors.New("INVALID_TOKEN_FORMAT")
 		}
-		return nil, errors.New("TOKEN_PARSE_ERROR")
+		return nil, err
 	}
 
 	// Check if the token is valid

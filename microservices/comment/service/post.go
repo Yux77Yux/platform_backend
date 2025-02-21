@@ -13,10 +13,10 @@ func (s *Server) PublishComment(ctx context.Context, req *generated.PublishComme
 
 	response, err := internal.PublishComment(req)
 	if err != nil {
-		log.Println("error: upload comment occur fail")
+		log.Printf("error: publish comment occur fail,%v", err)
 		return response, nil
 	}
 
-	log.Println("info: upload comment occur success")
+	log.Println("info: publish comment occur success")
 	return response, nil
 }

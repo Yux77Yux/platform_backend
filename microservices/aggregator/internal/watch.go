@@ -370,7 +370,82 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 	}
 
 	response.Area = commentsResponse.GetCommentArea()
+	response.PageCount = commentsResponse.GetPageCount()
 	response.Comments = cards
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
+}
+func InitialSecondComments(ctx context.Context, req *generated.InitialSecondCommentsRequest) (*generated.InitialSecondCommentsResponse, error) {
+	response := new(generated.InitialSecondCommentsResponse)
+	request := req.GetRequest()
+	creationId := request.GetCreationId()
+
+	comment_client, err := client.GetCommentClient()
+	if err != nil {
+		err = fmt.Errorf("error: comment client %w", err)
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, nil
+	}
+	commentsResponse, err := comment_client.InitialSecondComments(ctx, &comment.InitialSecondCommentsRequest{
+		CreationId: creationId,
+	})
+	if err != nil {
+		var msg *common.ApiResponse
+		if commentsResponse != nil {
+			msg = commentsResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
+		return response, err
+	}
+	if commentsResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+		response.Msg = commentsResponse.Msg
+		return response, err
+	}
+
+	comments := commentsResponse.GetComments()
+	if len(comments) <= 0 {
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no comment",
+		}
+		return response, nil
+	}
+
+	cards, err := getCards(ctx, comments)
+	if err != nil {
+		err = fmt.Errorf("error: user client %w", err)
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, nil
+	}
+	if len(cards) <= 0 {
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no comment",
+		}
+		return response, nil
+	}
+
+	response.Comments = cards
+	response.PageCount = commentsResponse.GetPageCount()
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",

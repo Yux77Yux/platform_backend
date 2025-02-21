@@ -16,7 +16,7 @@ import (
 /*
 	这里的链表不太符合高并发特点的设计，问题在于持有锁时间会很长
 	改进的办法是使用堆建立，或者使用HASH对节点进行映射
-	先留着，以后再建堆
+	先留着，以后改map
 
 	......
 	写的挺烂的
@@ -61,7 +61,7 @@ func (chain *DeleteChain) ExecuteBatch() {
 			// 更新数据库
 			affectedCount, err := db.BatchUpdateDeleteStatus(delComments)
 			if err != nil {
-				log.Printf("error: BatchUpdateDeleteStatus error")
+				log.Printf("error: BatchUpdateDeleteStatus error %v", err)
 			}
 			// 更新Redis
 			id := delComments[0].GetCreationId()

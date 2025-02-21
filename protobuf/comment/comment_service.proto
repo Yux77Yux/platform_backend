@@ -20,6 +20,7 @@ service CommentService {
   }
 
   rpc InitialComments(comment.methods.InitialCommentsRequest) returns (comment.methods.InitialCommentsResponse);
+  rpc InitialSecondComments(comment.methods.InitialSecondCommentsRequest) returns (comment.methods.InitialSecondCommentsResponse);
 
   rpc DeleteComment(comment.methods.DeleteCommentRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
@@ -32,9 +33,9 @@ service CommentService {
 
   rpc GetSecondComments(comment.methods.GetSecondCommentsRequest) returns (comment.methods.GetCommentsResponse);
 
-  rpc GetReplyComments(comment.methods.GetReplyCommentsRequest) returns (comment.methods.GetCommentsResponse) ;
+  rpc GetReplyComments(comment.methods.GetReplyCommentsRequest) returns (comment.methods.GetCommentsResponse);
 
   rpc GetComment(comment.methods.GetCommentRequest) returns (comment.methods.GetCommentResponse);
-  
+
   rpc GetComments(comment.methods.GetCommentsRequest) returns (comment.methods.GetCommentsResponse);
 }

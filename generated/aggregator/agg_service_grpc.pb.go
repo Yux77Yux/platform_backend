@@ -23,6 +23,7 @@ const (
 	AggregatorService_WatchCreation_FullMethodName         = "/aggregator.AggregatorService/WatchCreation"
 	AggregatorService_SimilarCreations_FullMethodName      = "/aggregator.AggregatorService/SimilarCreations"
 	AggregatorService_InitialComments_FullMethodName       = "/aggregator.AggregatorService/InitialComments"
+	AggregatorService_InitialSecondComments_FullMethodName = "/aggregator.AggregatorService/InitialSecondComments"
 	AggregatorService_GetTopComments_FullMethodName        = "/aggregator.AggregatorService/GetTopComments"
 	AggregatorService_GetSecondComments_FullMethodName     = "/aggregator.AggregatorService/GetSecondComments"
 	AggregatorService_GetUserReviews_FullMethodName        = "/aggregator.AggregatorService/GetUserReviews"
@@ -48,6 +49,7 @@ type AggregatorServiceClient interface {
 	SimilarCreations(ctx context.Context, in *SimilarCreationsRequest, opts ...grpc.CallOption) (*GetCardsResponse, error)
 	// Comment OK
 	InitialComments(ctx context.Context, in *InitialCommentsRequest, opts ...grpc.CallOption) (*InitialCommentsResponse, error)
+	InitialSecondComments(ctx context.Context, in *InitialSecondCommentsRequest, opts ...grpc.CallOption) (*InitialSecondCommentsResponse, error)
 	GetTopComments(ctx context.Context, in *GetTopCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
 	GetSecondComments(ctx context.Context, in *GetSecondCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
 	// Review
@@ -107,6 +109,16 @@ func (c *aggregatorServiceClient) InitialComments(ctx context.Context, in *Initi
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(InitialCommentsResponse)
 	err := c.cc.Invoke(ctx, AggregatorService_InitialComments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorServiceClient) InitialSecondComments(ctx context.Context, in *InitialSecondCommentsRequest, opts ...grpc.CallOption) (*InitialSecondCommentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InitialSecondCommentsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_InitialSecondComments_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -235,6 +247,7 @@ type AggregatorServiceServer interface {
 	SimilarCreations(context.Context, *SimilarCreationsRequest) (*GetCardsResponse, error)
 	// Comment OK
 	InitialComments(context.Context, *InitialCommentsRequest) (*InitialCommentsResponse, error)
+	InitialSecondComments(context.Context, *InitialSecondCommentsRequest) (*InitialSecondCommentsResponse, error)
 	GetTopComments(context.Context, *GetTopCommentsRequest) (*GetCommentsResponse, error)
 	GetSecondComments(context.Context, *GetSecondCommentsRequest) (*GetCommentsResponse, error)
 	// Review
@@ -271,6 +284,9 @@ func (UnimplementedAggregatorServiceServer) SimilarCreations(context.Context, *S
 }
 func (UnimplementedAggregatorServiceServer) InitialComments(context.Context, *InitialCommentsRequest) (*InitialCommentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitialComments not implemented")
+}
+func (UnimplementedAggregatorServiceServer) InitialSecondComments(context.Context, *InitialSecondCommentsRequest) (*InitialSecondCommentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitialSecondComments not implemented")
 }
 func (UnimplementedAggregatorServiceServer) GetTopComments(context.Context, *GetTopCommentsRequest) (*GetCommentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTopComments not implemented")
@@ -394,6 +410,24 @@ func _AggregatorService_InitialComments_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AggregatorServiceServer).InitialComments(ctx, req.(*InitialCommentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AggregatorService_InitialSecondComments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitialSecondCommentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).InitialSecondComments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_InitialSecondComments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).InitialSecondComments(ctx, req.(*InitialSecondCommentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -618,6 +652,10 @@ var AggregatorService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InitialComments",
 			Handler:    _AggregatorService_InitialComments_Handler,
+		},
+		{
+			MethodName: "InitialSecondComments",
+			Handler:    _AggregatorService_InitialSecondComments_Handler,
 		},
 		{
 			MethodName: "GetTopComments",

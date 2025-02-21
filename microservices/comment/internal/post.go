@@ -11,7 +11,8 @@ import (
 
 func PublishComment(req *generated.PublishCommentRequest) (*generated.PublishCommentResponse, error) {
 	response := &generated.PublishCommentResponse{}
-	pass, user_id, err := auth.Auth("post", "comment", req.GetAccessToken().GetValue())
+	token := req.GetAccessToken().GetValue()
+	pass, user_id, err := auth.Auth("post", "comment", token)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status: common.ApiResponse_FAILED,

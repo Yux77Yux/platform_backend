@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 // POST
 func BatchInsert(comments []*generated.Comment) (int64, error) {
 	ctx := context.Background()
-
 	count := len(comments)
 	// 构建用于构建 IN 子句的占位符部分
 	queryCommentCount := make([]string, count) // 使用切片存储占位符
@@ -42,7 +42,7 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 		queryArea = `
 				UPDATE db_comment_area_1.CommentArea 
 				SET
-					total_comments = total_comments + ?,
+					total_comments = total_comments + ?
 				WHERE creation_id = ?`
 		CommentValues = make([]interface{}, 0, count*5)
 		ContentValues = make([]interface{}, 0, count*3)
@@ -177,8 +177,7 @@ func GetPublisherIdInTransaction(comment_id int32) (int64, error) {
 			FROM
 				db_comment_1.Comment
 			WHERE
-				id = ?
-		`
+				id = ?`
 	)
 
 	ctx := context.Background()
@@ -202,16 +201,39 @@ func GetPublisherIdInTransaction(comment_id int32) (int64, error) {
 	return userId, nil
 }
 
-func GetFirstCommentsInTransaction(ctx context.Context, creation_id int64) (*generated.CommentArea, []*generated.Comment, error) {
+const (
+	TOP_LIMIT    = 25
+	SECOND_LIMIT = 10
+)
+
+// 初始化一级评论
+func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) (*generated.CommentArea, []*generated.Comment, int32, error) {
 	const (
-		query = `
+		LIMIT            = TOP_LIMIT
+		queryTopComments = `
+			SELECT count(*) 
+			FROM db_comment_1.Comment 
+			WHERE creation_id = ? 
+			AND root = 0 
+			AND status = 'PUBLISHED'`
+
+		queryArea = `
+			SELECT 
+				total_comments,
+				areas_status
+			FROM
+				db_comment_area_1.CommentArea
+			WHERE
+				creation_id = ?`
+	)
+	query := fmt.Sprintf(`
 			SELECT 
     			c.id,
     			c.root,
     			c.parent,
     			c.dialog,
     			c.user_id,
-    			c.created_at,
+    			CAST(c.created_at AS DATETIME) AS created_at,
     			cc.content,
     			cc.media
 			FROM 
@@ -226,28 +248,19 @@ func GetFirstCommentsInTransaction(ctx context.Context, creation_id int64) (*gen
 				c.root = 0
 			AND 
 				c.status = 'PUBLISHED'
-			LIMIT 50`
-
-		queryArea = `
-			SELECT 
-				total_comments,
-				areas_status
-			FROM
-				db_comment_area_1.CommentArea
-			WHERE
-				creation_id = ?`
-	)
+			LIMIT %d`, LIMIT)
 
 	var (
 		total  int32  = -1
 		status string = ""
+		count  int32
 
 		comments []*generated.Comment
 	)
 
 	select {
 	case <-ctx.Done():
-		return nil, nil, ctx.Err()
+		return nil, nil, -1, ctx.Err()
 	default:
 		// 查统计
 		err := db.QueryRowContext(ctx,
@@ -255,24 +268,31 @@ func GetFirstCommentsInTransaction(ctx context.Context, creation_id int64) (*gen
 			creation_id,
 		).Scan(&total, &status)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, -1, err
+		}
+
+		err = db.QueryRowContext(ctx,
+			queryTopComments,
+			creation_id,
+		).Scan(&count)
+		if err != nil {
+			return nil, nil, -1, err
 		}
 
 		// 非公开则直接返回
-		if status != "DEFAULT" {
+		if status != generated.CommentArea_DEFAULT.String() {
 			return &generated.CommentArea{
 				AreaStatus: generated.CommentArea_Status(generated.CommentArea_Status_value[status]),
-			}, nil, nil
+			}, nil, -1, nil
 		}
 
 		// 查评论
-		rows, err := db.QueryContext(
-			ctx,
+		rows, err := db.Query(
 			query,
 			creation_id,
 		)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, -1, err
 		}
 		defer rows.Close()
 
@@ -290,7 +310,112 @@ func GetFirstCommentsInTransaction(ctx context.Context, creation_id int64) (*gen
 
 			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, -1, err
+			}
+			comments = append(comments, &generated.Comment{
+				CommentId:  id,
+				Root:       root,
+				Parent:     parent,
+				Dialog:     dialog,
+				UserId:     user_id,
+				CreationId: creation_id,
+				CreatedAt:  timestamppb.Now(),
+				Content:    content.String,
+				Media:      media.String,
+			})
+		}
+	}
+
+	// 计算页数返回
+	pageCount := int32(math.Ceil(float64(count) / float64(LIMIT)))
+	return &generated.CommentArea{
+		AreaStatus:    generated.CommentArea_Status(generated.CommentArea_Status_value[status]),
+		TotalComments: total,
+	}, comments, pageCount, nil
+}
+
+// 初始化二级评论
+func GetInitialSecondCommentsInTransaction(ctx context.Context, creation_id int64, root int32) ([]*generated.Comment, int32, error) {
+	const (
+		LIMIT               = SECOND_LIMIT
+		querySecondComments = `
+			SELECT count(*) 
+			FROM db_comment_1.Comment 
+			WHERE creation_id = ? 
+			AND root = ? 
+			AND status = 'PUBLISHED'`
+	)
+
+	query := fmt.Sprintf(`
+			SELECT 
+    			c.id,
+    			c.root,
+    			c.parent,
+    			c.dialog,
+    			c.user_id,
+    			c.created_at,
+    			cc.content,
+    			cc.media,
+			FROM 
+    			db_comment_1.Comment c
+			LEFT JOIN 
+    			db_comment_1.CommentContent cc 
+			ON 
+				c.id = cc.comment_id
+			WHERE 
+    			c.creation_id = ?
+			AND 
+				c.root = ?
+			AND 
+				c.status = 'PUBLISHED'
+			LIMIT %d`, LIMIT)
+
+	var (
+		count int32
+
+		comments []*generated.Comment
+	)
+
+	select {
+	case <-ctx.Done():
+		return nil, -1, ctx.Err()
+	default:
+		err := db.QueryRowContext(ctx,
+			querySecondComments,
+			creation_id,
+			root,
+		).Scan(&count)
+		if err != nil {
+			return nil, -1, err
+		}
+
+		// 查评论
+		rows, err := db.QueryContext(
+			ctx,
+			query,
+			creation_id,
+			root,
+		)
+		if err != nil {
+			return nil, -1, err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var (
+				id         int32
+				root       int32
+				parent     int32
+				dialog     int32
+				user_id    int64
+				created_at time.Time
+				content    sql.NullString
+				media      sql.NullString
+			)
+
+			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
+			if err != nil {
+				return nil, -1, err
 			}
 			comments = append(comments, &generated.Comment{
 				CommentId:  id,
@@ -306,16 +431,15 @@ func GetFirstCommentsInTransaction(ctx context.Context, creation_id int64) (*gen
 		}
 	}
 
-	return &generated.CommentArea{
-		AreaStatus:    generated.CommentArea_Status(generated.CommentArea_Status_value[status]),
-		TotalComments: total,
-	}, comments, nil
+	pageCount := int32(math.Ceil(float64(count) / float64(LIMIT)))
+	return comments, pageCount, nil
 }
 
 func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNumber int32) ([]*generated.Comment, error) {
-	offset := (pageNumber - 1) * 50
-	const (
-		query = `
+	const LIMIT = TOP_LIMIT
+	var (
+		offset = (pageNumber - 1) * LIMIT
+		query  = fmt.Sprintf(`
 			SELECT 
     			c.id,
     			c.root,
@@ -337,8 +461,8 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 				c.root = 0
 			AND 
 				c.status = 'PUBLISHED'
-			LIMIT 50 OFFSET ?
-		`
+			LIMIT %d 
+			OFFSET ?`, LIMIT)
 	)
 
 	var (
@@ -394,9 +518,10 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 }
 
 func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root, pageNumber int32) ([]*generated.Comment, error) {
-	offset := (pageNumber - 1) * 50
-	const (
-		query = `
+	const LIMIT = SECOND_LIMIT
+	var (
+		offset = (pageNumber - 1) * LIMIT
+		query  = fmt.Sprintf(`
 			SELECT 
     			c.id,
     			c.root,
@@ -418,7 +543,8 @@ func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root
 				c.root = ?
 			AND 
 				c.status = 'PUBLISHED'
-			LIMIT 10 OFFSET ?`
+			LIMIT %d 
+			OFFSET ?`, LIMIT)
 	)
 
 	var (
@@ -474,9 +600,10 @@ func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root
 }
 
 func GetReplyCommentsInTransaction(ctx context.Context, user_id int64, page int32) ([]*generated.Comment, error) {
+	const LIMIT = TOP_LIMIT
 	var (
-		offset = (page - 1) * 50
-		query  = `
+		offset = (page - 1) * LIMIT
+		query  = fmt.Sprintf(`
 			SELECT 
     			c.id,
     			c.root,
@@ -495,8 +622,8 @@ func GetReplyCommentsInTransaction(ctx context.Context, user_id int64, page int3
 			WHERE 
 				c.user_id = ?
 			ORDER BY c.created_at DESC
-			LIMIT 50 
-			OFFSET ?`
+			LIMIT %d 
+			OFFSET ?`, LIMIT)
 	)
 
 	var (

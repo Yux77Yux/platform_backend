@@ -14,7 +14,7 @@ import (
 )
 
 func JoinCommentProcessor(msg amqp.Delivery) error {
-	data := new(generated.AfterAuth)
+	data := new(generated.Comment)
 	err := proto.Unmarshal(msg.Body, data)
 	if err != nil {
 		return err

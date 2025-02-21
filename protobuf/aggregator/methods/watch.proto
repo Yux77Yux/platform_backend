@@ -39,6 +39,16 @@ message InitialCommentsRequest {
 message InitialCommentsResponse {
   repeated aggregator.messages.CommentInfo comments = 1;
   comment.messages.CommentArea area = 2;
+  int32 page_count = 3;
+  common.ApiResponse msg = 4;// 返回的响应
+}
+
+message InitialSecondCommentsRequest {
+  comment.methods.InitialSecondCommentsRequest request = 1;
+}
+message InitialSecondCommentsResponse {
+  repeated aggregator.messages.CommentInfo comments = 1;
+  int32 page_count = 2;
   common.ApiResponse msg = 3;// 返回的响应
 }
 

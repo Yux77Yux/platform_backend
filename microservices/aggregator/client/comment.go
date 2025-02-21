@@ -60,6 +60,18 @@ func (c *CommentClient) InitialComments(ctx context.Context, req *generated.Init
 	return response, nil
 }
 
+func (c *CommentClient) InitialSecondComments(ctx context.Context, req *generated.InitialSecondCommentsRequest) (*generated.InitialSecondCommentsResponse, error) {
+	// 创建客户端
+	client := generated.NewCommentServiceClient(c.connection)
+
+	response, err := client.InitialSecondComments(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("could not greet: %v", err)
+	}
+
+	return response, nil
+}
+
 func (c *CommentClient) GetComments(ctx context.Context, req *generated.GetCommentsRequest) (*generated.GetCommentsResponse, error) {
 	// 创建客户端
 	client := generated.NewCommentServiceClient(c.connection)

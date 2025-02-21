@@ -41,6 +41,12 @@ service AggregatorService {
     };
   }
 
+  rpc InitialSecondComments(aggregator.methods.InitialSecondCommentsRequest) returns (aggregator.methods.InitialSecondCommentsResponse) {
+    option (google.api.http) = {
+      get: "/api/watch/comments/second/{request.creation_id}/{request.root}"
+    };
+  }
+
   rpc GetTopComments(aggregator.methods.GetTopCommentsRequest) returns (aggregator.methods.GetCommentsResponse) {
     option (google.api.http) = {
       get: "/api/watch/comments/{request.creation_id=*}/{request.page=*}"
@@ -49,7 +55,7 @@ service AggregatorService {
 
   rpc GetSecondComments(aggregator.methods.GetSecondCommentsRequest) returns (aggregator.methods.GetCommentsResponse) {
     option (google.api.http) = {
-      get: "/api/watch/comments/seconds/{request.creation_id=*}/{request.root=*}/{request.page=*}"
+      get: "/api/watch/comments/second/{request.creation_id=*}/{request.root=*}/{request.page=*}"
     };
   }
 
@@ -97,7 +103,7 @@ service AggregatorService {
   }
 
   // 主页
-  rpc HomePage(aggregator.methods.HomeRequest) returns (aggregator.methods.GetCardsResponse){
+  rpc HomePage(aggregator.methods.HomeRequest) returns (aggregator.methods.GetCardsResponse) {
     option (google.api.http) = {
       post: "/api/home/fetch"
       body: "*"
@@ -105,7 +111,7 @@ service AggregatorService {
   }
 
   // 收藏夹
-  rpc Collections(aggregator.methods.CollectionsRequest) returns (aggregator.methods.GetCardsResponse){
+  rpc Collections(aggregator.methods.CollectionsRequest) returns (aggregator.methods.GetCardsResponse) {
     option (google.api.http) = {
       post: "/api/collections/fetch"
       body: "*"
@@ -113,7 +119,7 @@ service AggregatorService {
   }
 
   // 历史
-  rpc History(aggregator.methods.HistoryRequest) returns (aggregator.methods.GetCardsResponse){
+  rpc History(aggregator.methods.HistoryRequest) returns (aggregator.methods.GetCardsResponse) {
     option (google.api.http) = {
       post: "/api/history/fetch"
       body: "*"

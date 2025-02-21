@@ -20,14 +20,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CommentService_PublishComment_FullMethodName    = "/comment.CommentService/PublishComment"
-	CommentService_InitialComments_FullMethodName   = "/comment.CommentService/InitialComments"
-	CommentService_DeleteComment_FullMethodName     = "/comment.CommentService/DeleteComment"
-	CommentService_GetTopComments_FullMethodName    = "/comment.CommentService/GetTopComments"
-	CommentService_GetSecondComments_FullMethodName = "/comment.CommentService/GetSecondComments"
-	CommentService_GetReplyComments_FullMethodName  = "/comment.CommentService/GetReplyComments"
-	CommentService_GetComment_FullMethodName        = "/comment.CommentService/GetComment"
-	CommentService_GetComments_FullMethodName       = "/comment.CommentService/GetComments"
+	CommentService_PublishComment_FullMethodName        = "/comment.CommentService/PublishComment"
+	CommentService_InitialComments_FullMethodName       = "/comment.CommentService/InitialComments"
+	CommentService_InitialSecondComments_FullMethodName = "/comment.CommentService/InitialSecondComments"
+	CommentService_DeleteComment_FullMethodName         = "/comment.CommentService/DeleteComment"
+	CommentService_GetTopComments_FullMethodName        = "/comment.CommentService/GetTopComments"
+	CommentService_GetSecondComments_FullMethodName     = "/comment.CommentService/GetSecondComments"
+	CommentService_GetReplyComments_FullMethodName      = "/comment.CommentService/GetReplyComments"
+	CommentService_GetComment_FullMethodName            = "/comment.CommentService/GetComment"
+	CommentService_GetComments_FullMethodName           = "/comment.CommentService/GetComments"
 )
 
 // CommentServiceClient is the client API for CommentService service.
@@ -36,6 +37,7 @@ const (
 type CommentServiceClient interface {
 	PublishComment(ctx context.Context, in *PublishCommentRequest, opts ...grpc.CallOption) (*PublishCommentResponse, error)
 	InitialComments(ctx context.Context, in *InitialCommentsRequest, opts ...grpc.CallOption) (*InitialCommentsResponse, error)
+	InitialSecondComments(ctx context.Context, in *InitialSecondCommentsRequest, opts ...grpc.CallOption) (*InitialSecondCommentsResponse, error)
 	DeleteComment(ctx context.Context, in *DeleteCommentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetTopComments(ctx context.Context, in *GetTopCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
 	GetSecondComments(ctx context.Context, in *GetSecondCommentsRequest, opts ...grpc.CallOption) (*GetCommentsResponse, error)
@@ -66,6 +68,16 @@ func (c *commentServiceClient) InitialComments(ctx context.Context, in *InitialC
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(InitialCommentsResponse)
 	err := c.cc.Invoke(ctx, CommentService_InitialComments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *commentServiceClient) InitialSecondComments(ctx context.Context, in *InitialSecondCommentsRequest, opts ...grpc.CallOption) (*InitialSecondCommentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InitialSecondCommentsResponse)
+	err := c.cc.Invoke(ctx, CommentService_InitialSecondComments_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -138,6 +150,7 @@ func (c *commentServiceClient) GetComments(ctx context.Context, in *GetCommentsR
 type CommentServiceServer interface {
 	PublishComment(context.Context, *PublishCommentRequest) (*PublishCommentResponse, error)
 	InitialComments(context.Context, *InitialCommentsRequest) (*InitialCommentsResponse, error)
+	InitialSecondComments(context.Context, *InitialSecondCommentsRequest) (*InitialSecondCommentsResponse, error)
 	DeleteComment(context.Context, *DeleteCommentRequest) (*emptypb.Empty, error)
 	GetTopComments(context.Context, *GetTopCommentsRequest) (*GetCommentsResponse, error)
 	GetSecondComments(context.Context, *GetSecondCommentsRequest) (*GetCommentsResponse, error)
@@ -159,6 +172,9 @@ func (UnimplementedCommentServiceServer) PublishComment(context.Context, *Publis
 }
 func (UnimplementedCommentServiceServer) InitialComments(context.Context, *InitialCommentsRequest) (*InitialCommentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitialComments not implemented")
+}
+func (UnimplementedCommentServiceServer) InitialSecondComments(context.Context, *InitialSecondCommentsRequest) (*InitialSecondCommentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitialSecondComments not implemented")
 }
 func (UnimplementedCommentServiceServer) DeleteComment(context.Context, *DeleteCommentRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteComment not implemented")
@@ -231,6 +247,24 @@ func _CommentService_InitialComments_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CommentServiceServer).InitialComments(ctx, req.(*InitialCommentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CommentService_InitialSecondComments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitialSecondCommentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CommentServiceServer).InitialSecondComments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CommentService_InitialSecondComments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CommentServiceServer).InitialSecondComments(ctx, req.(*InitialSecondCommentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -357,6 +391,10 @@ var CommentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InitialComments",
 			Handler:    _CommentService_InitialComments_Handler,
+		},
+		{
+			MethodName: "InitialSecondComments",
+			Handler:    _CommentService_InitialSecondComments_Handler,
 		},
 		{
 			MethodName: "DeleteComment",

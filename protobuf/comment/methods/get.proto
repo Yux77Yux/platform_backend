@@ -9,6 +9,10 @@ import "comment/messages/comment.proto";
 import "common/access_token.proto";
 import "common/api_response.proto";
 
+message GetCommentsRequest {
+  repeated int32 ids = 1;
+}
+
 // 初始化
 message InitialCommentsRequest {
   int64 creation_id = 1;
@@ -17,14 +21,22 @@ message InitialCommentsRequest {
 message InitialCommentsResponse {
   repeated comment.messages.Comment comments = 1;
   comment.messages.CommentArea comment_area = 2;
+  int32 page_count = 3;
+  common.ApiResponse msg = 4;
+}
+
+message InitialSecondCommentsRequest {
+  int64 creation_id = 1;
+  int32 root = 2;// 一级评论所在
+}
+
+message InitialSecondCommentsResponse {
+  repeated comment.messages.Comment comments = 1;
+  int32 page_count = 2;
   common.ApiResponse msg = 3;
 }
 
 // 作品的一级评论
-message GetCommentsRequest {
-  repeated int32 ids = 1;
-}
-
 message GetTopCommentsRequest {
   int64 creation_id = 1;
   int32 page = 2;
