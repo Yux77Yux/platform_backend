@@ -19,21 +19,10 @@ message InitialCommentsRequest {
 }
 
 message InitialCommentsResponse {
-  repeated comment.messages.Comment comments = 1;
+  repeated comment.messages.TopComment comments = 1;
   comment.messages.CommentArea comment_area = 2;
   int32 page_count = 3;
   common.ApiResponse msg = 4;
-}
-
-message InitialSecondCommentsRequest {
-  int64 creation_id = 1;
-  int32 root = 2;// 一级评论所在
-}
-
-message InitialSecondCommentsResponse {
-  repeated comment.messages.Comment comments = 1;
-  int32 page_count = 2;
-  common.ApiResponse msg = 3;
 }
 
 // 作品的一级评论
@@ -42,11 +31,21 @@ message GetTopCommentsRequest {
   int32 page = 2;
 }
 
-// 一级评论内的评论
+message GetTopCommentsResponse {
+  repeated comment.messages.TopComment comments = 1;
+  common.ApiResponse msg = 2;
+}
+
+// 二级评论
 message GetSecondCommentsRequest {
   int64 creation_id = 1;
   int32 root = 2;// 一级评论所在
   int32 page = 3;
+}
+
+message GetSecondCommentsResponse {
+  repeated comment.messages.SecondComment comments = 1;
+  common.ApiResponse msg = 2;
 }
 
 // 消息中心，没做

@@ -41,19 +41,13 @@ service AggregatorService {
     };
   }
 
-  rpc InitialSecondComments(aggregator.methods.InitialSecondCommentsRequest) returns (aggregator.methods.InitialSecondCommentsResponse) {
-    option (google.api.http) = {
-      get: "/api/watch/comments/second/{request.creation_id}/{request.root}"
-    };
-  }
-
-  rpc GetTopComments(aggregator.methods.GetTopCommentsRequest) returns (aggregator.methods.GetCommentsResponse) {
+  rpc GetTopComments(aggregator.methods.GetTopCommentsRequest) returns (aggregator.methods.GetTopCommentsResponse) {
     option (google.api.http) = {
       get: "/api/watch/comments/{request.creation_id=*}/{request.page=*}"
     };
   }
 
-  rpc GetSecondComments(aggregator.methods.GetSecondCommentsRequest) returns (aggregator.methods.GetCommentsResponse) {
+  rpc GetSecondComments(aggregator.methods.GetSecondCommentsRequest) returns (aggregator.methods.GetSecondCommentsResponse) {
     option (google.api.http) = {
       get: "/api/watch/comments/second/{request.creation_id=*}/{request.root=*}/{request.page=*}"
     };

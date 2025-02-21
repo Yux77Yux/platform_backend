@@ -19,6 +19,16 @@ message Comment {
   string media = 9;
 }
 
+message TopComment {
+  Comment comment = 1;
+  int32 sub_count = 2;
+}
+
+message SecondComment{
+  Comment comment = 1;
+  int64 reply_user_id = 2;
+}
+
 message CommentArea {
   enum Status {
     DEFAULT = 0;
@@ -30,10 +40,10 @@ message CommentArea {
   Status area_status = 3;
 }
 
-message AnyComment{
+message AnyComment {
   repeated Comment any_comment = 1;
 }
 
-message AnyCommentArea{
+message AnyCommentArea {
   repeated CommentArea any_comment_area = 1;
 }

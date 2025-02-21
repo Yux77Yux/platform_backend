@@ -339,9 +339,9 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 		response.Msg = commentsResponse.Msg
 		return response, err
 	}
-
 	comments := commentsResponse.GetComments()
-	if len(comments) <= 0 {
+	comments_len := len(comments)
+	if comments_len <= 0 {
 		response.Msg = &common.ApiResponse{
 			Code:    "404",
 			Status:  common.ApiResponse_ERROR,
@@ -350,7 +350,12 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 		return response, nil
 	}
 
-	cards, err := getCards(ctx, comments)
+	userIds := make([]int64, 0, comments_len)
+	for i := 0; i < comments_len; i++ {
+		userIds = append(userIds, comments[i].Comment.GetUserId())
+	}
+
+	userMap, err := getUsers(ctx, userIds)
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -360,92 +365,33 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 		}
 		return response, nil
 	}
-	if len(cards) <= 0 {
+	if len(userMap) <= 0 {
 		response.Msg = &common.ApiResponse{
 			Code:    "404",
 			Status:  common.ApiResponse_ERROR,
-			Details: "no comment",
+			Details: "no user",
 		}
 		return response, nil
 	}
 
+	userMap[0] = &common.UserCreationComment{
+		UserDefault: &common.UserDefault{},
+	}
+	userMap[-1] = &common.UserCreationComment{
+		UserDefault: &common.UserDefault{},
+	}
+	topComments := make([]*generated.TopCommentInfo, comments_len)
+	for i := 0; i < comments_len; i++ {
+		comment := comments[i]
+		topComments[i] = &generated.TopCommentInfo{
+			CommentUser: userMap[comment.Comment.GetUserId()],
+			TopComment:  comment,
+		}
+	}
+
+	response.Comments = topComments
 	response.Area = commentsResponse.GetCommentArea()
 	response.PageCount = commentsResponse.GetPageCount()
-	response.Comments = cards
-	response.Msg = &common.ApiResponse{
-		Status: common.ApiResponse_SUCCESS,
-		Code:   "200",
-	}
-	return response, nil
-}
-func InitialSecondComments(ctx context.Context, req *generated.InitialSecondCommentsRequest) (*generated.InitialSecondCommentsResponse, error) {
-	response := new(generated.InitialSecondCommentsResponse)
-	request := req.GetRequest()
-	creationId := request.GetCreationId()
-
-	comment_client, err := client.GetCommentClient()
-	if err != nil {
-		err = fmt.Errorf("error: comment client %w", err)
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
-		}
-		return response, nil
-	}
-	commentsResponse, err := comment_client.InitialSecondComments(ctx, &comment.InitialSecondCommentsRequest{
-		CreationId: creationId,
-	})
-	if err != nil {
-		var msg *common.ApiResponse
-		if commentsResponse != nil {
-			msg = commentsResponse.GetMsg()
-		} else {
-			msg = &common.ApiResponse{
-				Code:    "500",
-				Status:  common.ApiResponse_ERROR,
-				Details: err.Error(),
-			}
-		}
-		response.Msg = msg
-		return response, err
-	}
-	if commentsResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = commentsResponse.Msg
-		return response, err
-	}
-
-	comments := commentsResponse.GetComments()
-	if len(comments) <= 0 {
-		response.Msg = &common.ApiResponse{
-			Code:    "404",
-			Status:  common.ApiResponse_ERROR,
-			Details: "no comment",
-		}
-		return response, nil
-	}
-
-	cards, err := getCards(ctx, comments)
-	if err != nil {
-		err = fmt.Errorf("error: user client %w", err)
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
-		}
-		return response, nil
-	}
-	if len(cards) <= 0 {
-		response.Msg = &common.ApiResponse{
-			Code:    "404",
-			Status:  common.ApiResponse_ERROR,
-			Details: "no comment",
-		}
-		return response, nil
-	}
-
-	response.Comments = cards
-	response.PageCount = commentsResponse.GetPageCount()
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",
@@ -453,8 +399,8 @@ func InitialSecondComments(ctx context.Context, req *generated.InitialSecondComm
 	return response, nil
 }
 
-func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetCommentsResponse, error) {
-	response := new(generated.GetCommentsResponse)
+func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetTopCommentsResponse, error) {
+	response := new(generated.GetTopCommentsResponse)
 	request := req.GetRequest()
 	creationId := request.GetCreationId()
 
@@ -492,7 +438,8 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 	}
 
 	comments := commentsResponse.GetComments()
-	if len(comments) <= 0 {
+	comments_len := len(comments)
+	if comments_len <= 0 {
 		response.Msg = &common.ApiResponse{
 			Code:    "404",
 			Status:  common.ApiResponse_ERROR,
@@ -501,7 +448,12 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 		return response, nil
 	}
 
-	cards, err := getCards(ctx, comments)
+	userIds := make([]int64, 0, comments_len)
+	for i := 0; i < comments_len; i++ {
+		userIds = append(userIds, comments[i].Comment.GetUserId())
+	}
+
+	userMap, err := getUsers(ctx, userIds)
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -511,16 +463,31 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 		}
 		return response, nil
 	}
-	if len(cards) <= 0 {
+	if len(userMap) <= 0 {
 		response.Msg = &common.ApiResponse{
 			Code:    "404",
 			Status:  common.ApiResponse_ERROR,
-			Details: "no comment",
+			Details: "no user",
 		}
 		return response, nil
 	}
 
-	response.Comments = cards
+	userMap[0] = &common.UserCreationComment{
+		UserDefault: &common.UserDefault{},
+	}
+	userMap[-1] = &common.UserCreationComment{
+		UserDefault: &common.UserDefault{},
+	}
+	topComments := make([]*generated.TopCommentInfo, comments_len)
+	for i := 0; i < comments_len; i++ {
+		comment := comments[i]
+		topComments[i] = &generated.TopCommentInfo{
+			CommentUser: userMap[comment.Comment.GetUserId()],
+			TopComment:  comment,
+		}
+	}
+
+	response.Comments = topComments
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",
@@ -528,8 +495,8 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 	return response, nil
 }
 
-func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequest) (*generated.GetCommentsResponse, error) {
-	response := new(generated.GetCommentsResponse)
+func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequest) (*generated.GetSecondCommentsResponse, error) {
+	response := new(generated.GetSecondCommentsResponse)
 	request := req.GetRequest()
 	creationId := request.GetCreationId()
 
@@ -568,7 +535,8 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 	}
 
 	comments := commentsResponse.GetComments()
-	if len(comments) <= 0 {
+	comments_len := len(comments)
+	if comments_len <= 0 {
 		response.Msg = &common.ApiResponse{
 			Code:    "404",
 			Status:  common.ApiResponse_ERROR,
@@ -577,7 +545,16 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 		return response, nil
 	}
 
-	cards, err := getCards(ctx, comments)
+	userIds := make([]int64, 0, comments_len*2)
+	for i := 0; i < comments_len; i++ {
+		replyUserId := comments[i].GetReplyUserId()
+		if replyUserId > 0 {
+			userIds = append(userIds, replyUserId)
+		}
+		userIds = append(userIds, comments[i].Comment.GetUserId())
+	}
+
+	userMap, err := getUsers(ctx, userIds)
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
 		response.Msg = &common.ApiResponse{
@@ -587,16 +564,34 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 		}
 		return response, nil
 	}
-	if len(cards) <= 0 {
+	if len(userMap) <= 0 {
 		response.Msg = &common.ApiResponse{
 			Code:    "404",
 			Status:  common.ApiResponse_ERROR,
-			Details: "no comment",
+			Details: "no user",
 		}
 		return response, nil
 	}
 
-	response.Comments = cards
+	userMap[0] = &common.UserCreationComment{
+		UserDefault: &common.UserDefault{},
+	}
+	userMap[-1] = &common.UserCreationComment{
+		UserDefault: &common.UserDefault{},
+	}
+	secondComments := make([]*generated.SecondCommentInfo, comments_len)
+	for i := 0; i < comments_len; i++ {
+		comment := comments[i]
+		secondComments[i] = &generated.SecondCommentInfo{
+			ReplyUser: userMap[comment.GetReplyUserId()],
+		}
+		secondComments[i].SecondComment = &generated.CommentInfo{
+			CommentUser: userMap[comment.Comment.GetUserId()],
+			Comment:     comment.GetComment(),
+		}
+	}
+
+	response.Comments = secondComments
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",
@@ -604,25 +599,8 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 	return response, nil
 }
 
-func getCards(ctx context.Context, comments []*comment.Comment) ([]*generated.CommentInfo, error) {
-	length := len(comments)
-	if length <= 0 {
-		return nil, nil
-	}
+func getUsers(ctx context.Context, userIds []int64) (map[int64]*common.UserCreationComment, error) {
 	userMap := make(map[int64]*common.UserCreationComment)
-
-	for _, comment := range comments {
-		userId := comment.GetUserId()
-		userMap[userId] = &common.UserCreationComment{
-			UserDefault: &common.UserDefault{
-				UserId: userId,
-			},
-		}
-	}
-	userIds := make([]int64, 0, len(userMap))
-	for id := range userMap {
-		userIds = append(userIds, id)
-	}
 
 	user_client, err := client.GetUserClient()
 	if err != nil {
@@ -646,17 +624,5 @@ func getCards(ctx context.Context, comments []*comment.Comment) ([]*generated.Co
 		userMap[userId] = user
 	}
 
-	cards := make([]*generated.CommentInfo, length)
-	for i, comment := range comments {
-		userId := comment.GetUserId()
-
-		card := &generated.CommentInfo{
-			Comment:     comment,
-			CommentUser: userMap[userId],
-		}
-
-		cards[i] = card
-	}
-
-	return cards, nil
+	return userMap, nil
 }

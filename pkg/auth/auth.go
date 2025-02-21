@@ -2,7 +2,6 @@ package auth
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/Yux77Yux/platform_backend/pkg/jwt"
 )
@@ -20,7 +19,6 @@ func Auth(method, object string, token string) (bool, int64, error) {
 	var id int64
 
 	if accessToken != "" {
-		log.Println(accessToken)
 		accessClaims, err := jwt.ParseJWT(accessToken)
 		if err != nil {
 			return false, -1, fmt.Errorf("parseJWT err %w", err)

@@ -11,3 +11,13 @@ message CommentInfo {
   common.UserCreationComment comment_user = 1;// 评论中的用户信息
   comment.messages.Comment comment = 2;
 }
+
+message TopCommentInfo {
+  common.UserCreationComment comment_user = 1;// 评论中的用户信息
+  comment.messages.TopComment top_comment = 2;
+}
+
+message SecondCommentInfo {
+  CommentInfo second_comment = 1;// 评论中的用户信息
+  common.UserCreationComment reply_user = 2;// 回复对象的信息
+}

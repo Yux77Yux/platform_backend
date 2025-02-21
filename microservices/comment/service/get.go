@@ -34,20 +34,7 @@ func (s *Server) InitialComments(ctx context.Context, req *generated.InitialComm
 	return response, nil
 }
 
-func (s *Server) InitialSecondComments(ctx context.Context, req *generated.InitialSecondCommentsRequest) (*generated.InitialSecondCommentsResponse, error) {
-	log.Println("info: InitialSecondComments service start")
-
-	response, err := internal.InitialSecondComments(ctx, req)
-	if err != nil {
-		log.Println("error: InitialSecondComments occur fail: ", err)
-		return response, nil
-	}
-
-	log.Println("info: InitialSecondComments occur success")
-	return response, nil
-}
-
-func (s *Server) GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetCommentsResponse, error) {
+func (s *Server) GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetTopCommentsResponse, error) {
 	log.Println("info: GetTopComment service start")
 
 	response, err := internal.GetTopComments(ctx, req)
@@ -60,7 +47,7 @@ func (s *Server) GetTopComments(ctx context.Context, req *generated.GetTopCommen
 	return response, nil
 }
 
-func (s *Server) GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequest) (*generated.GetCommentsResponse, error) {
+func (s *Server) GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequest) (*generated.GetSecondCommentsResponse, error) {
 	log.Println("info: GetSecondComment service start")
 
 	response, err := internal.GetSecondComments(ctx, req)

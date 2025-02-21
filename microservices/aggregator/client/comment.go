@@ -60,18 +60,6 @@ func (c *CommentClient) InitialComments(ctx context.Context, req *generated.Init
 	return response, nil
 }
 
-func (c *CommentClient) InitialSecondComments(ctx context.Context, req *generated.InitialSecondCommentsRequest) (*generated.InitialSecondCommentsResponse, error) {
-	// 创建客户端
-	client := generated.NewCommentServiceClient(c.connection)
-
-	response, err := client.InitialSecondComments(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("could not greet: %v", err)
-	}
-
-	return response, nil
-}
-
 func (c *CommentClient) GetComments(ctx context.Context, req *generated.GetCommentsRequest) (*generated.GetCommentsResponse, error) {
 	// 创建客户端
 	client := generated.NewCommentServiceClient(c.connection)
@@ -84,7 +72,7 @@ func (c *CommentClient) GetComments(ctx context.Context, req *generated.GetComme
 	return response, nil
 }
 
-func (c *CommentClient) GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetCommentsResponse, error) {
+func (c *CommentClient) GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetTopCommentsResponse, error) {
 	// 创建客户端
 	client := generated.NewCommentServiceClient(c.connection)
 
@@ -96,7 +84,7 @@ func (c *CommentClient) GetTopComments(ctx context.Context, req *generated.GetTo
 	return response, nil
 }
 
-func (c *CommentClient) GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequest) (*generated.GetCommentsResponse, error) {
+func (c *CommentClient) GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequest) (*generated.GetSecondCommentsResponse, error) {
 	// 创建客户端
 	client := generated.NewCommentServiceClient(c.connection)
 

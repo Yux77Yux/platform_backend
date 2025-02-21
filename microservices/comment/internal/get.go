@@ -62,41 +62,14 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 	}, nil
 }
 
-// 第一次请求二级评论
-func InitialSecondComments(ctx context.Context, req *generated.InitialSecondCommentsRequest) (*generated.InitialSecondCommentsResponse, error) {
-	creationId := req.GetCreationId()
-	root := req.GetRoot()
-
-	comments, count, err := db.GetInitialSecondCommentsInTransaction(ctx, creationId, root)
-	if err != nil {
-		return &generated.InitialSecondCommentsResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "404",
-				Message: err.Error(),
-				Details: err.Error(),
-			},
-		}, nil
-	}
-
-	return &generated.InitialSecondCommentsResponse{
-		Comments:  comments,
-		PageCount: count,
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "200",
-		},
-	}, nil
-}
-
 // 一级评论
-func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetCommentsResponse, error) {
+func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetTopCommentsResponse, error) {
 	creationId := req.GetCreationId()
 	page := req.GetPage()
 
 	comments, err := db.GetTopCommentsInTransaction(ctx, creationId, page)
 	if err != nil {
-		return &generated.GetCommentsResponse{
+		return &generated.GetTopCommentsResponse{
 			Msg: &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,
 				Code:    "500",
@@ -106,7 +79,7 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 		}, nil
 	}
 
-	return &generated.GetCommentsResponse{
+	return &generated.GetTopCommentsResponse{
 		Comments: comments,
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
@@ -116,14 +89,14 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 }
 
 // 查看二级评论
-func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequest) (*generated.GetCommentsResponse, error) {
+func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequest) (*generated.GetSecondCommentsResponse, error) {
 	creationId := req.GetCreationId()
 	root := req.GetRoot()
 	page := req.GetPage()
 
 	comments, err := db.GetSecondCommentsInTransaction(ctx, creationId, root, page)
 	if err != nil {
-		return &generated.GetCommentsResponse{
+		return &generated.GetSecondCommentsResponse{
 			Msg: &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,
 				Code:    "500",
@@ -133,7 +106,7 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 		}, nil
 	}
 
-	return &generated.GetCommentsResponse{
+	return &generated.GetSecondCommentsResponse{
 		Comments: comments,
 		Msg: &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,

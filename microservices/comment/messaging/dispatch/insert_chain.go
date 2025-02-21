@@ -92,6 +92,9 @@ func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerI
 	next := chain.Head.next
 	prev := chain.Tail.prev
 	for {
+		log.Printf("finding")
+		log.Printf("prev: %d \n", prev.creationId)
+		log.Printf("next: %d \n", next.creationId)
 		if prev == chain.Head {
 			break
 		}
@@ -145,6 +148,7 @@ func (chain *InsertChain) CreateListener(data protoreflect.ProtoMessage) Listene
 // 销毁监听者
 func (chain *InsertChain) DestroyListener(listener ListenerInterface) {
 	// 找到前一个节点（假设 chain.Head 是链表的头部）
+	log.Printf("deleting")
 	current, ok := listener.(*InsertListener)
 	if !ok {
 		log.Printf("invalid type: expected *InsertListener")

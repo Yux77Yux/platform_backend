@@ -40,10 +40,9 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 					media)
 				VALUES%s`, strings.Join(queryContentCount, ","))
 		queryArea = `
-				UPDATE db_comment_area_1.CommentArea 
-				SET
-					total_comments = total_comments + ?
-				WHERE creation_id = ?`
+		INSERT INTO db_comment_area_1.CommentArea (creation_id, total_comments)
+		VALUES (?,?)
+		ON DUPLICATE KEY UPDATE total_comments = total_comments + VALUES(total_comments)`
 		CommentValues = make([]interface{}, 0, count*5)
 		ContentValues = make([]interface{}, 0, count*3)
 		creationId    = comments[0].GetCreationId()
@@ -148,8 +147,8 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 		_, err = tx.ExecContext(
 			ctx,
 			queryArea,
-			count,
 			creationId,
+			count,
 		)
 		if err != nil {
 			err = fmt.Errorf("batchInsert transaction exec failed during queryArea because %v", err)
@@ -207,7 +206,7 @@ const (
 )
 
 // 初始化一级评论
-func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) (*generated.CommentArea, []*generated.Comment, int32, error) {
+func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) (*generated.CommentArea, []*generated.TopComment, int32, error) {
 	const (
 		LIMIT            = TOP_LIMIT
 		queryTopComments = `
@@ -226,16 +225,19 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 			WHERE
 				creation_id = ?`
 	)
-	query := fmt.Sprintf(`
+
+	var (
+		query = fmt.Sprintf(`
 			SELECT 
     			c.id,
     			c.root,
     			c.parent,
     			c.dialog,
     			c.user_id,
-    			CAST(c.created_at AS DATETIME) AS created_at,
+    			c.created_at,
     			cc.content,
-    			cc.media
+    			cc.media,
+				(SELECT count(*) FROM db_comment_1.Comment b WHERE b.root = c.id AND b.status = 'PUBLISHED') AS subCount
 			FROM 
     			db_comment_1.Comment c
 			LEFT JOIN 
@@ -248,14 +250,14 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 				c.root = 0
 			AND 
 				c.status = 'PUBLISHED'
+			ORDER BY c.created_at DESC
 			LIMIT %d`, LIMIT)
 
-	var (
 		total  int32  = -1
 		status string = ""
 		count  int32
 
-		comments []*generated.Comment
+		comments = make([]*generated.TopComment, 0, LIMIT)
 	)
 
 	select {
@@ -287,7 +289,8 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 		}
 
 		// 查评论
-		rows, err := db.Query(
+		rows, err := db.QueryContext(
+			ctx,
 			query,
 			creation_id,
 		)
@@ -306,22 +309,26 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 				created_at time.Time
 				content    sql.NullString
 				media      sql.NullString
+				subCount   int32
 			)
 
-			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
+			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media, &subCount)
 			if err != nil {
 				return nil, nil, -1, err
 			}
-			comments = append(comments, &generated.Comment{
-				CommentId:  id,
-				Root:       root,
-				Parent:     parent,
-				Dialog:     dialog,
-				UserId:     user_id,
-				CreationId: creation_id,
-				CreatedAt:  timestamppb.Now(),
-				Content:    content.String,
-				Media:      media.String,
+			comments = append(comments, &generated.TopComment{
+				Comment: &generated.Comment{
+					CommentId:  id,
+					Root:       root,
+					Parent:     parent,
+					Dialog:     dialog,
+					UserId:     user_id,
+					CreationId: creation_id,
+					CreatedAt:  timestamppb.Now(),
+					Content:    content.String,
+					Media:      media.String,
+				},
+				SubCount: subCount,
 			})
 		}
 	}
@@ -334,108 +341,7 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 	}, comments, pageCount, nil
 }
 
-// 初始化二级评论
-func GetInitialSecondCommentsInTransaction(ctx context.Context, creation_id int64, root int32) ([]*generated.Comment, int32, error) {
-	const (
-		LIMIT               = SECOND_LIMIT
-		querySecondComments = `
-			SELECT count(*) 
-			FROM db_comment_1.Comment 
-			WHERE creation_id = ? 
-			AND root = ? 
-			AND status = 'PUBLISHED'`
-	)
-
-	query := fmt.Sprintf(`
-			SELECT 
-    			c.id,
-    			c.root,
-    			c.parent,
-    			c.dialog,
-    			c.user_id,
-    			c.created_at,
-    			cc.content,
-    			cc.media,
-			FROM 
-    			db_comment_1.Comment c
-			LEFT JOIN 
-    			db_comment_1.CommentContent cc 
-			ON 
-				c.id = cc.comment_id
-			WHERE 
-    			c.creation_id = ?
-			AND 
-				c.root = ?
-			AND 
-				c.status = 'PUBLISHED'
-			LIMIT %d`, LIMIT)
-
-	var (
-		count int32
-
-		comments []*generated.Comment
-	)
-
-	select {
-	case <-ctx.Done():
-		return nil, -1, ctx.Err()
-	default:
-		err := db.QueryRowContext(ctx,
-			querySecondComments,
-			creation_id,
-			root,
-		).Scan(&count)
-		if err != nil {
-			return nil, -1, err
-		}
-
-		// 查评论
-		rows, err := db.QueryContext(
-			ctx,
-			query,
-			creation_id,
-			root,
-		)
-		if err != nil {
-			return nil, -1, err
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var (
-				id         int32
-				root       int32
-				parent     int32
-				dialog     int32
-				user_id    int64
-				created_at time.Time
-				content    sql.NullString
-				media      sql.NullString
-			)
-
-			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
-			if err != nil {
-				return nil, -1, err
-			}
-			comments = append(comments, &generated.Comment{
-				CommentId:  id,
-				Root:       root,
-				Parent:     parent,
-				Dialog:     dialog,
-				UserId:     user_id,
-				CreationId: creation_id,
-				CreatedAt:  timestamppb.New(created_at),
-				Content:    content.String,
-				Media:      media.String,
-			})
-		}
-	}
-
-	pageCount := int32(math.Ceil(float64(count) / float64(LIMIT)))
-	return comments, pageCount, nil
-}
-
-func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNumber int32) ([]*generated.Comment, error) {
+func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNumber int32) ([]*generated.TopComment, error) {
 	const LIMIT = TOP_LIMIT
 	var (
 		offset = (pageNumber - 1) * LIMIT
@@ -448,7 +354,8 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
     			c.user_id,
     			c.created_at,
     			cc.content,
-    			cc.media
+    			cc.media,
+				(SELECT count(*) FROM db_comment_1.Comment b WHERE b.root = c.id AND b.status = 'PUBLISHED') AS subCount
 			FROM 
     			db_comment_1.Comment c
 			LEFT JOIN 
@@ -461,12 +368,11 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 				c.root = 0
 			AND 
 				c.status = 'PUBLISHED'
+			ORDER BY c.created_at DESC
 			LIMIT %d 
 			OFFSET ?`, LIMIT)
-	)
 
-	var (
-		comments []*generated.Comment
+		comments = make([]*generated.TopComment, 0, LIMIT)
 	)
 
 	select {
@@ -494,22 +400,26 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 				created_at time.Time
 				content    sql.NullString
 				media      sql.NullString
+				subCount   int32
 			)
 
-			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
+			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media, &subCount)
 			if err != nil {
 				return nil, err
 			}
-			comments = append(comments, &generated.Comment{
-				CommentId:  id,
-				Root:       root,
-				Parent:     parent,
-				Dialog:     dialog,
-				UserId:     user_id,
-				CreationId: creation_id,
-				CreatedAt:  timestamppb.New(created_at),
-				Content:    content.String,
-				Media:      media.String,
+			comments = append(comments, &generated.TopComment{
+				Comment: &generated.Comment{
+					CommentId:  id,
+					Root:       root,
+					Parent:     parent,
+					Dialog:     dialog,
+					UserId:     user_id,
+					CreationId: creation_id,
+					CreatedAt:  timestamppb.Now(),
+					Content:    content.String,
+					Media:      media.String,
+				},
+				SubCount: subCount,
 			})
 		}
 	}
@@ -517,7 +427,7 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 	return comments, nil
 }
 
-func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root, pageNumber int32) ([]*generated.Comment, error) {
+func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root, pageNumber int32) ([]*generated.SecondComment, error) {
 	const LIMIT = SECOND_LIMIT
 	var (
 		offset = (pageNumber - 1) * LIMIT
@@ -530,7 +440,8 @@ func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root
     			c.user_id,
     			c.created_at,
     			cc.content,
-    			cc.media
+    			cc.media,
+				(SELECT b.user_id FROM db_comment_1.Comment b WHERE b.id = c.parent AND b.status = 'PUBLISHED') AS reply_user_id
 			FROM 
     			db_comment_1.Comment c
 			LEFT JOIN 
@@ -548,7 +459,7 @@ func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root
 	)
 
 	var (
-		comments []*generated.Comment
+		comments []*generated.SecondComment
 	)
 
 	select {
@@ -569,29 +480,33 @@ func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root
 
 		for rows.Next() {
 			var (
-				id         int32
-				root       int32
-				parent     int32
-				dialog     int32
-				user_id    int64
-				created_at time.Time
-				content    sql.NullString
-				media      sql.NullString
+				id            int32
+				root          int32
+				parent        int32
+				dialog        int32
+				user_id       int64
+				created_at    time.Time
+				content       sql.NullString
+				media         sql.NullString
+				reply_user_id sql.NullInt64
 			)
 
-			if err := rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media); err != nil {
+			if err := rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media, &reply_user_id); err != nil {
 				return nil, err
 			}
-			comments = append(comments, &generated.Comment{
-				CommentId:  id,
-				Root:       root,
-				Parent:     parent,
-				Dialog:     dialog,
-				UserId:     user_id,
-				CreationId: creation_id,
-				CreatedAt:  timestamppb.New(created_at),
-				Content:    content.String,
-				Media:      media.String,
+			comments = append(comments, &generated.SecondComment{
+				Comment: &generated.Comment{
+					CommentId:  id,
+					Root:       root,
+					Parent:     parent,
+					Dialog:     dialog,
+					UserId:     user_id,
+					CreationId: creation_id,
+					CreatedAt:  timestamppb.New(created_at),
+					Content:    content.String,
+					Media:      media.String,
+				},
+				ReplyUserId: reply_user_id.Int64,
 			})
 		}
 	}

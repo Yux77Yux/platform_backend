@@ -37,29 +37,30 @@ message InitialCommentsRequest {
   comment.methods.InitialCommentsRequest request = 1;
 }
 message InitialCommentsResponse {
-  repeated aggregator.messages.CommentInfo comments = 1;
+  repeated aggregator.messages.TopCommentInfo comments = 1;
   comment.messages.CommentArea area = 2;
   int32 page_count = 3;
   common.ApiResponse msg = 4;// 返回的响应
-}
-
-message InitialSecondCommentsRequest {
-  comment.methods.InitialSecondCommentsRequest request = 1;
-}
-message InitialSecondCommentsResponse {
-  repeated aggregator.messages.CommentInfo comments = 1;
-  int32 page_count = 2;
-  common.ApiResponse msg = 3;// 返回的响应
 }
 
 message GetTopCommentsRequest {
   comment.methods.GetTopCommentsRequest request = 1;
 }
 
+message GetTopCommentsResponse {
+  repeated aggregator.messages.TopCommentInfo comments = 1;
+  common.ApiResponse msg = 2;// 返回的响应
+}
+
 // 一级评论内的评论
 message GetSecondCommentsRequest {
   comment.methods.GetSecondCommentsRequest request = 1;
   common.AccessToken access_token = 2;
+}
+
+message GetSecondCommentsResponse {
+  repeated aggregator.messages.SecondCommentInfo comments = 1;
+  common.ApiResponse msg = 2;// 返回的响应
 }
 
 // 回复我的评论，在页面的消息内显示, 权限类 没做
