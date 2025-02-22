@@ -29,8 +29,9 @@ func (listener *RegisterListener) GetId() int64 {
 
 // 启动监听者
 func (listener *RegisterListener) StartListening() {
-	listener.RestartUpdateIntervalTimer()
-	listener.RestartTimeoutTimer()
+	listener.userCredentialsChannel = make(chan *generated.UserCredentials, LISTENER_CHANNEL_COUNT)
+	go listener.RestartUpdateIntervalTimer()
+	go listener.RestartTimeoutTimer()
 }
 
 // 分发至通道
@@ -71,7 +72,12 @@ func (listener *RegisterListener) SendBatch() {
 func (listener *RegisterListener) RestartUpdateIntervalTimer() {
 	if listener.updateIntervalTimer != nil {
 		if !listener.updateIntervalTimer.Stop() {
-			<-listener.updateIntervalTimer.C // 清理可能遗留的信号
+			select {
+			case <-listener.updateIntervalTimer.C:
+				break
+			default:
+				break
+			}
 		}
 	}
 
@@ -92,7 +98,12 @@ func (listener *RegisterListener) RestartTimeoutTimer() {
 	// 先重置
 	if listener.timeoutTimer != nil {
 		if !listener.timeoutTimer.Stop() {
-			<-listener.timeoutTimer.C // 清理可能遗留的信号
+			select {
+			case <-listener.timeoutTimer.C:
+				break
+			default:
+				break
+			}
 		}
 	}
 

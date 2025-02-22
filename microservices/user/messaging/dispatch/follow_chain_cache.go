@@ -21,7 +21,6 @@ func InitialFollowCacheChain() *FollowCacheChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &FollowCacheListener{
-					usersChannel:    make(chan *generated.Follow, LISTENER_CHANNEL_COUNT),
 					timeoutDuration: 10 * time.Second,
 					updateInterval:  3 * time.Second,
 				}

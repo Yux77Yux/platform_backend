@@ -29,7 +29,8 @@ func (listener *CancelLikeListener) GetId() int64 {
 
 // 启动监听者
 func (listener *CancelLikeListener) StartListening() {
-	listener.RestartUpdateIntervalTimer()
+	listener.datasChannel = make(chan *generated.BaseInteraction, LISTENER_CHANNEL_COUNT)
+	go listener.RestartUpdateIntervalTimer()
 	listener.RestartTimeoutTimer()
 }
 
@@ -73,7 +74,12 @@ func (listener *CancelLikeListener) SendBatch() {
 func (listener *CancelLikeListener) RestartUpdateIntervalTimer() {
 	if listener.updateIntervalTimer != nil {
 		if !listener.updateIntervalTimer.Stop() {
-			<-listener.updateIntervalTimer.C // 清理可能遗留的信号
+			select {
+			case <-listener.updateIntervalTimer.C:
+				break
+			default:
+				break
+			}
 		}
 	}
 
@@ -95,7 +101,12 @@ func (listener *CancelLikeListener) RestartTimeoutTimer() {
 	if listener.timeoutTimer != nil {
 		// 如果 timer 已存在，确保安全地重置
 		if !listener.timeoutTimer.Stop() {
-			<-listener.timeoutTimer.C // 清理可能遗留的信号
+			select {
+			case <-listener.timeoutTimer.C:
+				break
+			default:
+				break
+			}
 		}
 	}
 

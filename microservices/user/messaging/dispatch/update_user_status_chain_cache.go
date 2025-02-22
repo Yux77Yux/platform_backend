@@ -27,9 +27,8 @@ func InitialUserStatusCacheChain() *UserStatusCacheChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &UserStatusCacheListener{
-					userUpdateStatusChannel: make(chan *generated.UserUpdateStatus, LISTENER_CHANNEL_COUNT),
-					timeoutDuration:         10 * time.Second,
-					updateInterval:          3 * time.Second,
+					timeoutDuration: 10 * time.Second,
+					updateInterval:  3 * time.Second,
 				}
 			},
 		},

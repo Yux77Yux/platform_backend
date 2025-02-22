@@ -27,9 +27,8 @@ func InitialUserBioChain() *UserBioChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &UserBioListener{
-					userUpdateBioChannel: make(chan *generated.UserUpdateBio, LISTENER_CHANNEL_COUNT),
-					timeoutDuration:      10 * time.Second,
-					updateInterval:       3 * time.Second,
+					timeoutDuration: 10 * time.Second,
+					updateInterval:  3 * time.Second,
 				}
 			},
 		},

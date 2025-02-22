@@ -30,8 +30,9 @@ func (listener *InsertListener) GetId() int64 {
 
 // 启动监听者
 func (listener *InsertListener) StartListening() {
+	listener.commentChannel = make(chan *generated.Comment, LISTENER_CHANNEL_COUNT)
+	go listener.RestartTimeoutTimer()
 	listener.RestartUpdateIntervalTimer()
-	listener.RestartTimeoutTimer()
 }
 
 // 分发评论至通道
@@ -77,20 +78,24 @@ func (listener *InsertListener) RestartUpdateIntervalTimer() {
 	if listener.updateIntervalTimer != nil {
 		// 如果 timer 已存在，确保安全地重置
 		if !listener.updateIntervalTimer.Stop() {
-			<-listener.updateIntervalTimer.C // 清理可能遗留的信号
+			select {
+			case <-listener.updateIntervalTimer.C:
+				break
+			default:
+				break
+			}
 		}
 	}
 
 	// 再执行
 	listener.updateIntervalTimer = time.AfterFunc(listener.updateInterval, func() {
 		count := atomic.LoadUint32(&listener.count)
-
-		// 大于零则发送，不大于0说明目前没有数据
 		if count > 0 {
 			go listener.SendBatch()        // 执行批量更新
-			listener.RestartTimeoutTimer() // 重启定时器
+			listener.RestartTimeoutTimer() // 重启超时定时器
 		}
-		listener.RestartUpdateIntervalTimer() // 重启定时器
+		// 在任务结束后重启定时器
+		listener.RestartUpdateIntervalTimer()
 	})
 }
 
@@ -100,7 +105,12 @@ func (listener *InsertListener) RestartTimeoutTimer() {
 	if listener.timeoutTimer != nil {
 		// 如果 timer 已存在，确保安全地重置
 		if !listener.timeoutTimer.Stop() {
-			<-listener.timeoutTimer.C // 清理可能遗留的信号
+			select {
+			case <-listener.timeoutTimer.C:
+				break
+			default:
+				break
+			}
 		}
 	}
 
@@ -111,6 +121,7 @@ func (listener *InsertListener) RestartTimeoutTimer() {
 			listener.Cleanup()
 			// 超时后销毁监听者
 			insertChain.DestroyListener(listener)
+			return
 		}
 		listener.RestartTimeoutTimer() // 重启定时器
 	})

@@ -21,7 +21,6 @@ func InitialInsertCacheChain() *InsertCacheChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &InsertCacheListener{
-					usersChannel:    make(chan *generated.User, LISTENER_CHANNEL_COUNT),
 					timeoutDuration: 10 * time.Second,
 					updateInterval:  3 * time.Second,
 				}

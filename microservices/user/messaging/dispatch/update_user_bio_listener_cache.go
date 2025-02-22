@@ -29,8 +29,9 @@ func (listener *UserBioCacheListener) GetId() int64 {
 
 // 启动监听者
 func (listener *UserBioCacheListener) StartListening() {
-	listener.RestartUpdateIntervalTimer()
-	listener.RestartTimeoutTimer()
+	listener.userUpdateBioChannel = make(chan *generated.UserUpdateBio, LISTENER_CHANNEL_COUNT)
+	go listener.RestartUpdateIntervalTimer()
+	go listener.RestartTimeoutTimer()
 }
 
 // 分发至通道
@@ -74,7 +75,12 @@ func (listener *UserBioCacheListener) RestartUpdateIntervalTimer() {
 	if listener.updateIntervalTimer != nil {
 		// 如果 timer 已存在，确保安全地重置
 		if !listener.updateIntervalTimer.Stop() {
-			<-listener.updateIntervalTimer.C // 清理可能遗留的信号
+			select {
+			case <-listener.updateIntervalTimer.C:
+				break
+			default:
+				break
+			}
 		}
 	}
 
@@ -96,7 +102,12 @@ func (listener *UserBioCacheListener) RestartTimeoutTimer() {
 	if listener.timeoutTimer != nil {
 		// 如果 timer 已存在，确保安全地重置
 		if !listener.timeoutTimer.Stop() {
-			<-listener.timeoutTimer.C // 清理可能遗留的信号
+			select {
+			case <-listener.timeoutTimer.C:
+				break
+			default:
+				break
+			}
 		}
 	}
 

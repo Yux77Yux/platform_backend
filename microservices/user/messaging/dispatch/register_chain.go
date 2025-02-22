@@ -27,9 +27,8 @@ func InitialRegisterChain() *RegisterChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &RegisterListener{
-					userCredentialsChannel: make(chan *generated.UserCredentials, LISTENER_CHANNEL_COUNT),
-					timeoutDuration:        10 * time.Second,
-					updateInterval:         3 * time.Second,
+					timeoutDuration: 10 * time.Second,
+					updateInterval:  3 * time.Second,
 				}
 			},
 		},

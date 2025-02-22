@@ -27,9 +27,8 @@ func InitialUserSpaceChain() *UserSpaceChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &UserSpaceListener{
-					userUpdateSpaceChannel: make(chan *generated.UserUpdateSpace, LISTENER_CHANNEL_COUNT),
-					timeoutDuration:        10 * time.Second,
-					updateInterval:         3 * time.Second,
+					timeoutDuration: 10 * time.Second,
+					updateInterval:  3 * time.Second,
 				}
 			},
 		},

@@ -27,9 +27,8 @@ func InitialUserAvatarCacheChain() *UserAvatarCacheChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &UserAvatarCacheListener{
-					userUpdateAvatarChannel: make(chan *generated.UserUpdateAvatar, LISTENER_CHANNEL_COUNT),
-					timeoutDuration:         10 * time.Second,
-					updateInterval:          3 * time.Second,
+					timeoutDuration: 10 * time.Second,
+					updateInterval:  3 * time.Second,
 				}
 			},
 		},

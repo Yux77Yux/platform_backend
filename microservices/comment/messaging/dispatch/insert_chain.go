@@ -22,7 +22,6 @@ func InitialInsertChain() *InsertChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &InsertListener{
-					commentChannel:  make(chan *generated.Comment, LISTENER_CHANNEL_COUNT),
 					timeoutDuration: 12 * time.Second,
 					updateInterval:  3 * time.Second,
 				}
@@ -96,6 +95,7 @@ func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerI
 		log.Printf("prev: %d \n", prev.creationId)
 		log.Printf("next: %d \n", next.creationId)
 		if prev == chain.Head {
+			log.Println("new 一个")
 			break
 		}
 		if next.creationId == creationId {
@@ -141,6 +141,7 @@ func (chain *InsertChain) CreateListener(data protoreflect.ProtoMessage) Listene
 
 	atomic.AddInt32(&chain.Count, 1)
 
+	log.Println("新挂的")
 	newListener.StartListening() // 启动监听
 	return newListener
 }

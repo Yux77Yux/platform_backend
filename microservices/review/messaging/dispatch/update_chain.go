@@ -21,7 +21,6 @@ func InitialUpdateChain() *UpdateChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &UpdateListener{
-					datasChannel:    make(chan *generated.Review, LISTENER_CHANNEL_COUNT),
 					timeoutDuration: 10 * time.Second,
 					updateInterval:  3 * time.Second,
 				}

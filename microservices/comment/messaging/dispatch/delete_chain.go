@@ -31,7 +31,6 @@ func InitialDeleteChain() *DeleteChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &DeleteListener{
-					commentChannel:  make(chan *generated.AfterAuth, LISTENER_CHANNEL_COUNT),
 					timeoutDuration: 10 * time.Second,
 					updateInterval:  3 * time.Second,
 				}

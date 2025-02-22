@@ -21,7 +21,6 @@ func InitialDbChain() *DbInteractionChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &DbInteractionsListener{
-					datasChannel:    make(chan *generated.Interaction, LISTENER_CHANNEL_COUNT),
 					timeoutDuration: 10 * time.Second,
 					updateInterval:  3 * time.Second,
 				}

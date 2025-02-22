@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"time"
@@ -21,8 +22,8 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 	queryCommentCount := make([]string, count) // 使用切片存储占位符
 	queryContentCount := make([]string, count) // 使用切片存储占位符
 	for i := 0; i < count; i++ {
-		queryCommentCount[i] = "(?,?,?,?,?)" // 每对 id 和 user_id 用 (?,?,...) 来占位
-		queryContentCount[i] = "(?,?,?)"     // 每对 id 和 user_id 用 (?,?,...) 来占位
+		queryCommentCount[i] = "(?,?,?,?,?,?)" // 每对 id 和 user_id 用 (?,?,...) 来占位
+		queryContentCount[i] = "(?,?,?)"       // 每对 id 和 user_id 用 (?,?,...) 来占位
 	}
 	var (
 		queryComment = fmt.Sprintf(`
@@ -31,7 +32,8 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 					parent,
 					dialog,
 					creation_id,
-					user_id)
+					user_id,
+					created_at)
 				VALUES%s`, strings.Join(queryCommentCount, ","))
 		queryContent = fmt.Sprintf(`
 				INSERT INTO db_comment_1.CommentContent (
@@ -43,19 +45,23 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 		INSERT INTO db_comment_area_1.CommentArea (creation_id, total_comments)
 		VALUES (?,?)
 		ON DUPLICATE KEY UPDATE total_comments = total_comments + VALUES(total_comments)`
-		CommentValues = make([]interface{}, 0, count*5)
+		CommentValues = make([]interface{}, 0, count*6)
 		ContentValues = make([]interface{}, 0, count*3)
 		creationId    = comments[0].GetCreationId()
 	)
 
 	// 格式化输入
 	for _, comment := range comments {
+		log.Printf("timestamp: %v", comment.GetCreatedAt())
+		log.Printf("time: %v", comment.GetCreatedAt().AsTime())
 		CommentValues = append(CommentValues,
 			comment.GetRoot(),
 			comment.GetParent(),
 			comment.GetDialog(),
 			comment.GetCreationId(),
-			comment.GetUserId())
+			comment.GetUserId(),
+			comment.GetCreatedAt().AsTime(),
+		)
 	}
 
 	tx, err := db.BeginTransaction()
@@ -324,7 +330,7 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 					Dialog:     dialog,
 					UserId:     user_id,
 					CreationId: creation_id,
-					CreatedAt:  timestamppb.Now(),
+					CreatedAt:  timestamppb.New(created_at),
 					Content:    content.String,
 					Media:      media.String,
 				},
@@ -415,7 +421,7 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 					Dialog:     dialog,
 					UserId:     user_id,
 					CreationId: creation_id,
-					CreatedAt:  timestamppb.Now(),
+					CreatedAt:  timestamppb.New(created_at),
 					Content:    content.String,
 					Media:      media.String,
 				},

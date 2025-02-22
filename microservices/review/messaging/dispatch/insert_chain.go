@@ -21,7 +21,6 @@ func InitialInsertChain() *InsertChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &InsertListener{
-					datasChannel:    make(chan *generated.NewReview, LISTENER_CHANNEL_COUNT),
 					timeoutDuration: 10 * time.Second,
 					updateInterval:  3 * time.Second,
 				}

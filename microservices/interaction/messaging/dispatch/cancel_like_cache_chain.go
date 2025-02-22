@@ -21,7 +21,6 @@ func InitialCancelLikeCacheChain() *CancelLikeCacheChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &CancelLikeListener{
-					datasChannel:    make(chan *generated.BaseInteraction, LISTENER_CHANNEL_COUNT),
 					timeoutDuration: 10 * time.Second,
 					updateInterval:  3 * time.Second,
 				}
