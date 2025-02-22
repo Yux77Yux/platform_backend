@@ -8,7 +8,9 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
+	dispatch "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/dispatch"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
 )
@@ -16,7 +18,7 @@ import (
 func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequest) (*generated.GetCreationInteractionResponse, error) {
 	var response = new(generated.GetCreationInteractionResponse)
 	token := req.GetAccessToken().GetValue()
-	pass, userId, err := auth.Auth("get", "interaction", token)
+	pass, userId, err := auth.Auth("update", "interaction", token)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Code:    "500",
@@ -27,22 +29,36 @@ func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequ
 	}
 	if !pass {
 		response.Msg = &common.ApiResponse{
-			Code:   "403",
-			Status: common.ApiResponse_ERROR,
+			Code:    "403",
+			Status:  common.ApiResponse_ERROR,
+			Details: "no pass",
 		}
 		return response, nil
 	}
 
 	base := req.GetBase()
 	base.UserId = userId
+
+	newInteraction := &generated.Interaction{
+		Base:      base,
+		UpdatedAt: timestamppb.Now(),
+		ActionTag: 1,
+	}
+
+	// 更新历史
+	go dispatch.HandleRequest(newInteraction, dispatch.DbInteraction)
+	go dispatch.HandleRequest(newInteraction, dispatch.ViewCache)
+
 	interaction, err := cache.GetInteraction(ctx, base)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
-			Status: common.ApiResponse_ERROR,
-			Code:   "500",
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
 		}
 		interaction, err = db.GetActionTag(ctx, base)
 		if err != nil {
+			response.Msg.Details = err.Error()
 			return response, nil
 		}
 	}

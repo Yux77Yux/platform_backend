@@ -219,9 +219,11 @@ func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction)
 
 		// 执行 pipeline
 		_, err := pipe.Exec(ctx)
-		if err != nil {
+		if err != nil && err != redis.Nil {
+			// 只有在非 redis.Nil 时，才是真的错误
+			fmt.Printf("error: pipe.Exec %v\n", err)
 			resultCh <- &ActionResult{
-				err: fmt.Errorf("pipeline execution failed: %w", err),
+				err: fmt.Errorf("redis pipeline execution failed: %w", err),
 			}
 			return
 		}
@@ -231,6 +233,7 @@ func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction)
 		if err == redis.Nil {
 			likeScore = -1 // 代表用户没有点赞
 		} else if err != nil {
+			fmt.Printf("error: likeScore %v", err)
 			resultCh <- &ActionResult{
 				err: fmt.Errorf("failed to get like score: %w", err),
 			}
@@ -241,6 +244,7 @@ func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction)
 		if err == redis.Nil {
 			collectionScore = -1 // 代表用户没有收藏
 		} else if err != nil {
+			fmt.Printf("error: collectionScore %v", err)
 			resultCh <- &ActionResult{
 				err: fmt.Errorf("failed to get collection score: %w", err),
 			}

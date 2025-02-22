@@ -20,7 +20,12 @@ service InteractionService {
   rpc GetRecommendBaseCreation(interaction.methods.GetRecommendRequest) returns (interaction.methods.GetRecommendResponse);
 
   // 这个为展示完视频信息之后再查看是否登录，再盘点是否已经点赞过
-  rpc GetActionTag(interaction.methods.GetCreationInteractionRequest) returns (interaction.methods.GetCreationInteractionResponse);
+  rpc GetActionTag(interaction.methods.GetCreationInteractionRequest) returns (interaction.methods.GetCreationInteractionResponse) {
+    option (google.api.http) = {
+      patch: "/api/interaction"
+      body: "*"
+    };
+  }
 
   rpc GetHistories(interaction.methods.GetHistoriesRequest) returns (interaction.methods.GetInteractionsResponse);
 

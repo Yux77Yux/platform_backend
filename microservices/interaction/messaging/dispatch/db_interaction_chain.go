@@ -52,7 +52,7 @@ func (chain *DbInteractionChain) ExecuteBatch() {
 			// 插入数据库
 			err := db.UpdateInteractions(interactions)
 			if err != nil {
-				log.Printf("error: UpdateInteractions error")
+				log.Printf("error: UpdateInteractions error %v", err)
 			}
 
 			// 放回对象池

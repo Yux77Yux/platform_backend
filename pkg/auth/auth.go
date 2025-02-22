@@ -39,7 +39,6 @@ func Auth(method, object string, token string) (bool, int64, error) {
 
 	// 拼接权限
 	power := fmt.Sprintf("%s:%s:%s", method, object, owner)
-
 	return includes(scope, power), id, nil
 }
 

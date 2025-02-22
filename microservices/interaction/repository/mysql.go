@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -196,8 +197,16 @@ func UpdateInteractions(req []*generated.Interaction) error {
 		values[i*5] = val.GetBase().GetUserId()
 		values[i*5+1] = val.GetBase().GetCreationId()
 		values[i*5+2] = val.GetActionTag()
-		values[i*5+3] = val.GetUpdatedAt()
-		values[i*5+4] = val.GetSaveAt()
+		values[i*5+3] = val.GetUpdatedAt().AsTime()
+		saveTime := val.GetSaveAt().AsTime()
+		var value sql.NullTime
+		if saveTime.Unix() != 0 { // 只在非1970-01-01时写入时间
+			value = sql.NullTime{Time: saveTime, Valid: true}
+		} else {
+			value = sql.NullTime{Valid: false}
+		}
+		values[i*5+4] = value
+		values[i*5+4] = value
 	}
 
 	query := fmt.Sprintf(`
@@ -211,7 +220,15 @@ func UpdateInteractions(req []*generated.Interaction) error {
         	WHEN VALUES(action_tag) = 5 THEN action_tag & 5
         	WHEN VALUES(action_tag) = 6 THEN action_tag & 6
         	ELSE action_tag
-        END;`, strings.Join(sqlStr, ","))
+		END,
+    		updated_at = CASE
+        	WHEN VALUES(updated_at) IS NOT NULL THEN VALUES(updated_at)
+        	ELSE updated_at
+		END,
+    		save_at = CASE
+        	WHEN VALUES(save_at) IS NOT NULL THEN VALUES(save_at)
+        	ELSE save_at
+    	END;`, strings.Join(sqlStr, ","))
 
 	ctx := context.Background()
 
