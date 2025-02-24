@@ -48,7 +48,6 @@ func (chain *CollectionCacheChain) ExecuteBatch() {
 	for interactionsPtr := range chain.exeChannel {
 		go func(interactionsPtr *[]*generated.Interaction) {
 			interactions := *interactionsPtr
-			log.Printf("我他妈来啦！ %v", interactions)
 			// 插入数据库
 			err := cache.ModifyCollections(interactions)
 			if err != nil {

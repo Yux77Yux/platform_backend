@@ -40,7 +40,7 @@ func main() {
 	log.Printf("info: received signal: %s. Initiating graceful shutdown...", sig)
 
 	// 创建取消上下文
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	// 取消上下文，通知服务停止
 	defer cancel()
 	// 关闭服务器

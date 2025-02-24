@@ -48,7 +48,6 @@ func (chain *CancelLikeCacheChain) ExecuteBatch() {
 	for interactionsPtr := range chain.exeChannel {
 		go func(interactionsPtr *[]*generated.BaseInteraction) {
 			interactions := *interactionsPtr
-			log.Printf("我他妈来啦！ %v", interactions)
 			// 插入数据库
 			err := cache.DelLike(interactions)
 			if err != nil {

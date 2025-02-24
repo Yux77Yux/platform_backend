@@ -55,25 +55,24 @@ func ExistsUsername(username string) (bool, error) {
 	}
 }
 
+type Exist struct {
+	exist bool
+	err   error
+}
+
 func ExistsEmail(email string) (bool, error) {
 	ctx := context.Background()
-
-	resultCh := make(chan struct {
-		exist bool
-		err   error
-	}, 1)
+	resultCh := make(chan Exist, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		exist, err := CacheClient.ExistsHashField(ctx, "User", "Credentials", email)
 
 		select {
-		case resultCh <- struct {
-			exist bool
-			err   error
-		}{exist, err}:
+		case resultCh <- Exist{exist, err}:
 			log.Printf("info: completely execute for cache method: ExistsEmail")
 		case <-ctx.Done():
 			log.Printf("warning: context canceled for cache method: ExistsEmail")
+			resultCh <- Exist{false, nil}
 		}
 	}
 
@@ -90,22 +89,17 @@ func ExistsEmail(email string) (bool, error) {
 }
 
 func ExistsUserInfo(ctx context.Context, user_id int64) (bool, error) {
-	resultCh := make(chan struct {
-		exist bool
-		err   error
-	}, 1)
+	resultCh := make(chan Exist, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		exist, err := CacheClient.ExistsHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
 
 		select {
-		case resultCh <- struct {
-			exist bool
-			err   error
-		}{exist, err}:
+		case resultCh <- Exist{exist, err}:
 			log.Printf("info: completely execute for cache method: ExistsUserInfo")
 		case <-ctx.Done():
 			log.Printf("warning: context canceled for cache method: ExistsUserInfo")
+			resultCh <- Exist{false, nil}
 		}
 	}
 
@@ -328,6 +322,7 @@ func UpdateUserSpace(users []*generated.UserUpdateSpace) error {
 			if err != nil {
 				resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
 			}
+			resultCh <- nil
 		}
 	}(count)
 
@@ -363,6 +358,7 @@ func UpdateUserAvatar(users []*generated.UserUpdateAvatar) error {
 			if err != nil {
 				resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
 			}
+			resultCh <- nil
 		}
 	}(count)
 
@@ -398,6 +394,7 @@ func UpdateUserBio(users []*generated.UserUpdateBio) error {
 			if err != nil {
 				resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
 			}
+			resultCh <- nil
 		}
 	}(count)
 
@@ -433,6 +430,7 @@ func UpdateUserStatus(users []*generated.UserUpdateStatus) error {
 			if err != nil {
 				resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
 			}
+			resultCh <- nil
 		}
 	}(count)
 
@@ -450,18 +448,16 @@ func UpdateUserStatus(users []*generated.UserUpdateStatus) error {
 
 // GET
 func GetUserInfo(ctx context.Context, user_id int64, fields []string) (map[string]string, error) {
-	resultCh := make(chan struct {
+	type UserMapErr struct {
 		user map[string]string
 		err  error
-	}, 1)
+	}
+	resultCh := make(chan UserMapErr, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		if len(fields) == 0 {
 			result, err := CacheClient.GetAllHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
-			resultCh <- struct {
-				user map[string]string
-				err  error
-			}{
+			resultCh <- UserMapErr{
 				user: result,
 				err:  err,
 			}
@@ -480,10 +476,7 @@ func GetUserInfo(ctx context.Context, user_id int64, fields []string) (map[strin
 					result[field] = strValue
 				}
 			}
-			resultCh <- struct {
-				user map[string]string
-				err  error
-			}{
+			resultCh <- UserMapErr{
 				user: result,
 				err:  err,
 			}
@@ -510,21 +503,19 @@ func GetUserCredentials(ctx context.Context, userCrdentials *generated.UserCrede
 		field = email
 	}
 
-	resultCh := make(chan struct {
+	type Credential struct {
 		credentials string
 		err         error
-	}, 1)
+	}
+
+	resultCh := make(chan Credential, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		result, err := CacheClient.GetHash(ctx, "User", "Credentials", field)
-		resultCh <- struct {
-			credentials string
-			err         error
-		}{
+		resultCh <- Credential{
 			credentials: result,
 			err:         err,
 		}
-
 	}
 
 	// 使用 select 来监听超时和结果

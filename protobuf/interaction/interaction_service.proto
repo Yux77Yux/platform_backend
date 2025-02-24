@@ -57,7 +57,7 @@ service InteractionService {
 
   rpc DelHistories(interaction.methods.UpdateInteractionsRequest) returns (interaction.methods.UpdateInteractionResponse) {
     option (google.api.http) = {
-      patch: "/api/interaction/history"
+      patch: "/api/interaction/history/cancel"
       body: "*"
     };
   }

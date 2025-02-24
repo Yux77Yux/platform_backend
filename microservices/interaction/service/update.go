@@ -39,7 +39,7 @@ func (s *Server) ClickCollection(ctx context.Context, req *generated.UpdateInter
 
 	response, err := internal.ClickCollection(req)
 	if err != nil {
-		log.Println("error: ClickCollection fail")
+		log.Printf("error: ClickCollection fail %v", err)
 		return response, err
 	}
 

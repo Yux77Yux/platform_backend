@@ -57,9 +57,15 @@ func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.I
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		results, err := CacheClient.RevRangeZSetWithScore(ctx, "Histories", userIdStr, start, stop)
+		if err != nil {
+			resultCh <- &Result{
+				err: err,
+			}
+			return
+		}
 		resultCh <- &Result{
 			result: results,
-			err:    err,
+			err:    nil,
 		}
 	}
 
@@ -93,9 +99,15 @@ func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		results, err := CacheClient.RevRangeZSetWithScore(ctx, "Collections", userIdStr, start, stop)
+		if err != nil {
+			resultCh <- &Result{
+				err: err,
+			}
+			return
+		}
 		resultCh <- &Result{
 			result: results,
-			err:    err,
+			err:    nil,
 		}
 	}
 
@@ -128,9 +140,15 @@ func GetLikes(userId int64) ([]*generated.BaseInteraction, error) {
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		results, err := CacheClient.GetMembersSet(ctx, "Likes", userIdStr)
+		if err != nil {
+			resultCh <- &ResultStr{
+				err: err,
+			}
+			return
+		}
 		resultCh <- &ResultStr{
 			result: results,
-			err:    err,
+			err:    nil,
 		}
 	}
 
@@ -168,9 +186,15 @@ func GetUsers(creationId int64) ([]int64, error) {
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		results, err := CacheClient.RevRangeZSet(ctx, "Item_Users", creationIdStr, 0, 199)
+		if err != nil {
+			resultCh <- &ResultStr{
+				err: err,
+			}
+			return
+		}
 		resultCh <- &ResultStr{
 			result: results,
-			err:    err,
+			err:    nil,
 		}
 	}
 
@@ -208,13 +232,13 @@ func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction)
 	resultCh := make(chan *ActionResult, 1)
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		pipe := CacheClient.Pipeline()
-		isLike := fmt.Sprintf("ZSet_Likes_%d", userId)             // 自己是否点赞
+		isLike := fmt.Sprintf("Set_Likes_%d", userId)              // 自己是否点赞
 		isCollection := fmt.Sprintf("ZSet_Collections_%d", userId) // 自己是否收藏
 
 		creationIdStr := strconv.FormatInt(creationId, 10)
 
 		// 使用 pipeline 执行多个查询
-		zScoreLikeCmd := pipe.ZScore(ctx, isLike, creationIdStr)
+		setLikeCmd := pipe.ZScore(ctx, isLike, creationIdStr)
 		zScoreCollectionCmd := pipe.ZScore(ctx, isCollection, creationIdStr)
 
 		// 执行 pipeline
@@ -229,7 +253,7 @@ func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction)
 		}
 
 		// 解析返回结果
-		likeScore, err := zScoreLikeCmd.Result()
+		likeScore, err := setLikeCmd.Result()
 		if err == redis.Nil {
 			likeScore = -1 // 代表用户没有点赞
 		} else if err != nil {
@@ -420,6 +444,7 @@ func UpdateHistories(data []*generated.Interaction) error {
 		if err != nil {
 			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
 		}
+		resultCh <- nil
 	}
 	// 使用 select 来监听超时和结果
 	select {
@@ -460,6 +485,7 @@ func ModifyCollections(data []*generated.Interaction) error {
 		if err != nil {
 			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
 		}
+		resultCh <- nil
 	}
 	// 使用 select 来监听超时和结果
 	select {
@@ -494,6 +520,7 @@ func ModifyLike(data []*generated.BaseInteraction) error {
 		if err != nil {
 			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
 		}
+		resultCh <- nil
 	}
 	// 使用 select 来监听超时和结果
 	select {
@@ -527,6 +554,7 @@ func DelHistories(data []*generated.BaseInteraction) error {
 		if err != nil {
 			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
 		}
+		resultCh <- nil
 	}
 	// 使用 select 来监听超时和结果
 	select {
@@ -557,10 +585,12 @@ func DelCollections(data []*generated.BaseInteraction) error {
 			collectionKey := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
 			pipe.HIncrBy(ctx, collectionKey, "saves", -1)
 		}
+
 		_, err := pipe.Exec(ctx)
 		if err != nil {
 			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
 		}
+		resultCh <- nil
 	}
 	// 使用 select 来监听超时和结果
 	select {
@@ -589,7 +619,7 @@ func DelLike(data []*generated.BaseInteraction) error {
 			pipe.ZRem(ctx, key, userId)
 
 			likeKey := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
-			pipe.HIncrBy(ctx, likeKey, "likes", 1)
+			pipe.HIncrBy(ctx, likeKey, "likes", -1)
 		}
 		_, err := pipe.Exec(ctx)
 		if err != nil {

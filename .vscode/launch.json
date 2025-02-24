@@ -5,9 +5,9 @@
             "name": "Launch Go Program",
             "type": "go",
             "request": "launch",
-            "mode": "auto",
-            "program": "${workspaceFolder}/microservices/user/cmd",  // 包路径
-            "args": []
+            "mode": "auto",  // 改为 exec 模式，直接执行命令
+            "program": "${workspaceFolder}/microservices/interaction/cmd",  // 包路径，保持和你原来的路径一致
+            "args": []  // 如果有参数，填在这里
         }
     ]
 }

@@ -63,7 +63,8 @@ func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequ
 		}
 	}
 
-	response.Interaction = interaction
+	response.ActionTag = interaction.GetActionTag()
+	log.Printf("response %v", response)
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",

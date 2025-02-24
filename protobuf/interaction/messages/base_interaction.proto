@@ -13,10 +13,10 @@ message BaseInteraction {
 
 message OperateInteraction {
   interaction.messages.Operate action = 1;
-  BaseInteraction interction = 2;
+  BaseInteraction interaction = 2;
 }
 
 message OperateAnyInteraction {
   interaction.messages.Operate action = 1;
-  repeated BaseInteraction any_interction = 2;
+  repeated BaseInteraction any_interaction = 2;
 }

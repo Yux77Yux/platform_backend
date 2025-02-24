@@ -48,7 +48,6 @@ func (chain *InsertChain) ExecuteBatch() {
 	for insertUsersPtr := range chain.exeChannel {
 		go func(insertUsersPtr *[]*generated.User) {
 			insertUsers := *insertUsersPtr
-			log.Printf("我他妈来啦！ %v", insertUsers)
 			// 插入数据库
 			err := db.UserAddInfoInTransaction(insertUsers)
 			if err != nil {

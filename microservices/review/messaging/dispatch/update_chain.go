@@ -48,7 +48,6 @@ func (chain *UpdateChain) ExecuteBatch() {
 	for ReviewsPtr := range chain.exeChannel {
 		go func(ReviewsPtr *[]*generated.Review) {
 			Reviews := *ReviewsPtr
-			log.Printf("我他妈来啦！ %v", Reviews)
 			// 更新数据库
 			err := db.UpdateReviews(Reviews)
 			if err != nil {

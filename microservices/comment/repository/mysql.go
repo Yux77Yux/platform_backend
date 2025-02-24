@@ -757,7 +757,7 @@ func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) (int64, error) {
 		queryArea = `
 				UPDATE db_comment_area_1.CommentArea 
 				SET
-					total_comments = total_comments - ?,
+					total_comments = total_comments - ?
 				WHERE creation_id = ?`
 		values     = make([]interface{}, 0, count)
 		creationId = comments[0].GetCreationId()

@@ -48,7 +48,6 @@ func (chain *InsertChain) ExecuteBatch() {
 	for ReviewsPtr := range chain.exeChannel {
 		go func(ReviewsPtr *[]*generated.NewReview) {
 			Reviews := *ReviewsPtr
-			log.Printf("我他妈来啦！ %v", Reviews)
 			// 插入数据库
 			err := db.PostReviews(Reviews)
 			if err != nil {

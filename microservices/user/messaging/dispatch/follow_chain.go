@@ -48,7 +48,6 @@ func (chain *FollowChain) ExecuteBatch() {
 	for FollowUsersPtr := range chain.exeChannel {
 		go func(FollowUsersPtr *[]*generated.Follow) {
 			FollowUsers := *FollowUsersPtr
-			log.Printf("我他妈来啦！ %v", FollowUsers)
 			// 插入数据库
 			err := db.Follow(FollowUsers)
 			if err != nil {

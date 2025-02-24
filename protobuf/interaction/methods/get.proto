@@ -26,7 +26,7 @@ message GetCreationInteractionRequest {
 
 message GetCreationInteractionResponse {
   common.ApiResponse msg = 1;
-  interaction.messages.Interaction interaction = 2;
+  int32 action_tag = 2;
 }
 
 message GetHistoriesRequest {

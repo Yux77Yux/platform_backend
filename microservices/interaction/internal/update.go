@@ -10,7 +10,6 @@ import (
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 	// mq "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/dispatch"
-	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
@@ -33,7 +32,7 @@ func ClickCollection(req *generated.UpdateInteractionRequest) (*generated.Update
 		return response, nil
 	}
 	OperateInteraction := req.GetOperateInteraction()
-	base_interaction := OperateInteraction.GetInterction()
+	base_interaction := OperateInteraction.GetInteraction()
 	base_interaction.UserId = userId
 
 	timest := timestamppb.Now()
@@ -55,6 +54,7 @@ func ClickCollection(req *generated.UpdateInteractionRequest) (*generated.Update
 }
 
 func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
+	log.Printf("req %v", req)
 	token := req.GetAccessToken().GetValue()
 	response := new(generated.UpdateInteractionResponse)
 	pass, userId, err := auth.Auth("update", "interaction", token)
@@ -74,7 +74,7 @@ func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateIntera
 	}
 
 	OperateInteraction := req.GetOperateInteraction()
-	base_interaction := OperateInteraction.GetInterction()
+	base_interaction := OperateInteraction.GetInteraction()
 	base_interaction.UserId = userId
 
 	timest := timestamppb.Now()
@@ -84,8 +84,8 @@ func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateIntera
 		UpdatedAt: timest,
 		ActionTag: int32(OperateInteraction.GetAction()),
 	}
-	go dispatch.HandleRequest(base_interaction, dispatch.DbInteraction)
-	go dispatch.HandleRequest(interaction, dispatch.LikeCache)
+	go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
+	go dispatch.HandleRequest(base_interaction, dispatch.LikeCache)
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
@@ -96,6 +96,7 @@ func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateIntera
 }
 
 func CancelCollections(req *generated.UpdateInteractionsRequest) (*generated.UpdateInteractionResponse, error) {
+	log.Printf("req %v", req.GetOperateInteraction())
 	token := req.GetAccessToken().GetValue()
 	response := new(generated.UpdateInteractionResponse)
 	pass, userId, err := auth.Auth("update", "interaction", token)
@@ -115,7 +116,7 @@ func CancelCollections(req *generated.UpdateInteractionsRequest) (*generated.Upd
 	}
 
 	OperateInteraction := req.GetOperateInteraction()
-	base_interactions := OperateInteraction.GetAnyInterction()
+	base_interactions := OperateInteraction.GetAnyInteraction()
 	for _, val := range base_interactions {
 		val.UserId = userId
 	}
@@ -125,17 +126,13 @@ func CancelCollections(req *generated.UpdateInteractionsRequest) (*generated.Upd
 		log.Printf("error: DelCollections %v", err)
 	}
 
-	length := len(base_interactions)
-	interactions := make([]*generated.Interaction, length)
-	for i, val := range base_interactions {
-		interactions[i].SaveAt = nil
-		interactions[i].Base = val
-		interactions[i].UpdatedAt = timestamppb.Now()
-		interactions[i].ActionTag = int32(OperateInteraction.GetAction())
-	}
-	err = db.UpdateInteractions(interactions)
-	if err != nil {
-		log.Printf("error: UpdateInteractions %v", err)
+	for _, val := range base_interactions {
+		interaction := &generated.Interaction{
+			Base:      val,
+			UpdatedAt: timestamppb.Now(),
+			ActionTag: int32(OperateInteraction.GetAction()),
+		}
+		go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
 	}
 
 	response.Msg = &common.ApiResponse{
@@ -165,7 +162,7 @@ func DelHistories(req *generated.UpdateInteractionsRequest) (*generated.UpdateIn
 		return response, nil
 	}
 	OperateInteraction := req.GetOperateInteraction()
-	base_interactions := OperateInteraction.GetAnyInterction()
+	base_interactions := OperateInteraction.GetAnyInteraction()
 	for _, val := range base_interactions {
 		val.UserId = userId
 	}
@@ -175,17 +172,13 @@ func DelHistories(req *generated.UpdateInteractionsRequest) (*generated.UpdateIn
 		log.Printf("error: DelHistories %v", err)
 	}
 
-	length := len(base_interactions)
-	interactions := make([]*generated.Interaction, length)
-	for i, val := range base_interactions {
-		interactions[i].SaveAt = nil
-		interactions[i].Base = val
-		interactions[i].UpdatedAt = timestamppb.Now()
-		interactions[i].ActionTag = int32(OperateInteraction.GetAction())
-	}
-	err = db.UpdateInteractions(interactions)
-	if err != nil {
-		log.Printf("error: UpdateInteractions %v", err)
+	for _, val := range base_interactions {
+		interaction := &generated.Interaction{
+			Base:      val,
+			UpdatedAt: timestamppb.Now(),
+			ActionTag: int32(OperateInteraction.GetAction()),
+		}
+		go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
 	}
 
 	response.Msg = &common.ApiResponse{
@@ -216,15 +209,16 @@ func CancelLike(req *generated.UpdateInteractionRequest) (*generated.UpdateInter
 	}
 
 	OperateInteraction := req.GetOperateInteraction()
-	base_interaction := OperateInteraction.GetInterction()
+	base_interaction := OperateInteraction.GetInteraction()
 	base_interaction.UserId = userId
 
 	interaction := &generated.Interaction{
 		Base:      base_interaction,
 		ActionTag: int32(OperateInteraction.GetAction()),
+		UpdatedAt: timestamppb.Now(),
 	}
-	go dispatch.HandleRequest(base_interaction, dispatch.DbInteraction)
-	go dispatch.HandleRequest(interaction, dispatch.CancelLikeCache)
+	go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
+	go dispatch.HandleRequest(base_interaction, dispatch.CancelLikeCache)
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
