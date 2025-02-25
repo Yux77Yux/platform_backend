@@ -41,8 +41,6 @@ func CreationAddInCache(creationInfo *generated.CreationInfo) error {
 			"likes", 0,
 			"publish_time", "none",
 
-			"comment_count", 0,
-
 			"category_name", tools.Categories[categoryId].Name,
 			"category_parent", tools.Categories[categoryId].Parent,
 		)
@@ -133,10 +131,13 @@ func GetCreationInfo(ctx context.Context, creation_id int64) (*generated.Creatio
 		log.Printf("error: GetCreationInfo GetCreationInfoFields %v", err)
 		return nil, err
 	}
-	log.Printf("creationInfo %v", results)
-	creationInfo := tools.MapCreationInfoByString(results)
+	creationInfo, err := tools.MapCreationInfoByString(results)
+	if err != nil {
+		return nil, err
+	}
+
 	if creationInfo == nil {
-		return nil, fmt.Errorf("warning: MapCreationInfoByString %v", err)
+		return nil, nil
 	}
 
 	return creationInfo, nil
@@ -153,10 +154,11 @@ func mapToCreationInfo(results map[string]string, creation_id int64) (*generated
 		"author_id", "src", "thumbnail", "title", "bio",
 		"duration", "views",
 	}
+
 	// 确保所有必须字段存在且非空
 	for _, key := range requiredKeys {
 		if val, ok := results[key]; !ok || val == "" {
-			return nil, fmt.Errorf("error: missing or empty field %s", key)
+			return nil, nil
 		}
 	}
 
@@ -211,7 +213,6 @@ func mapToCreationInfo(results map[string]string, creation_id int64) (*generated
 	return creationInfo, nil
 }
 
-// (返回的，未缓存的，是否重新计算，错误)
 func GetSimilarCreationList(ctx context.Context, creation_id int64) ([]int64, error) {
 	strs, err := CacheClient.RevRangeZSet(ctx, "SimilarCreation", strconv.FormatInt(creation_id, 10), 0, 149)
 	if err != nil {
@@ -370,26 +371,20 @@ func DeleteCreation(creation_id int64) error {
 	idStr := strconv.FormatInt(creation_id, 10)
 	ctx := context.Background()
 
-	resultCh := make(chan struct {
-		err error
-	}, 1)
+	resultCh := make(chan error, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		err := CacheClient.SetFieldHash(ctx, "Hash_CreationInfo", idStr, "status", generated.CreationStatus_DELETE.String())
-		resultCh <- struct {
-			err error
-		}{
-			err: err,
-		}
+		resultCh <- err
 	}
 
 	// 使用 select 来监听超时和结果
 	select {
 	case <-ctx.Done():
 		return fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result.err != nil {
-			return result.err
+	case err := <-resultCh:
+		if err != nil {
+			return err
 		}
 
 		return nil

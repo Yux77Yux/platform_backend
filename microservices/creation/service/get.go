@@ -21,6 +21,19 @@ func (s *Server) GetCreation(ctx context.Context, req *generated.GetCreationRequ
 	return response, nil
 }
 
+func (s *Server) GetCreationPrivate(ctx context.Context, req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {
+	log.Println("info: GetCreationPrivate service start")
+
+	response, err := internal.GetCreationPrivate(ctx, req)
+	if err != nil {
+		log.Println("error: GetCreationPrivate occur fail: ", err)
+		return response, nil
+	}
+
+	log.Println("info: GetCreationPrivate occur success")
+	return response, nil
+}
+
 func (s *Server) GetCreationList(ctx context.Context, req *generated.GetCreationListRequest) (*generated.GetCreationListResponse, error) {
 	log.Println("info: GetCreationList service start")
 

@@ -129,25 +129,22 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 		category_id,
 		upload_time
 	FROM db_creation_1.Creation 
-	WHERE id = ?
-	`
+	WHERE id = ?`
 
 	queryCategory := `SELECT
 		parent,
 		name,
 		description
 	FROM db_creation_category_1.Category 
-	WHERE id = ?
-	`
+	WHERE id = ?`
 
 	queryCreationEngagement := `SELECT
 		views,
 		likes,
 		saves,
 		publish_time
-	FROM db_creation_1.Creation 
-	WHERE creation_id = ?
-	`
+	FROM db_creation_engagment_1.CreationEngagement 
+	WHERE creation_id = ?`
 
 	var (
 		author_id   int64

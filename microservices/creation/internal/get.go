@@ -17,6 +17,8 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 	// 取数据
 	creationId := req.GetCreationId()
 	creation, err := cache.GetCreationInfo(ctx, creationId)
+	log.Printf("creationInfo %v", creation)
+	log.Printf("err %v", err)
 	if err != nil {
 		return &generated.GetCreationResponse{
 			Msg: &common.ApiResponse{
@@ -27,26 +29,18 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 			},
 		}, nil
 	}
-	if creation != nil {
-		return &generated.GetCreationResponse{
-			CreationInfo: creation,
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_SUCCESS,
-				Code:   "200",
-			},
-		}, nil
-	}
-
-	creation, err = db.GetDetailInTransaction(ctx, creationId)
-	if err != nil {
-		return &generated.GetCreationResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
-				Message: "Internal Server Error",
-				Details: err.Error(),
-			},
-		}, nil
+	if creation == nil {
+		creation, err = db.GetDetailInTransaction(ctx, creationId)
+		if err != nil {
+			return &generated.GetCreationResponse{
+				Msg: &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    "500",
+					Message: "Internal Server Error",
+					Details: err.Error(),
+				},
+			}, nil
+		}
 	}
 
 	// 存作品至redis
@@ -56,6 +50,31 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 			log.Printf("error: GetCreation SendMessage %v", err)
 		}
 	}(creation)
+
+	return &generated.GetCreationResponse{
+		CreationInfo: creation,
+		Msg: &common.ApiResponse{
+			Status: common.ApiResponse_SUCCESS,
+			Code:   "200",
+		},
+	}, nil
+}
+
+func GetCreationPrivate(ctx context.Context, req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {
+	// 取数据
+	creationId := req.GetCreationId()
+
+	creation, err := db.GetDetailInTransaction(ctx, creationId)
+	if err != nil {
+		return &generated.GetCreationResponse{
+			Msg: &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    "500",
+				Message: "Internal Server Error",
+				Details: err.Error(),
+			},
+		}, nil
+	}
 
 	return &generated.GetCreationResponse{
 		CreationInfo: creation,

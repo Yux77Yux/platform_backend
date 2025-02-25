@@ -48,6 +48,18 @@ func (c *CreationClient) GetCreation(ctx context.Context, req *generated.GetCrea
 	return response, nil
 }
 
+func (c *CreationClient) GetCreationPrivate(ctx context.Context, req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {
+	// 创建客户端
+	client := generated.NewCreationServiceClient(c.connection)
+
+	response, err := client.GetCreationPrivate(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("could not greet: %v", err)
+	}
+
+	return response, nil
+}
+
 func (c *CreationClient) GetCreationList(ctx context.Context, req *generated.GetCreationListRequest) (*generated.GetCreationListResponse, error) {
 	// 创建客户端
 	client := generated.NewCreationServiceClient(c.connection)

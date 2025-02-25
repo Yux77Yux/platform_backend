@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	ReviewService_UpdateReview_FullMethodName  = "/review.ReviewService/UpdateReview"
 	ReviewService_NewReview_FullMethodName     = "/review.ReviewService/NewReview"
+	ReviewService_GetReview_FullMethodName     = "/review.ReviewService/GetReview"
 	ReviewService_GetReviews_FullMethodName    = "/review.ReviewService/GetReviews"
 	ReviewService_GetNewReviews_FullMethodName = "/review.ReviewService/GetNewReviews"
 )
@@ -34,6 +35,7 @@ type ReviewServiceClient interface {
 	// POST
 	NewReview(ctx context.Context, in *NewReviewRequest, opts ...grpc.CallOption) (*NewReviewResponse, error)
 	// GET
+	GetReview(ctx context.Context, in *GetReviewDetailRequest, opts ...grpc.CallOption) (*GetReviewDetailResponse, error)
 	GetReviews(ctx context.Context, in *GetReviewsRequest, opts ...grpc.CallOption) (*GetReviewsResponse, error)
 	GetNewReviews(ctx context.Context, in *GetNewReviewsRequest, opts ...grpc.CallOption) (*GetReviewsResponse, error)
 }
@@ -60,6 +62,16 @@ func (c *reviewServiceClient) NewReview(ctx context.Context, in *NewReviewReques
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(NewReviewResponse)
 	err := c.cc.Invoke(ctx, ReviewService_NewReview_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *reviewServiceClient) GetReview(ctx context.Context, in *GetReviewDetailRequest, opts ...grpc.CallOption) (*GetReviewDetailResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetReviewDetailResponse)
+	err := c.cc.Invoke(ctx, ReviewService_GetReview_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +107,7 @@ type ReviewServiceServer interface {
 	// POST
 	NewReview(context.Context, *NewReviewRequest) (*NewReviewResponse, error)
 	// GET
+	GetReview(context.Context, *GetReviewDetailRequest) (*GetReviewDetailResponse, error)
 	GetReviews(context.Context, *GetReviewsRequest) (*GetReviewsResponse, error)
 	GetNewReviews(context.Context, *GetNewReviewsRequest) (*GetReviewsResponse, error)
 	mustEmbedUnimplementedReviewServiceServer()
@@ -112,6 +125,9 @@ func (UnimplementedReviewServiceServer) UpdateReview(context.Context, *UpdateRev
 }
 func (UnimplementedReviewServiceServer) NewReview(context.Context, *NewReviewRequest) (*NewReviewResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NewReview not implemented")
+}
+func (UnimplementedReviewServiceServer) GetReview(context.Context, *GetReviewDetailRequest) (*GetReviewDetailResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReview not implemented")
 }
 func (UnimplementedReviewServiceServer) GetReviews(context.Context, *GetReviewsRequest) (*GetReviewsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetReviews not implemented")
@@ -176,6 +192,24 @@ func _ReviewService_NewReview_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ReviewService_GetReview_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReviewDetailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ReviewServiceServer).GetReview(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ReviewService_GetReview_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ReviewServiceServer).GetReview(ctx, req.(*GetReviewDetailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ReviewService_GetReviews_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetReviewsRequest)
 	if err := dec(in); err != nil {
@@ -226,6 +260,10 @@ var ReviewService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "NewReview",
 			Handler:    _ReviewService_NewReview_Handler,
+		},
+		{
+			MethodName: "GetReview",
+			Handler:    _ReviewService_GetReview_Handler,
 		},
 		{
 			MethodName: "GetReviews",

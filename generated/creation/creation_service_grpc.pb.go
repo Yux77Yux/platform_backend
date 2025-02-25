@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	CreationService_UploadCreation_FullMethodName        = "/creation.CreationService/UploadCreation"
 	CreationService_GetCreation_FullMethodName           = "/creation.CreationService/GetCreation"
+	CreationService_GetCreationPrivate_FullMethodName    = "/creation.CreationService/GetCreationPrivate"
 	CreationService_GetSpaceCreations_FullMethodName     = "/creation.CreationService/GetSpaceCreations"
 	CreationService_GetCreationList_FullMethodName       = "/creation.CreationService/GetCreationList"
 	CreationService_GetPublicCreationList_FullMethodName = "/creation.CreationService/GetPublicCreationList"
@@ -38,6 +39,7 @@ type CreationServiceClient interface {
 	UploadCreation(ctx context.Context, in *UploadCreationRequest, opts ...grpc.CallOption) (*UploadCreationResponse, error)
 	// GET
 	GetCreation(ctx context.Context, in *GetCreationRequest, opts ...grpc.CallOption) (*GetCreationResponse, error)
+	GetCreationPrivate(ctx context.Context, in *GetCreationRequest, opts ...grpc.CallOption) (*GetCreationResponse, error)
 	GetSpaceCreations(ctx context.Context, in *GetSpaceCreationsRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
 	GetCreationList(ctx context.Context, in *GetCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
 	GetPublicCreationList(ctx context.Context, in *GetCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
@@ -70,6 +72,16 @@ func (c *creationServiceClient) GetCreation(ctx context.Context, in *GetCreation
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCreationResponse)
 	err := c.cc.Invoke(ctx, CreationService_GetCreation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *creationServiceClient) GetCreationPrivate(ctx context.Context, in *GetCreationRequest, opts ...grpc.CallOption) (*GetCreationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCreationResponse)
+	err := c.cc.Invoke(ctx, CreationService_GetCreationPrivate_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -144,6 +156,7 @@ type CreationServiceServer interface {
 	UploadCreation(context.Context, *UploadCreationRequest) (*UploadCreationResponse, error)
 	// GET
 	GetCreation(context.Context, *GetCreationRequest) (*GetCreationResponse, error)
+	GetCreationPrivate(context.Context, *GetCreationRequest) (*GetCreationResponse, error)
 	GetSpaceCreations(context.Context, *GetSpaceCreationsRequest) (*GetCreationListResponse, error)
 	GetCreationList(context.Context, *GetCreationListRequest) (*GetCreationListResponse, error)
 	GetPublicCreationList(context.Context, *GetCreationListRequest) (*GetCreationListResponse, error)
@@ -167,6 +180,9 @@ func (UnimplementedCreationServiceServer) UploadCreation(context.Context, *Uploa
 }
 func (UnimplementedCreationServiceServer) GetCreation(context.Context, *GetCreationRequest) (*GetCreationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCreation not implemented")
+}
+func (UnimplementedCreationServiceServer) GetCreationPrivate(context.Context, *GetCreationRequest) (*GetCreationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCreationPrivate not implemented")
 }
 func (UnimplementedCreationServiceServer) GetSpaceCreations(context.Context, *GetSpaceCreationsRequest) (*GetCreationListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSpaceCreations not implemented")
@@ -239,6 +255,24 @@ func _CreationService_GetCreation_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CreationServiceServer).GetCreation(ctx, req.(*GetCreationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CreationService_GetCreationPrivate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCreationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CreationServiceServer).GetCreationPrivate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CreationService_GetCreationPrivate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CreationServiceServer).GetCreationPrivate(ctx, req.(*GetCreationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -365,6 +399,10 @@ var CreationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCreation",
 			Handler:    _CreationService_GetCreation_Handler,
+		},
+		{
+			MethodName: "GetCreationPrivate",
+			Handler:    _CreationService_GetCreationPrivate_Handler,
 		},
 		{
 			MethodName: "GetSpaceCreations",

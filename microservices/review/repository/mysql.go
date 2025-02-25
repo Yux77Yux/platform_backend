@@ -7,7 +7,6 @@ import (
 	"time"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
-	snow "github.com/Yux77Yux/platform_backend/pkg/snow"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -102,9 +101,8 @@ func PostReviews(reviews []*generated.NewReview) error {
 	values := make([]any, length*FieldsCount)
 	for i, review := range reviews {
 		sqlStr[i] = QM
-		id := snow.GetId()
 
-		values[FieldsCount*i] = id
+		values[FieldsCount*i] = review.GetId()
 		values[FieldsCount*i+1] = review.GetTargetId()
 		values[FieldsCount*i+2] = review.GetTargetType()
 		values[FieldsCount*i+3] = nil

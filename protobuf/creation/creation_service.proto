@@ -23,6 +23,11 @@ service CreationService {
 
   // GET
   rpc GetCreation(creation.methods.GetCreationRequest) returns (creation.methods.GetCreationResponse);
+  rpc GetCreationPrivate(creation.methods.GetCreationRequest) returns (creation.methods.GetCreationResponse) {
+    option (google.api.http) = {
+      get: "/api/creation/private/{creation_id}"
+    };
+  }
 
   rpc GetSpaceCreations(creation.methods.GetSpaceCreationsRequest) returns (creation.methods.GetCreationListResponse) {
     option (google.api.http) = {

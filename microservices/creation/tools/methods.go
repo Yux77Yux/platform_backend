@@ -1,8 +1,8 @@
 package tools
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -95,10 +95,7 @@ func ensureTimestampPB(input interface{}) (*timestamppb.Timestamp, error) {
 	}
 }
 
-func MapCreationInfoByString(result map[string]string) *generated.CreationInfo {
-	if len(result) <= 0 {
-		return nil
-	}
+func MapCreationInfoByString(result map[string]string) (*generated.CreationInfo, error) {
 	converted := make(map[string]interface{})
 	// 将 map[string]string 转换为 map[string]interface{}
 	for key, value := range result {
@@ -107,75 +104,86 @@ func MapCreationInfoByString(result map[string]string) *generated.CreationInfo {
 	return MapCreationInfo(converted)
 }
 
-func MapCreationInfo(result map[string]interface{}) *generated.CreationInfo {
-	if len(result) <= 0 {
-		return nil
+func MapCreationInfo(result map[string]interface{}) (*generated.CreationInfo, error) {
+	requiredKeys := []string{
+		"author_id", "src", "thumbnail", "title", "bio", "duration", "upload_time", "status",
+		"views", "saves", "likes", "publish_time",
+		"category_id", "category_name", "category_parent",
+	}
+	for _, key := range requiredKeys {
+		if val, ok := result[key]; !ok || val == "" {
+			return nil, nil
+		}
 	}
 
-	statusStr := result["status"].(string)
+	statusStr, ok := result["status"].(string)
+	if !ok {
+		return nil, errors.New("missing or invalid 'status'")
+	}
 
-	status := generated.CreationStatus(generated.CreationStatus_value[statusStr])
+	status, exists := generated.CreationStatus_value[statusStr]
+	if !exists {
+		return nil, errors.New("invalid 'status' value")
+	}
 
-	var publishTime *timestamppb.Timestamp = nil
-	if result["publish_time"] != nil {
+	var publishTime *timestamppb.Timestamp
+	if v, exists := result["publish_time"]; exists && v != nil {
 		var err error
-		publishTime, err = ensureTimestampPB(result["publish_time"])
+		publishTime, err = ensureTimestampPB(v)
 		if err != nil {
-			log.Println("error: publish_time ", err)
-			return nil
+			return nil, fmt.Errorf("error parsing 'publish_time': %w", err)
 		}
 	}
 
 	uploadTime, err := ensureTimestampPB(result["upload_time"])
 	if err != nil {
-		log.Println("error: upload_time ", err)
-		return nil
+		return nil, fmt.Errorf("error parsing 'upload_time': %w", err)
 	}
 
-	authorId, err := strconv.ParseInt(result["author_id"].(string), 10, 64)
+	authorId, err := parseInt64(result["author_id"], "author_id")
 	if err != nil {
-		log.Println("authorId is not int64 type")
+		return nil, err
 	}
 
-	duration, err := strconv.Atoi(result["duration"].(string))
+	duration, err := parseInt(result["duration"], "duration")
 	if err != nil {
-		log.Println("duration is not int type")
+		return nil, err
 	}
 
-	categoryId, err := strconv.Atoi(result["category_id"].(string))
+	categoryId, err := parseInt(result["category_id"], "category_id")
 	if err != nil {
-		log.Println("category_id is not int type")
+		return nil, err
 	}
 
-	categoryParent, err := strconv.Atoi(result["category_parent"].(string))
+	categoryParent, err := parseInt(result["category_parent"], "category_parent")
 	if err != nil {
-		log.Println("category_parent is not int type")
+		return nil, err
 	}
 
-	views, err := strconv.Atoi(result["views"].(string))
+	views, err := parseInt(result["views"], "views")
 	if err != nil {
-		log.Println("views is not int type")
+		return nil, err
 	}
 
-	likes, err := strconv.Atoi(result["likes"].(string))
+	likes, err := parseInt(result["likes"], "likes")
 	if err != nil {
-		log.Println("likes is not int type")
+		return nil, err
 	}
 
-	saves, err := strconv.Atoi(result["saves"].(string))
+	saves, err := parseInt(result["saves"], "saves")
 	if err != nil {
-		log.Println("saves is not int type")
+		return nil, err
 	}
 
 	return &generated.CreationInfo{
 		Creation: &generated.Creation{
 			BaseInfo: &generated.CreationUpload{
 				AuthorId:   authorId,
-				Src:        result["src"].(string),
-				Thumbnail:  result["thumbnail"].(string),
-				Title:      result["title"].(string),
-				Bio:        result["bio"].(string),
-				Status:     status,
+				Src:        safeString(result, "src"),
+				Thumbnail:  safeString(result, "thumbnail"),
+				Title:      safeString(result, "title"),
+				Bio:        safeString(result, "bio"),
+				Status:     generated.CreationStatus(status),
 				Duration:   int32(duration),
 				CategoryId: int32(categoryId),
 			},
@@ -189,8 +197,31 @@ func MapCreationInfo(result map[string]interface{}) *generated.CreationInfo {
 		},
 		Category: &generated.Category{
 			CategoryId: int32(categoryId),
-			Name:       result["category_name"].(string),
+			Name:       safeString(result, "category_name"),
 			Parent:     int32(categoryParent),
 		},
+	}, nil
+}
+
+func parseInt(value interface{}, fieldName string) (int, error) {
+	str, ok := value.(string)
+	if !ok {
+		return 0, fmt.Errorf("missing or invalid '%s'", fieldName)
 	}
+	return strconv.Atoi(str)
+}
+
+func parseInt64(value interface{}, fieldName string) (int64, error) {
+	str, ok := value.(string)
+	if !ok {
+		return 0, fmt.Errorf("missing or invalid '%s'", fieldName)
+	}
+	return strconv.ParseInt(str, 10, 64)
+}
+
+func safeString(result map[string]interface{}, key string) string {
+	if val, ok := result[key].(string); ok {
+		return val
+	}
+	return ""
 }
