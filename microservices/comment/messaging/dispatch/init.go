@@ -6,6 +6,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
+	common "github.com/Yux77Yux/platform_backend/generated/common"
 )
 
 const (
@@ -21,7 +22,7 @@ var (
 	deleteChain     *DeleteChain
 	delCommentsPool = sync.Pool{
 		New: func() any {
-			slice := make([]*generated.AfterAuth, 0, MAX_BATCH_SIZE)
+			slice := make([]*common.AfterAuth, 0, MAX_BATCH_SIZE)
 			return &slice
 		},
 	}

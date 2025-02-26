@@ -50,13 +50,12 @@ func updateCreationDbProcessor(msg amqp.Delivery) error {
 		return err
 	}
 
-	// 更新缓存
-	err = cache.UpdateCreation(creation)
-	if err != nil {
-		log.Printf("cache CreationAddInCache occur error: %v", err)
-	}
+	creationId := creation.GetCreationId()
+	err = SendMessage(PendingCreation, PendingCreation, &common.CreationId{
+		Id: creationId,
+	})
 
-	return nil
+	return err
 }
 
 func updateCreationCacheProcessor(msg amqp.Delivery) error {

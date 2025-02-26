@@ -11,8 +11,7 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
-	dispatch "github.com/Yux77Yux/platform_backend/microservices/user/messaging/dispatch"
-	"github.com/Yux77Yux/platform_backend/pkg/auth"
+	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
 func AddReviewer(req *generated.AddReviewerRequest) (*generated.AddReviewerResponse, error) {
@@ -88,7 +87,7 @@ func AddReviewer(req *generated.AddReviewerRequest) (*generated.AddReviewerRespo
 	requestChannel <- func(reqID string) error {
 		reqIdCh <- reqID
 
-		err = userMQ.SendMessage("register", "register", user_credentials)
+		err = userMQ.SendMessage(userMQ.Register, userMQ.Register, user_credentials)
 		if err != nil {
 			return fmt.Errorf("err: request_id: %s ,message: %w", reqID, err)
 		}
@@ -158,7 +157,7 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 	requestChannel <- func(reqID string) error {
 		reqIdCh <- reqID
 
-		err = userMQ.SendMessage("register", "register", user_credentials)
+		err = userMQ.SendMessage(userMQ.Register, userMQ.Register, user_credentials)
 		if err != nil {
 			return fmt.Errorf("err: request_id: %s ,message: %w", reqID, err)
 		}
@@ -178,12 +177,36 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 }
 
 func Follow(req *generated.FollowRequest) (*generated.FollowResponse, error) {
-	follow := req.GetFollow()
-
 	response := new(generated.FollowResponse)
+	follow := req.GetFollow()
+	token := req.GetAccessToken().GetValue()
+	pass, userId, err := auth.Auth("post", "user_credentials", token)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Code:    "500",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if !pass {
+		response.Msg = &common.ApiResponse{
+			Code:   "403",
+			Status: common.ApiResponse_ERROR,
+		}
+		return response, nil
+	}
+	follow.FollowerId = userId
 
-	go dispatch.HandleRequest(follow, dispatch.Follow)
-	go dispatch.HandleRequest(follow, dispatch.FollowCache)
+	err = userMQ.SendMessage(userMQ.Follow, userMQ.Follow, follow)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
+	}
 
 	response.Msg = &common.ApiResponse{
 		Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值

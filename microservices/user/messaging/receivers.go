@@ -18,7 +18,6 @@ import (
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/user/messaging/dispatch"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
-	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
 // 补缓存
@@ -204,7 +203,7 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 			}, nil
 		}
 
-		go SendMessage("storeUser", "storeUser", result)
+		go SendMessage(StoreUser, StoreUser, result)
 	}
 
 	user_info.UserDefault.UserId = user_id
@@ -219,7 +218,7 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 }
 
 func delReviewerProcessor(msg amqp.Delivery) error {
-	req := new(generated.DelReviewerRequest)
+	req := new(common.UserDefault)
 	// 反序列化
 	err := proto.Unmarshal(msg.Body, req)
 	if err != nil {
@@ -227,17 +226,8 @@ func delReviewerProcessor(msg amqp.Delivery) error {
 		return err
 	}
 
-	token := req.GetAccessToken().GetValue()
-	pass, _, err := auth.Auth("update", "user", token)
-	if err != nil {
-		return err
-	}
-	if !pass {
-		return nil
-	}
-
 	// 删除审核员身份
-	username, err := db.DelReviewer(req.GetReviewerId())
+	username, email, err := db.DelReviewer(req.GetUserId())
 	if err != nil {
 		log.Printf("error: %v", err)
 		return err
@@ -249,5 +239,51 @@ func delReviewerProcessor(msg amqp.Delivery) error {
 		return err
 	}
 
+	if email != "" {
+		err = cache.DelCredentials(email)
+		if err != nil {
+			log.Printf("error: %v", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func updateUserStatusProcessor(msg amqp.Delivery) error {
+	log.Println("Update User Status Start !!!")
+	updateStatus := new(generated.UserUpdateStatus)
+
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, updateStatus)
+	if err != nil {
+		log.Printf("Error unmarshaling message: %v", err)
+		return fmt.Errorf("update user processor error: %w", err)
+	}
+
+	// 更新 数据库用户表
+	go dispatch.HandleRequest(updateStatus, dispatch.UpdateUserStatus)
+	go dispatch.HandleRequest(updateStatus, dispatch.UpdateUserStatusCache)
+
+	log.Println("updateUserStatusProcessor success")
+	return nil
+}
+
+func followProcessor(msg amqp.Delivery) error {
+	log.Println("followProcessor Start !!!")
+	follow := new(generated.Follow)
+
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, follow)
+	if err != nil {
+		log.Printf("Error unmarshaling message: %v", err)
+		return fmt.Errorf("followProcessor error: %w", err)
+	}
+
+	// 更新 数据库用户表
+	go dispatch.HandleRequest(follow, dispatch.Follow)
+	go dispatch.HandleRequest(follow, dispatch.FollowCache)
+
+	log.Println("followProcessor success")
 	return nil
 }

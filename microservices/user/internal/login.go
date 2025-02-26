@@ -140,7 +140,7 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 			UserRole:   user_part_info.GetUserRole(),
 		}
 
-		go userMQ.SendMessage("storeUser", "storeUser", user_info)
+		go userMQ.SendMessage(userMQ.StoreUser, userMQ.StoreUser, user_info)
 	}
 
 	return &generated.LoginResponse{

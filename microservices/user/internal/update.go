@@ -13,7 +13,7 @@ import (
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/user/messaging/dispatch"
 	oss "github.com/Yux77Yux/platform_backend/microservices/user/oss"
-	jwt "github.com/Yux77Yux/platform_backend/pkg/jwt"
+	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
 func DelReviewer(req *generated.DelReviewerRequest) (*generated.DelReviewerResponse, error) {
@@ -22,7 +22,7 @@ func DelReviewer(req *generated.DelReviewerRequest) (*generated.DelReviewerRespo
 		reqIdCh <- reqID
 		log.Printf("info: handling updateUser request with ID: %s\n", reqID)
 
-		err := userMQ.SendMessage("delReviewer", "delReviewer", req)
+		err := userMQ.SendMessage(userMQ.DelReviewer, userMQ.DelReviewer, req)
 		if err != nil {
 			return fmt.Errorf("err: request_id: %s ,message: %w", reqID, err)
 		}
@@ -44,29 +44,34 @@ func DelReviewer(req *generated.DelReviewerRequest) (*generated.DelReviewerRespo
 }
 
 func UpdateUserSpace(req *generated.UpdateUserSpaceRequest) (*generated.UpdateUserResponse, error) {
-	space := req.GetUserUpdateSpace()
-
+	response := new(generated.UpdateUserResponse)
 	accessToken := req.GetAccessToken().GetValue()
-	accessClaims, err := jwt.ParseJWT(accessToken)
+	pass, userId, err := auth.Auth("update", "user", accessToken)
 	if err != nil {
-		return &generated.UpdateUserResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "401",
-				Message: "Unauthorized",
-				Details: err.Error(),
-			},
-		}, nil
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if !pass {
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "403",
+		}
+		return response, nil
 	}
 
-	space.UserDefault.UserId = accessClaims.UserID
+	space := req.GetUserUpdateSpace()
+	space.UserDefault.UserId = userId
 
 	reqIdCh := make(chan string, 1)
 	requestChannel <- func(reqID string) error {
 		reqIdCh <- reqID
 		log.Printf("info: handling updateUser request with ID: %s\n", reqID)
 
-		err = userMQ.SendMessage("updateUserSpace", "updateUserSpace", space)
+		err = userMQ.SendMessage(userMQ.UpdateUserSpace, userMQ.UpdateUserSpace, space)
 		if err != nil {
 			return fmt.Errorf("err: request_id: %s ,message: %w", reqID, err)
 		}
@@ -89,17 +94,23 @@ func UpdateUserSpace(req *generated.UpdateUserSpaceRequest) (*generated.UpdateUs
 }
 
 func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.UpdateUserAvatarResponse, error) {
+	response := new(generated.UpdateUserAvatarResponse)
 	accessToken := req.GetAccessToken().GetValue()
-	accessClaims, err := jwt.ParseJWT(accessToken)
+	pass, userId, err := auth.Auth("update", "user", accessToken)
 	if err != nil {
-		return &generated.UpdateUserAvatarResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "401",
-				Message: "Unauthorized",
-				Details: err.Error(),
-			},
-		}, nil
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if !pass {
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "403",
+		}
+		return response, nil
 	}
 
 	// 操作oss上传
@@ -122,7 +133,6 @@ func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.Update
 		}, nil
 	}
 	log.Printf("avatar url: %s over", userAvatar)
-	userId := accessClaims.UserID
 
 	updateAvatar := &generated.UserUpdateAvatar{
 		UserId:     userId,
@@ -132,75 +142,89 @@ func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.Update
 	go dispatch.HandleRequest(updateAvatar, dispatch.UpdateUserAvatar)
 	go dispatch.HandleRequest(updateAvatar, dispatch.UpdateUserAvatarCache)
 
-	return &generated.UpdateUserAvatarResponse{
-		Msg: &common.ApiResponse{
-			Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-			Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-			Message: "OK",                       // 标识完成
-			Details: "UpdateUser success",       // 更详细的成功信息
-		},
-		UserUpdateAvatar: updateAvatar,
-	}, nil
+	response.Msg = &common.ApiResponse{
+		Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
+		Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
+		Message: "OK",                       // 标识完成
+		Details: "UpdateUser success",       // 更详细的成功信息
+	}
+	response.UserUpdateAvatar = updateAvatar
+	return response, nil
 }
 
 func UpdateUserStatus(req *generated.UpdateUserStatusRequest) (*generated.UpdateUserResponse, error) {
+	response := new(generated.UpdateUserResponse)
 	accessToken := req.GetAccessToken().GetValue()
-	accessClaims, err := jwt.ParseJWT(accessToken)
+	pass, userId, err := auth.Auth("update", "user", accessToken)
 	if err != nil {
-		return &generated.UpdateUserResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "401",
-				Message: "Unauthorized",
-				Details: err.Error(),
-			},
-		}, nil
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if !pass {
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "403",
+		}
+		return response, nil
 	}
 
 	updateStatus := req.GetUserUpdateStatus()
-	userId := accessClaims.UserID
 	updateStatus.UserId = userId
 
-	go dispatch.HandleRequest(updateStatus, dispatch.UpdateUserStatus)
-	go dispatch.HandleRequest(updateStatus, dispatch.UpdateUserStatusCache)
+	err = userMQ.SendMessage(userMQ.UpdateUserStatus, userMQ.UpdateUserStatus, updateStatus)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
+	}
 
-	return &generated.UpdateUserResponse{
-		Msg: &common.ApiResponse{
-			Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-			Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-			Message: "OK",                       // 标识完成
-			Details: "UpdateUser success",       // 更详细的成功信息
-		},
-	}, nil
+	response.Msg = &common.ApiResponse{
+		Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
+		Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
+		Message: "OK",                       // 标识完成
+		Details: "UpdateUser success",       // 更详细的成功信息
+	}
+	return response, nil
 }
 
 func UpdateUserBio(req *generated.UpdateUserBioRequest) (*generated.UpdateUserResponse, error) {
+	response := new(generated.UpdateUserResponse)
 	accessToken := req.GetAccessToken().GetValue()
-	accessClaims, err := jwt.ParseJWT(accessToken)
+	pass, userId, err := auth.Auth("update", "user", accessToken)
 	if err != nil {
-		return &generated.UpdateUserResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "401",
-				Message: "Unauthorized",
-				Details: err.Error(),
-			},
-		}, nil
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if !pass {
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "403",
+		}
+		return response, nil
 	}
 
 	updateBio := req.GetUserUpdateBio()
-	userId := accessClaims.UserID
 	updateBio.UserId = userId
 
 	go dispatch.HandleRequest(updateBio, dispatch.UpdateUserBio)
 	go dispatch.HandleRequest(updateBio, dispatch.UpdateUserBioCache)
 
-	return &generated.UpdateUserResponse{
-		Msg: &common.ApiResponse{
-			Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-			Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-			Message: "OK",                       // 标识完成
-			Details: "UpdateUser success",       // 更详细的成功信息
-		},
-	}, nil
+	response.Msg = &common.ApiResponse{
+		Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
+		Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
+		Message: "OK",                       // 标识完成
+		Details: "UpdateUser success",       // 更详细的成功信息
+	}
+	return response, nil
 }

@@ -6,14 +6,14 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/comment"
+	common "github.com/Yux77Yux/platform_backend/generated/common"
 )
 
 // 监听者结构体
 type DeleteListener struct {
 	creationId     int64
-	exeChannel     chan *[]*generated.AfterAuth // 批量发送评论的通道
-	commentChannel chan *generated.AfterAuth    // 用于接收评论的通道
+	exeChannel     chan *[]*common.AfterAuth // 批量发送评论的通道
+	commentChannel chan *common.AfterAuth    // 用于接收评论的通道
 	count          uint32
 
 	timeoutDuration     time.Duration   // 超时持续时间（触发销毁）
@@ -30,7 +30,7 @@ func (listener *DeleteListener) GetId() int64 {
 
 // 启动监听者
 func (listener *DeleteListener) StartListening() {
-	listener.commentChannel = make(chan *generated.AfterAuth, LISTENER_CHANNEL_COUNT)
+	listener.commentChannel = make(chan *common.AfterAuth, LISTENER_CHANNEL_COUNT)
 	go listener.RestartTimeoutTimer()
 	listener.RestartUpdateIntervalTimer()
 }
@@ -40,7 +40,7 @@ func (listener *DeleteListener) Dispatch(data protoreflect.ProtoMessage) {
 	// 长度加1
 	count := atomic.AddUint32(&listener.count, 1)
 
-	comment := data.(*generated.AfterAuth)
+	comment := data.(*common.AfterAuth)
 	// 处理评论的逻辑
 	listener.commentChannel <- comment
 
@@ -61,7 +61,7 @@ func (listener *DeleteListener) SendBatch() {
 		return
 	}
 
-	delCommentsPtr := delCommentsPool.Get().(*[]*generated.AfterAuth)
+	delCommentsPtr := delCommentsPool.Get().(*[]*common.AfterAuth)
 	*delCommentsPtr = (*delCommentsPtr)[:count]
 	delComments := *delCommentsPtr
 	for i := uint32(0); i < count; i++ {

@@ -8,7 +8,7 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/comment"
+	common "github.com/Yux77Yux/platform_backend/generated/common"
 	cache "github.com/Yux77Yux/platform_backend/microservices/comment/cache"
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
 )
@@ -27,7 +27,7 @@ func InitialDeleteChain() *DeleteChain {
 		Head:       &DeleteListener{prev: nil},
 		Tail:       &DeleteListener{next: nil},
 		Count:      0,
-		exeChannel: make(chan *[]*generated.AfterAuth, 3),
+		exeChannel: make(chan *[]*common.AfterAuth, 3),
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &DeleteListener{
@@ -49,13 +49,13 @@ type DeleteChain struct {
 	Tail         *DeleteListener
 	nodeMux      sync.Mutex
 	Count        int32 // 监听者数量
-	exeChannel   chan *[]*generated.AfterAuth
+	exeChannel   chan *[]*common.AfterAuth
 	listenerPool sync.Pool
 }
 
 func (chain *DeleteChain) ExecuteBatch() {
 	for delCommentsPtr := range chain.exeChannel {
-		go func(delCommentsPtr *[]*generated.AfterAuth) {
+		go func(delCommentsPtr *[]*common.AfterAuth) {
 			delComments := *delCommentsPtr
 			// 更新数据库
 			affectedCount, err := db.BatchUpdateDeleteStatus(delComments)
@@ -87,9 +87,9 @@ func (chain *DeleteChain) HandleRequest(data protoreflect.ProtoMessage) {
 
 // 查找责任链中的合适监听者
 func (chain *DeleteChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
-	comment, ok := data.(*generated.AfterAuth)
+	comment, ok := data.(*common.AfterAuth)
 	if !ok {
-		log.Printf("invalid type: expected *generated.AfterAuth")
+		log.Printf("invalid type: expected *common.AfterAuth")
 	}
 
 	creationId := comment.GetCreationId()
@@ -122,9 +122,9 @@ func (chain *DeleteChain) FindListener(data protoreflect.ProtoMessage) ListenerI
 
 // 创建一个新的监听者
 func (chain *DeleteChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	comment, ok := data.(*generated.AfterAuth)
+	comment, ok := data.(*common.AfterAuth)
 	if !ok {
-		log.Printf("invalid type: expected *generated.AfterAuth")
+		log.Printf("invalid type: expected *common.AfterAuth")
 	}
 
 	newListener := chain.listenerPool.Get().(*DeleteListener)

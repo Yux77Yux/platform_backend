@@ -7,14 +7,28 @@ import (
 	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue"
 )
 
+const (
+	Register         = "Register"
+	StoreUser        = "StoreUser"
+	StoreCredentials = "StoreCredentials"
+	UpdateUserSpace  = "UpdateUserSpace"
+	Follow           = "Follow"
+
+	// review
+	UpdateUserStatus = "UpdateUserStatus" // 终点
+	DelReviewer      = "DelReviewer"      // 终点
+)
+
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
-		"register":         "direct",
-		"storeUser":        "direct",
-		"storeCredentials": "direct",
-		"updateUserSpace":  "direct",
-		"delReviewer":      "direct",
+		Register:         "direct",
+		StoreUser:        "direct",
+		StoreCredentials: "direct",
+		UpdateUserSpace:  "direct",
+		UpdateUserStatus: "direct",
+		DelReviewer:      "direct",
+		Follow:           "direct",
 
 		// Add more exchanges here
 	}
@@ -55,16 +69,20 @@ func Init() {
 
 		switch exchange {
 		// 不同的exchange使用不同函数
-		case "register":
-			go ListenToQueue(exchange, "register", "register", registerProcessor)
-		case "storeUser":
-			go ListenToQueue(exchange, "storeUser", "storeUser", storeUserProcessor)
-		case "storeCredentials":
-			go ListenToQueue(exchange, "storeCredentials", "storeCredentials", storeCredentialsProcessor)
-		case "updateUserSpace":
-			go ListenToQueue(exchange, "updateUserSpace", "updateUserSpace", updateUserSpaceProcessor)
-		case "delReviewer":
-			go ListenToQueue(exchange, "delReviewer", "delReviewer", delReviewerProcessor)
+		case Register:
+			go ListenToQueue(exchange, Register, Register, registerProcessor)
+		case StoreUser:
+			go ListenToQueue(exchange, StoreUser, StoreUser, storeUserProcessor)
+		case StoreCredentials:
+			go ListenToQueue(exchange, StoreCredentials, StoreCredentials, storeCredentialsProcessor)
+		case UpdateUserSpace:
+			go ListenToQueue(exchange, UpdateUserSpace, UpdateUserSpace, updateUserSpaceProcessor)
+		case UpdateUserStatus:
+			go ListenToQueue(exchange, UpdateUserStatus, UpdateUserStatus, updateUserStatusProcessor)
+		case DelReviewer:
+			go ListenToQueue(exchange, DelReviewer, DelReviewer, delReviewerProcessor)
+		case Follow:
+			go ListenToQueue(exchange, Follow, Follow, followProcessor)
 		}
 	}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
+	common "github.com/Yux77Yux/platform_backend/generated/common"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/comment/messaging"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
@@ -19,7 +20,7 @@ func DeleteComment(req *generated.DeleteCommentRequest) error {
 	}
 
 	// 第一次过滤，发到消息队列
-	afterAuth := &generated.AfterAuth{
+	afterAuth := &common.AfterAuth{
 		UserId:     user_id,
 		CommentId:  req.GetCommentId(),
 		CreationId: req.GetCreationId(),

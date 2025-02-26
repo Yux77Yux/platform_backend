@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
+	common "github.com/Yux77Yux/platform_backend/generated/common"
 )
 
 // POST
@@ -174,10 +175,12 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 }
 
 // GET
-func GetPublisherIdInTransaction(comment_id int32) (int64, error) {
+// (creationId, userId, error)
+func GetCreationIdInTransaction(comment_id int32) (int64, int64, error) {
 	const (
 		query = `
 			SELECT 
+				creation_id,
 				user_id
 			FROM
 				db_comment_1.Comment
@@ -187,23 +190,25 @@ func GetPublisherIdInTransaction(comment_id int32) (int64, error) {
 
 	ctx := context.Background()
 
+	var creationId int64 = -1
 	var userId int64 = -1
 
 	select {
 	case <-ctx.Done():
-		return -1, ctx.Err()
+		return -1, -1, ctx.Err()
 	default:
 		// 查统计
-		err := db.QueryRowContext(ctx,
+		err := db.QueryRowContext(
+			ctx,
 			query,
 			comment_id,
-		).Scan(&userId)
+		).Scan(&creationId, &userId)
 
 		if err != nil {
-			return -1, err
+			return -1, -1, err
 		}
 	}
-	return userId, nil
+	return creationId, userId, nil
 }
 
 const (
@@ -597,7 +602,7 @@ func GetReplyCommentsInTransaction(ctx context.Context, user_id int64, page int3
 	return comments, nil
 }
 
-func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, error) {
+func GetCommentInfo(comments []*common.AfterAuth) ([]*common.AfterAuth, error) {
 	ctx := context.Background()
 
 	count := len(comments)
@@ -616,7 +621,7 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 				WHERE id 
 				IN (%s)`, strings.Join(queryCount, ","))
 		values = make([]interface{}, 0, count)
-		result = make([]*generated.AfterAuth, 0, count)
+		result = make([]*common.AfterAuth, 0, count)
 	)
 
 	for i := 0; i < count; i++ {
@@ -645,7 +650,7 @@ func GetCommentInfo(comments []*generated.AfterAuth) ([]*generated.AfterAuth, er
 			)
 
 			rows.Scan(&id, &creationId)
-			result = append(result, &generated.AfterAuth{
+			result = append(result, &common.AfterAuth{
 				CommentId:  id,
 				CreationId: creationId,
 			})
@@ -737,7 +742,7 @@ func GetComments(ctx context.Context, ids []int32) ([]*generated.Comment, error)
 }
 
 // UPDATE
-func BatchUpdateDeleteStatus(comments []*generated.AfterAuth) (int64, error) {
+func BatchUpdateDeleteStatus(comments []*common.AfterAuth) (int64, error) {
 	ctx := context.Background()
 
 	count := len(comments)

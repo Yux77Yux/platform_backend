@@ -12,6 +12,21 @@ const (
 	Comment_review  = "Comment_review"
 	User_review     = "User_review"
 	Creation_review = "Creation_review"
+	PendingCreation = "PendingCreation"
+
+	// USER
+	USER_APPROVE  = "UpdateUserStatus"
+	USER_REJECTED = "UpdateUserStatus"
+	USER_DELETED  = "DeleteUser"
+
+	// CREATION
+	CREATION_APPROVE  = "UpdateCreationStatus"
+	CREATION_REJECTED = "UpdateCreationStatus"
+	CREATION_DELETED  = "DeleteCreation"
+
+	// COMMENT
+	COMMENT_REJECTED = "DeleteComment"
+	COMMENT_DELETED  = "DeleteComment"
 )
 
 var (
@@ -21,6 +36,7 @@ var (
 		Comment_review:  "direct",
 		User_review:     "direct",
 		Creation_review: "direct",
+		PendingCreation: "direct",
 		// Add more exchanges here
 	}
 )
@@ -60,6 +76,8 @@ func Init() {
 		// 不同的exchange使用不同函数
 		case New_review:
 			go ListenToQueue(exchange, New_review, New_review, NewReviewProcessor)
+		case PendingCreation:
+			go ListenToQueue(exchange, PendingCreation, PendingCreation, PendingCreationProcessor)
 		}
 	}
 }

@@ -37,8 +37,9 @@ func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCrea
 	baseInfo.AuthorId = author_id
 	status := baseInfo.GetStatus()
 
+	creationId := snow.GetId()
 	creation := &generated.Creation{
-		CreationId: snow.GetId(),
+		CreationId: creationId,
 		BaseInfo:   baseInfo,
 		UploadTime: timestamppb.Now(),
 	}
@@ -56,7 +57,9 @@ func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCrea
 
 	// 异步处理
 	if status == generated.CreationStatus_PENDING {
-		err = messaging.SendMessage(messaging.PendingCreation, messaging.PendingCreation, baseInfo)
+		err = messaging.SendMessage(messaging.PendingCreation, messaging.PendingCreation, &common.CreationId{
+			Id: creationId,
+		})
 		if err != nil {
 			log.Printf("error: publish failed because %v", err)
 			newErr := fmt.Errorf("error: publish error %w and trun back into draft", err)

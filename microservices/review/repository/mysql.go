@@ -192,3 +192,32 @@ func UpdateReviews(reviews []*generated.Review) error {
 
 	return err
 }
+
+func UpdateReview(review *generated.Review) error {
+	query := `
+		UPDATE db_review_1.Review 
+		SET 
+			status = ?,
+			remark =?,
+			reviewer_id = ?
+		WHERE id = ?`
+
+	var (
+		status      = review.GetStatus().String()
+		remark      = review.GetRemark()
+		reviewer_id = review.GetReviewerId()
+		id          = review.GetNew().GetId()
+	)
+
+	ctx := context.Background()
+	_, err := db.ExecContext(
+		ctx,
+		query,
+		status,
+		remark,
+		reviewer_id,
+		id,
+	)
+
+	return err
+}

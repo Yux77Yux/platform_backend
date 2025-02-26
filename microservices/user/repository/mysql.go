@@ -163,13 +163,6 @@ func UserRegisterInTransaction(user_credentials []*generated.UserCredentials) er
 		values[i*5+2] = UserPassword
 		values[i*5+3] = UserEmail
 		values[i*5+4] = UserRole
-		// values = append(values,
-		// 	UserId,
-		// 	Username,
-		// 	UserPassword,
-		// 	UserEmail,
-		// 	UserRole,
-		// )
 	}
 
 	ctx := context.Background()
@@ -242,7 +235,9 @@ func Follow(subs []*generated.Follow) error {
 
 	query := fmt.Sprintf(`
 		INSERT INTO db_user_1.Follow (follower_id, followee_id)
-		VALUES %s ;`, strings.Join(sqlStr, ","))
+		VALUES %s 
+		ON DUPLICATE KEY UPDATE
+		follower_id = follower_id;`, strings.Join(sqlStr, ","))
 
 	_, err := db.Exec(
 		query,
@@ -1036,9 +1031,11 @@ func UserUpdateBioInTransaction(users []*generated.UserUpdateBio) error {
 	return nil
 }
 
-func DelReviewer(reviewerId int64) (string, error) {
+func DelReviewer(reviewerId int64) (string, string, error) {
 	querySELECT := `
-		SELECT username 
+		SELECT 
+			username,
+			email
 		FROM db_user_credentials_1.UserCredentials 
 		WHERE id = ?
 		FOR UPDATE`
@@ -1047,13 +1044,17 @@ func DelReviewer(reviewerId int64) (string, error) {
 		SET role = USER 
 		WHERE id = ?`
 
-	var username string
+	var (
+		username string
+		email    sql.NullString
+	)
+
 	ctx := context.Background()
 
 	// 开始事务
 	tx, err := db.BeginTransaction()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	// 确保在错误时回滚事务
@@ -1064,24 +1065,24 @@ func DelReviewer(reviewerId int64) (string, error) {
 	}()
 
 	// 查询 username 并加行锁
-	err = tx.QueryRowContext(ctx, querySELECT, reviewerId).Scan(&username)
+	err = tx.QueryRowContext(ctx, querySELECT, reviewerId).Scan(&username, &email)
 	if err != nil {
-		return "", fmt.Errorf("failed to query username: %w", err)
+		return "", "", fmt.Errorf("failed to query username: %w", err)
 	}
 
 	// 更新角色
 	_, err = tx.ExecContext(ctx, queryUpdate, reviewerId)
 	if err != nil {
-		return "", fmt.Errorf("failed to update role: %w", err)
+		return "", "", fmt.Errorf("failed to update role: %w", err)
 	}
 
 	// 提交事务
 	err = db.CommitTransaction(tx)
 	if err != nil {
-		return "", fmt.Errorf("failed to commit transaction: %w", err)
+		return "", "", fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return username, nil
+	return username, email.String, nil
 }
 
 func ViewFollowee(subs []*generated.Follow) error {
@@ -1121,36 +1122,6 @@ func ViewFollowee(subs []*generated.Follow) error {
 
 // Del
 func CancelFollow(f *generated.Follow) error {
-	// const (
-	// 	QM = "(?,?)"
-	// )
-	// count := len(subs)
-	// if count <= 0 {
-	// 	return nil
-	// }
-	// sqlStr := make([]string, count)
-	// values := make([]interface{}, count*2)
-	// for i, val := range subs {
-	// 	sqlStr[i] = QM
-	// 	values[i*2] = val.FollowerId
-	// 	values[i*2+1] = val.FolloweeId
-	// }
-
-	// query := fmt.Sprintf(`
-	// 	DELETE FROM db_user_1.Follow
-	// 	WHERE (follower_id,followee_id)
-	// 	IN
-	// 		(%s);`, strings.Join(sqlStr, ","))
-
-	// _, err := db.Exec(
-	// 	query,
-	// 	values...,
-	// )
-	// if err != nil {
-	// 	err = fmt.Errorf("transaction exec failed because %v", err)
-
-	// 	return err
-	// }
 	query := `
 		DELETE FROM db_user_1.Follow 
 		WHERE follower_id = ?

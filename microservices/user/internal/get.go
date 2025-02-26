@@ -79,7 +79,7 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 			}, nil
 		}
 
-		go userMQ.SendMessage("storeUser", "storeUser", result)
+		go userMQ.SendMessage(userMQ.StoreUser, userMQ.StoreUser, result)
 	}
 
 	user_info.UserDefault.UserId = user_id

@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package comment.methods;
+package common;
 
-option go_package = "github.com/Yux77Yux/platform_backend/generated/comment";
+option go_package = "github.com/Yux77Yux/platform_backend/generated/common";
 
 message AfterAuth {
   int64 user_id = 1;
@@ -10,6 +10,6 @@ message AfterAuth {
   int32 comment_id = 3;
 }
 
-message AnyAfterAuth{
+message AnyAfterAuth {
   repeated AfterAuth any_after_auth = 1;
 }
