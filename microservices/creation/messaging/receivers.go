@@ -96,7 +96,7 @@ func updateCreationStatusProcessor(msg amqp.Delivery) error {
 	err := proto.Unmarshal(msg.Body, creation)
 	if err != nil {
 		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("register processor error: %w", err)
+		return fmt.Errorf("updateCreationStatusProcessor processor error: %w", err)
 	}
 
 	// 更新数据库
@@ -123,6 +123,30 @@ func updateCreationStatusProcessor(msg amqp.Delivery) error {
 		})
 		log.Printf("error: %v", err)
 		return err
+	}
+
+	return nil
+}
+
+func deleteCreationProcessor(msg amqp.Delivery) error {
+	deleteInfo := new(generated.CreationUpdateStatus)
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, deleteInfo)
+	if err != nil {
+		log.Printf("Error unmarshaling message: %v", err)
+		return fmt.Errorf("deleteCreationProcessor processor error: %w", err)
+	}
+
+	// 删除数据库中作品
+	err = db.UpdateCreationStatusInTransaction(deleteInfo)
+	if err != nil {
+		return fmt.Errorf("error:deleteCreationProcessor UpdateCreationStatusInTransaction error %w", err)
+	}
+
+	// 删除缓存中作品
+	err = cache.UpdateCreationStatus(deleteInfo)
+	if err != nil {
+		return fmt.Errorf("error:deleteCreationProcessor UpdateCreationStatus error %w", err)
 	}
 
 	return nil

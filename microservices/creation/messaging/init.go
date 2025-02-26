@@ -15,6 +15,7 @@ const (
 	// Review
 	PendingCreation      = "PendingCreation"      // 起点
 	UpdateCreationStatus = "UpdateCreationStatus" // 终点
+	DeleteCreation       = "DeleteCreation"
 )
 
 var (
@@ -24,6 +25,7 @@ var (
 		UpdateCacheCreation:  "direct",
 		StoreCreationInfo:    "direct",
 		UpdateCreationStatus: "direct",
+		DeleteCreation:       "direct",
 		// Add more exchanges here
 	}
 )
@@ -69,6 +71,8 @@ func Init() {
 			go ListenToQueue(exchange, UpdateCreationStatus, UpdateCreationStatus, updateCreationStatusProcessor)
 		case UpdateCacheCreation:
 			go ListenToQueue(exchange, UpdateCacheCreation, UpdateCacheCreation, updateCreationCacheProcessor)
+		case DeleteCreation:
+			go ListenToQueue(exchange, DeleteCreation, DeleteCreation, deleteCreationProcessor)
 		}
 	}
 }

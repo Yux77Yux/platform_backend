@@ -2,9 +2,9 @@ package internal
 
 import (
 	"fmt"
+	"log"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
-	cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
@@ -16,7 +16,7 @@ func DeleteCreation(req *generated.DeleteCreationRequest) error {
 		return fmt.Errorf("no token")
 	}
 
-	pass, user_id, err := auth.Auth("update", "creation", req.GetAccessToken().GetValue())
+	pass, user_id, err := auth.Auth("delete", "creation", req.GetAccessToken().GetValue())
 	if err != nil {
 		return fmt.Errorf("405")
 	}
@@ -33,15 +33,9 @@ func DeleteCreation(req *generated.DeleteCreationRequest) error {
 		AuthorId:   user_id,
 	}
 
-	// 删除缓存中作品
-	err = cache.UpdateCreationStatus(deleteInfo)
+	err = messaging.SendMessage(messaging.DeleteCreation, messaging.DeleteCreation, deleteInfo)
 	if err != nil {
-		return fmt.Errorf("error: cache error %w", err)
-	}
-
-	// 将删除信息发到消息队列
-	err = messaging.SendMessage(messaging.UpdateCreationStatus, messaging.UpdateCreationStatus, deleteInfo)
-	if err != nil {
+		log.Printf("error: publish failed because %v", err)
 		return err
 	}
 
