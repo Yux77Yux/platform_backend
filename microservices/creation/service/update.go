@@ -21,8 +21,15 @@ func (s *Server) UpdateCreation(ctx context.Context, req *generated.UpdateCreati
 	return response, nil
 }
 
-func (s *Server) UpdateCreationStatus(ctx context.Context, req *generated.UpdateCreationStatusRequest) (*generated.UpdateCreationResponse, error) {
+func (s *Server) PublishDraftCreation(ctx context.Context, req *generated.UpdateCreationStatusRequest) (*generated.UpdateCreationResponse, error) {
 	log.Println("info: UpdateCreationStatus service start")
+
+	info := req.GetUpdateInfo()
+	if info == nil {
+		info = new(generated.CreationUpdateStatus)
+	}
+	info.Status = generated.CreationStatus_PENDING
+	req.UpdateInfo = info
 
 	response, err := internal.UpdateCreationStatus(req)
 	if err != nil {

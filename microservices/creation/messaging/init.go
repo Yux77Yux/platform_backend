@@ -8,19 +8,20 @@ import (
 )
 
 const (
-	DraftCreation        = "DraftCreation"
-	PendingCreation      = "PendingCreation"
-	UpdateCreation       = "UpdateCreation"
-	StoreCreationInfo    = "StoreCreationInfo"
-	UpdateCreationStatus = "UpdateCreationStatus"
+	UpdateDbCreation    = "UpdateDbCreation"
+	StoreCreationInfo   = "StoreCreationInfo"
+	UpdateCacheCreation = "UpdateCacheCreation"
+
+	// Review
+	PendingCreation      = "PendingCreation"      // 起点
+	UpdateCreationStatus = "UpdateCreationStatus" // 终点
 )
 
 var (
 	connStr         string
 	ExchangesConfig = map[string]string{
-		DraftCreation:        "direct",
-		PendingCreation:      "direct",
-		UpdateCreation:       "direct",
+		UpdateDbCreation:     "direct",
+		UpdateCacheCreation:  "direct",
 		StoreCreationInfo:    "direct",
 		UpdateCreationStatus: "direct",
 		// Add more exchanges here
@@ -59,23 +60,15 @@ func Init() {
 
 		switch exchange {
 		// 不同的exchange使用不同函数
-		case PendingCreation:
-			go ListenToQueue(exchange, PendingCreation, PendingCreation, pendingCreationProcessor)
-		case DraftCreation:
-			go ListenToQueue(exchange, DraftCreation, DraftCreation, draftCreationProcessor)
-		case UpdateCreation:
-			go ListenToQueue(exchange, UpdateCreation, UpdateCreation, updateCreationProcessor)
+		case UpdateDbCreation:
+			go ListenToQueue(exchange, UpdateDbCreation, UpdateDbCreation, updateCreationDbProcessor)
 		case StoreCreationInfo:
 			go ListenToQueue(exchange, StoreCreationInfo, StoreCreationInfo, storeCreationProcessor)
+
 		case UpdateCreationStatus:
 			go ListenToQueue(exchange, UpdateCreationStatus, UpdateCreationStatus, updateCreationStatusProcessor)
+		case UpdateCacheCreation:
+			go ListenToQueue(exchange, UpdateCacheCreation, UpdateCacheCreation, updateCreationCacheProcessor)
 		}
 	}
-
-	// for _, exchange := range ListenRPCs {
-	// 	switch exchange {
-	// 	// 不同的exchange使用不同函数
-	// 	case "agg_user":
-	// 		go ListenRPC(exchange, "getUser", "getUser", getUserProcessor)
-	// 	}
 }

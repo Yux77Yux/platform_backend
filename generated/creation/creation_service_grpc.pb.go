@@ -28,7 +28,7 @@ const (
 	CreationService_GetPublicCreationList_FullMethodName = "/creation.CreationService/GetPublicCreationList"
 	CreationService_DeleteCreation_FullMethodName        = "/creation.CreationService/DeleteCreation"
 	CreationService_UpdateCreation_FullMethodName        = "/creation.CreationService/UpdateCreation"
-	CreationService_UpdateCreationStatus_FullMethodName  = "/creation.CreationService/UpdateCreationStatus"
+	CreationService_PublishDraftCreation_FullMethodName  = "/creation.CreationService/PublishDraftCreation"
 )
 
 // CreationServiceClient is the client API for CreationService service.
@@ -47,7 +47,7 @@ type CreationServiceClient interface {
 	DeleteCreation(ctx context.Context, in *DeleteCreationRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// UPDATE
 	UpdateCreation(ctx context.Context, in *UpdateCreationRequest, opts ...grpc.CallOption) (*UpdateCreationResponse, error)
-	UpdateCreationStatus(ctx context.Context, in *UpdateCreationStatusRequest, opts ...grpc.CallOption) (*UpdateCreationResponse, error)
+	PublishDraftCreation(ctx context.Context, in *UpdateCreationStatusRequest, opts ...grpc.CallOption) (*UpdateCreationResponse, error)
 }
 
 type creationServiceClient struct {
@@ -138,10 +138,10 @@ func (c *creationServiceClient) UpdateCreation(ctx context.Context, in *UpdateCr
 	return out, nil
 }
 
-func (c *creationServiceClient) UpdateCreationStatus(ctx context.Context, in *UpdateCreationStatusRequest, opts ...grpc.CallOption) (*UpdateCreationResponse, error) {
+func (c *creationServiceClient) PublishDraftCreation(ctx context.Context, in *UpdateCreationStatusRequest, opts ...grpc.CallOption) (*UpdateCreationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateCreationResponse)
-	err := c.cc.Invoke(ctx, CreationService_UpdateCreationStatus_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, CreationService_PublishDraftCreation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ type CreationServiceServer interface {
 	DeleteCreation(context.Context, *DeleteCreationRequest) (*emptypb.Empty, error)
 	// UPDATE
 	UpdateCreation(context.Context, *UpdateCreationRequest) (*UpdateCreationResponse, error)
-	UpdateCreationStatus(context.Context, *UpdateCreationStatusRequest) (*UpdateCreationResponse, error)
+	PublishDraftCreation(context.Context, *UpdateCreationStatusRequest) (*UpdateCreationResponse, error)
 	mustEmbedUnimplementedCreationServiceServer()
 }
 
@@ -199,8 +199,8 @@ func (UnimplementedCreationServiceServer) DeleteCreation(context.Context, *Delet
 func (UnimplementedCreationServiceServer) UpdateCreation(context.Context, *UpdateCreationRequest) (*UpdateCreationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateCreation not implemented")
 }
-func (UnimplementedCreationServiceServer) UpdateCreationStatus(context.Context, *UpdateCreationStatusRequest) (*UpdateCreationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateCreationStatus not implemented")
+func (UnimplementedCreationServiceServer) PublishDraftCreation(context.Context, *UpdateCreationStatusRequest) (*UpdateCreationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PublishDraftCreation not implemented")
 }
 func (UnimplementedCreationServiceServer) mustEmbedUnimplementedCreationServiceServer() {}
 func (UnimplementedCreationServiceServer) testEmbeddedByValue()                         {}
@@ -367,20 +367,20 @@ func _CreationService_UpdateCreation_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _CreationService_UpdateCreationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _CreationService_PublishDraftCreation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateCreationStatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CreationServiceServer).UpdateCreationStatus(ctx, in)
+		return srv.(CreationServiceServer).PublishDraftCreation(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: CreationService_UpdateCreationStatus_FullMethodName,
+		FullMethod: CreationService_PublishDraftCreation_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CreationServiceServer).UpdateCreationStatus(ctx, req.(*UpdateCreationStatusRequest))
+		return srv.(CreationServiceServer).PublishDraftCreation(ctx, req.(*UpdateCreationStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -425,8 +425,8 @@ var CreationService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CreationService_UpdateCreation_Handler,
 		},
 		{
-			MethodName: "UpdateCreationStatus",
-			Handler:    _CreationService_UpdateCreationStatus_Handler,
+			MethodName: "PublishDraftCreation",
+			Handler:    _CreationService_PublishDraftCreation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

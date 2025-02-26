@@ -54,7 +54,7 @@ service CreationService {
     };
   }
 
-  rpc UpdateCreationStatus(creation.methods.UpdateCreationStatusRequest) returns (creation.methods.UpdateCreationResponse) {
+  rpc PublishDraftCreation(creation.methods.UpdateCreationStatusRequest) returns (creation.methods.UpdateCreationResponse) {
     option (google.api.http) = {
       patch: "/api/creation/status"
       body: "*"

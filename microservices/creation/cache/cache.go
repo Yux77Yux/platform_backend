@@ -366,31 +366,6 @@ func GetCreationList(ctx context.Context, creationIds []int64) ([]*generated.Cre
 	return infos, notCaches, nil
 }
 
-// DEL
-func DeleteCreation(creation_id int64) error {
-	idStr := strconv.FormatInt(creation_id, 10)
-	ctx := context.Background()
-
-	resultCh := make(chan error, 1)
-
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		err := CacheClient.SetFieldHash(ctx, "Hash_CreationInfo", idStr, "status", generated.CreationStatus_DELETE.String())
-		resultCh <- err
-	}
-
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("timeout: %w", ctx.Err())
-	case err := <-resultCh:
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}
-}
-
 // UPDATE
 func UpdateCreation(creation *generated.CreationUpdated) error {
 	var (

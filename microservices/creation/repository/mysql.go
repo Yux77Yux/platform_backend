@@ -599,7 +599,7 @@ func UpdateCreationInTransaction(creation *generated.CreationUpdated) error {
 
 	values = append(values, creation.GetCreationId())
 	if userId != -403 {
-		AND = " AND user_id = ? "
+		AND = " AND author_id = ? "
 		values = append(values, userId)
 	}
 
@@ -610,6 +610,7 @@ func UpdateCreationInTransaction(creation *generated.CreationUpdated) error {
 	query := fmt.Sprintf(`
 		UPDATE db_creation_1.Creation
 		SET 
+			status = 'PENDING'
 			%s
 		WHERE 
 			id = ? 
@@ -639,7 +640,7 @@ func UpdateCreationStatusInTransaction(creation *generated.CreationUpdateStatus)
 
 	values = append(values, status.String(), creation.GetCreationId())
 	if userId != -403 {
-		AND = " AND user_id = ? "
+		AND = " AND author_id = ? "
 		values = append(values, userId)
 	}
 

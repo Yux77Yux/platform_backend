@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"fmt"
+
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
@@ -29,7 +31,7 @@ func UpdateCreation(req *generated.UpdateCreationRequest) (*generated.UpdateCrea
 
 	UpdateInfo := req.GetUpdateInfo()
 	UpdateInfo.AuthorId = user_id
-	err = messaging.SendMessage(messaging.UpdateCreation, messaging.UpdateCreation, UpdateInfo)
+	err = messaging.SendMessage(messaging.UpdateDbCreation, messaging.UpdateDbCreation, UpdateInfo)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -46,10 +48,11 @@ func UpdateCreation(req *generated.UpdateCreationRequest) (*generated.UpdateCrea
 	return response, nil
 }
 
+// 将草稿发布
 func UpdateCreationStatus(req *generated.UpdateCreationStatusRequest) (*generated.UpdateCreationResponse, error) {
 	response := new(generated.UpdateCreationResponse)
 
-	pass, isADMIN, user_id, err := auth.AuthRole("update", "creation", req.GetAccessToken().GetValue())
+	pass, user_id, err := auth.Auth("update", "creation", req.GetAccessToken().GetValue())
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_FAILED,
@@ -71,33 +74,25 @@ func UpdateCreationStatus(req *generated.UpdateCreationStatusRequest) (*generate
 		Code:   "202",
 	}
 
-	if isADMIN {
-		// 如果是则不用加userId，这里已经验证为审核员
-		UpdateInfo := req.GetUpdateInfo()
-		UpdateInfo.AuthorId = -403
-		err = messaging.SendMessage(messaging.UpdateCreationStatus, messaging.UpdateCreationStatus, UpdateInfo)
-		if err != nil {
-			response.Msg = &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
-				Details: err.Error(),
-			}
-			return response, nil
+	updateInfo := req.GetUpdateInfo()
+	if updateInfo == nil {
+		err := fmt.Errorf("error: not entail the request")
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "403",
+			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 
-	// 如果不是审核员，则一定加user_id
-	UpdateInfo := req.GetUpdateInfo()
-	UpdateInfo.AuthorId = user_id // 此处的user_id为token中，难被更改
-	err = messaging.SendMessage(messaging.UpdateCreation, messaging.UpdateCreation, UpdateInfo)
+	updateInfo.AuthorId = user_id
+	err = messaging.SendMessage(messaging.UpdateCreationStatus, messaging.UpdateCreationStatus, updateInfo)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
 	}
 	return response, nil
 }

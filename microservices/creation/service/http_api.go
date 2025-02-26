@@ -7,7 +7,6 @@ import (
 )
 
 // 上传目录
-const uploadDir = "uploads"
 
 func UploadVideo(w http.ResponseWriter, r *http.Request) {
 	// 设置响应头为 JSON 格式

@@ -8,56 +8,66 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 
 	cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
-	"github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
-	"github.com/Yux77Yux/platform_backend/microservices/creation/tools"
+	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 )
 
 func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {
+	response := new(generated.GetCreationResponse)
 	// 取数据
 	creationId := req.GetCreationId()
 	creation, err := cache.GetCreationInfo(ctx, creationId)
-	log.Printf("creationInfo %v", creation)
-	log.Printf("err %v", err)
 	if err != nil {
-		return &generated.GetCreationResponse{
-			Msg: &common.ApiResponse{
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Message: "Internal Server Error",
+			Details: err.Error(),
+		}
+		return response, nil
+	}
+
+	status := creation.GetCreation().GetBaseInfo().GetStatus()
+
+	if creation == nil {
+		creation, err = db.GetDetailInTransaction(ctx, creationId)
+		if err != nil {
+			response.Msg = &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,
 				Code:    "500",
 				Message: "Internal Server Error",
 				Details: err.Error(),
-			},
-		}, nil
-	}
-	if creation == nil {
-		creation, err = db.GetDetailInTransaction(ctx, creationId)
-		if err != nil {
-			return &generated.GetCreationResponse{
-				Msg: &common.ApiResponse{
-					Status:  common.ApiResponse_ERROR,
-					Code:    "500",
-					Message: "Internal Server Error",
-					Details: err.Error(),
-				},
-			}, nil
+			}
+			return response, nil
+		}
+
+		status = creation.GetCreation().GetBaseInfo().GetStatus()
+		if status == generated.CreationStatus_PUBLISHED {
+			// 存作品至redis
+			go func(creation *generated.CreationInfo) {
+				err := messaging.SendMessage(messaging.StoreCreationInfo, messaging.StoreCreationInfo, creation)
+				if err != nil {
+					log.Printf("error: GetCreation SendMessage %v", err)
+				}
+			}(creation)
 		}
 	}
 
-	// 存作品至redis
-	go func(creation *generated.CreationInfo) {
-		err := messaging.SendMessage(messaging.StoreCreationInfo, messaging.StoreCreationInfo, creation)
-		if err != nil {
-			log.Printf("error: GetCreation SendMessage %v", err)
-		}
-	}(creation)
-
-	return &generated.GetCreationResponse{
-		CreationInfo: creation,
-		Msg: &common.ApiResponse{
+	if status == generated.CreationStatus_DELETE {
+		response.Msg = &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
-			Code:   "200",
-		},
-	}, nil
+			Code:   "404",
+		}
+		return response, nil
+	}
+
+	response.CreationInfo = creation
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
 }
 
 func GetCreationPrivate(ctx context.Context, req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {

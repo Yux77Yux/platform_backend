@@ -1,10 +1,17 @@
 package internal
 
 import (
+	"fmt"
+	"log"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
+	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
+	snow "github.com/Yux77Yux/platform_backend/pkg/snow"
 )
 
 func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCreationResponse, error) {
@@ -26,19 +33,59 @@ func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCrea
 		}, nil
 	}
 	// 以上为鉴权
-	req.BaseInfo.AuthorId = author_id
+	baseInfo := req.GetBaseInfo()
+	baseInfo.AuthorId = author_id
+	status := baseInfo.GetStatus()
+
+	creation := &generated.Creation{
+		CreationId: snow.GetId(),
+		BaseInfo:   baseInfo,
+		UploadTime: timestamppb.Now(),
+	}
+
+	err = db.CreationAddInTransaction(creation)
+	if err != nil {
+		log.Printf("db CreationAddInTransaction occur error: %v", err)
+		return &generated.UploadCreationResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_ERROR,
+				Code:   "500",
+			},
+		}, err
+	}
 
 	// 异步处理
-	if req.GetBaseInfo().GetStatus() == generated.CreationStatus_DRAFT {
-		messaging.SendMessage(messaging.DraftCreation, messaging.DraftCreation, req.GetBaseInfo())
-	} else if req.GetBaseInfo().GetStatus() == generated.CreationStatus_PENDING {
-		messaging.SendMessage(messaging.PendingCreation, messaging.PendingCreation, req.GetBaseInfo())
+	if status == generated.CreationStatus_PENDING {
+		err = messaging.SendMessage(messaging.PendingCreation, messaging.PendingCreation, baseInfo)
+		if err != nil {
+			log.Printf("error: publish failed because %v", err)
+			newErr := fmt.Errorf("error: publish error %w and trun back into draft", err)
+
+			updateStatus := &generated.CreationUpdateStatus{
+				CreationId: creation.GetCreationId(),
+				AuthorId:   baseInfo.GetAuthorId(),
+				Status:     generated.CreationStatus_DRAFT,
+			}
+			errSecond := db.UpdateCreationStatusInTransaction(updateStatus)
+			if errSecond != nil {
+				log.Printf("error: db UpdateCreationStatusInTransaction occur error: %v", err)
+				newErr = fmt.Errorf("%w,but  %w", newErr, errSecond)
+			}
+
+			return &generated.UploadCreationResponse{
+				Msg: &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    "201",
+					Details: newErr.Error(),
+				},
+			}, newErr
+		}
 	}
 
 	return &generated.UploadCreationResponse{
 		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_PENDING,
-			Code:   "202",
+			Status: common.ApiResponse_SUCCESS,
+			Code:   "201",
 		},
 	}, nil
 }
