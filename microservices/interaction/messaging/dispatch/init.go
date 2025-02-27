@@ -16,16 +16,19 @@ const (
 	// sql的插入更新删除都用一套
 	DbInteraction = "DbInteraction"
 
-	ViewCache       = "ViewCache"
-	LikeCache       = "LikeCache"
-	CollectionCache = "CollectionCache"
-	CancelLikeCache = "CancelLikeCache"
+	ViewCache             = "ViewCache"
+	LikeCache             = "LikeCache"
+	CollectionCache       = "CollectionCache"
+	CancelLikeCache       = "CancelLikeCache"
+	CancelViewCache       = "CancelViewCache"
+	CancelCollectionCache = "CancelCollectionCache"
 )
 
 var (
 	// 持久化数据库的插入与更新一致
 	dbInteractionsChain  *DbInteractionChain
 	viewCacheChain       *ViewCacheChain
+	likeCacheChain       *LikeCacheChain
 	collectionCacheChain *CollectionCacheChain
 	interactionsPool     = sync.Pool{
 		New: func() any {
@@ -34,9 +37,10 @@ var (
 		},
 	}
 
-	cancelLikeCacheChain *CancelLikeCacheChain
-	likeCacheChain       *LikeCacheChain
-	baseInteractionsPool = sync.Pool{
+	cancelCollectionCacheChain *CancelCollectionCacheChain
+	cancelLikeCacheChain       *CancelLikeCacheChain
+	cancelViewCacheChain       *CancelViewCacheChain
+	baseInteractionsPool       = sync.Pool{
 		New: func() any {
 			slice := make([]*generated.BaseInteraction, 0, MAX_BATCH_SIZE)
 			return &slice
@@ -53,7 +57,8 @@ func init() {
 	collectionCacheChain = InitialCollectionCacheChain()
 
 	cancelLikeCacheChain = InitialCancelLikeCacheChain()
-
+	cancelCollectionCacheChain = InitialCancelCollectionCacheChain()
+	cancelViewCacheChain = InitialCancelViewCacheChain()
 }
 
 func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
@@ -69,5 +74,9 @@ func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 		collectionCacheChain.HandleRequest(msg)
 	case CancelLikeCache:
 		cancelLikeCacheChain.HandleRequest(msg)
+	case CancelCollectionCache:
+		cancelCollectionCacheChain.HandleRequest(msg)
+	case CancelViewCache:
+		cancelViewCacheChain.HandleRequest(msg)
 	}
 }

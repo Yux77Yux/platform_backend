@@ -1,4 +1,4 @@
-package messaging
+package receiver
 
 // 由于不同的exchange，需要不同的接收者，事实上需要被调度，统一开关
 
@@ -13,6 +13,7 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 )
 
@@ -51,7 +52,7 @@ func updateCreationDbProcessor(msg amqp.Delivery) error {
 	}
 
 	creationId := creation.GetCreationId()
-	err = SendMessage(PendingCreation, PendingCreation, &common.CreationId{
+	err = messaging.SendMessage(PendingCreation, PendingCreation, &common.CreationId{
 		Id: creationId,
 	})
 
@@ -80,9 +81,9 @@ func updateCreationCacheProcessor(msg amqp.Delivery) error {
 	}
 
 	go func(creation *generated.CreationInfo) {
-		err := SendMessage(StoreCreationInfo, StoreCreationInfo, creation)
+		err := messaging.SendMessage(StoreCreationInfo, StoreCreationInfo, creation)
 		if err != nil {
-			log.Printf("error: GetCreation SendMessage %v", err)
+			log.Printf("error: GetCreation messaging.SendMessage %v", err)
 		}
 	}(creation)
 
@@ -108,7 +109,7 @@ func updateCreationStatusProcessor(msg amqp.Delivery) error {
 	status := creation.GetStatus()
 	// 作者想发布
 	if status == generated.CreationStatus_PENDING {
-		err = SendMessage(PendingCreation, PendingCreation, &common.CreationId{
+		err = messaging.SendMessage(PendingCreation, PendingCreation, &common.CreationId{
 			Id: creation.GetCreationId(),
 		})
 		log.Printf("error: %v", err)
@@ -117,7 +118,7 @@ func updateCreationStatusProcessor(msg amqp.Delivery) error {
 
 	// 已经是发布状态
 	if status == generated.CreationStatus_PUBLISHED {
-		err = SendMessage(UpdateCacheCreation, UpdateCacheCreation, &common.CreationId{
+		err = messaging.SendMessage(UpdateCacheCreation, UpdateCacheCreation, &common.CreationId{
 			Id: creation.GetCreationId(),
 		})
 		log.Printf("error: %v", err)
@@ -146,6 +147,18 @@ func deleteCreationProcessor(msg amqp.Delivery) error {
 	err = cache.UpdateCreationStatus(deleteInfo)
 	if err != nil {
 		return fmt.Errorf("error:deleteCreationProcessor UpdateCreationStatus error %w", err)
+	}
+
+	return nil
+}
+
+func addInteractionCount(msg amqp.Delivery) error {
+	actions := new(common.AnyUserAction)
+	// 反序列化
+	err := proto.Unmarshal(msg.Body, actions)
+	if err != nil {
+		log.Printf("Error unmarshaling message: %v", err)
+		return fmt.Errorf("addInteractionCount processor error: %w", err)
 	}
 
 	return nil

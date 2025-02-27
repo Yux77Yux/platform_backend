@@ -10,6 +10,8 @@ type RedisMethods interface {
 	Open(connStr string, password string) error
 	Close() error
 
+	Exists(ctx context.Context, key string) (bool, error)
+
 	DelRelatedKeys(ctx context.Context, kindPrefix string, kindType string) error
 	DelKey(ctx context.Context, kind string, unique string) error
 

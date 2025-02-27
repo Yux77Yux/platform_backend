@@ -38,6 +38,16 @@ func (r *RedisClient) Close() error {
 	return r.redisClient.Close()
 }
 
+// 检查键是否存在
+func (r *RedisClient) Exists(ctx context.Context, key string) (bool, error) {
+	val, err := r.redisClient.Exists(ctx, key).Result()
+	if err != nil {
+		return false, fmt.Errorf("redis_utils checking key is not exists: %v", err)
+	}
+
+	return val > 0, nil
+}
+
 // 类型的删除
 
 // 删除指定类型符合要求的键

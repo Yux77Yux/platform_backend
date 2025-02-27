@@ -56,7 +56,7 @@ func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.I
 	resultCh := make(chan *Result, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		results, err := CacheClient.RevRangeZSetWithScore(ctx, "Histories", userIdStr, start, stop)
+		results, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Histories", userIdStr, start, stop)
 		if err != nil {
 			resultCh <- &Result{
 				err: err,
@@ -98,7 +98,7 @@ func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated
 	resultCh := make(chan *Result, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		results, err := CacheClient.RevRangeZSetWithScore(ctx, "Collections", userIdStr, start, stop)
+		results, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Collections", userIdStr, start, stop)
 		if err != nil {
 			resultCh <- &Result{
 				err: err,
@@ -132,21 +132,22 @@ func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated
 }
 
 // Like
-func GetLikes(userId int64) ([]*generated.BaseInteraction, error) {
-	ctx := context.Background()
+func GetLikes(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
+	const scope = 30
+	start := int64((page - 1) * scope)
+	stop := start + scope
 	userIdStr := strconv.FormatInt(userId, 10)
-
-	resultCh := make(chan *ResultStr, 1)
+	resultCh := make(chan *Result, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		results, err := CacheClient.GetMembersSet(ctx, "Likes", userIdStr)
+		results, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Likes", userIdStr, start, stop)
 		if err != nil {
-			resultCh <- &ResultStr{
+			resultCh <- &Result{
 				err: err,
 			}
 			return
 		}
-		resultCh <- &ResultStr{
+		resultCh <- &Result{
 			result: results,
 			err:    nil,
 		}
@@ -160,19 +161,14 @@ func GetLikes(userId int64) ([]*generated.BaseInteraction, error) {
 		if result.err != nil {
 			return nil, fmt.Errorf("error: %w", result.err)
 		}
-
-		creationIdStrs := result.result
-		length := len(creationIdStrs)
-		res := make([]*generated.BaseInteraction, length)
-		for i, val := range creationIdStrs {
-			CreationId, idErr := strconv.ParseInt(val, 10, 64)
-			if idErr != nil {
-				return nil, idErr
-			}
-			res[i].CreationId = CreationId
-			res[i].UserId = userId
+		res, err := ToBaseInteraction(result.result)
+		if err != nil {
+			return nil, fmt.Errorf("error: %w", err)
 		}
 
+		for i := range res {
+			res[i].Base.UserId = userId
+		}
 		return res, nil
 	}
 }
@@ -232,8 +228,8 @@ func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction)
 	resultCh := make(chan *ActionResult, 1)
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		pipe := CacheClient.Pipeline()
-		isLike := fmt.Sprintf("Set_Likes_%d", userId)              // 自己是否点赞
-		isCollection := fmt.Sprintf("ZSet_Collections_%d", userId) // 自己是否收藏
+		isLike := fmt.Sprintf("ZSet_User_Likes_%d", userId)             // 自己是否点赞
+		isCollection := fmt.Sprintf("ZSet_User_Collections_%d", userId) // 自己是否收藏
 
 		creationIdStr := strconv.FormatInt(creationId, 10)
 
@@ -343,7 +339,7 @@ func GetRecommendBaseItem(ctx context.Context, id int64) ([]int64, bool, error) 
 	pipe := CacheClient.Pipeline()
 
 	sliceCmd := pipe.SRandMemberN(ctx, fmt.Sprintf("Set_RecommendBaseItem_%d", id), popCount)
-	floatCmd := pipe.ZScore(ctx, "Set_RecommendBaseItem_Creation", strconv.FormatInt(id, 10))
+	floatCmd := pipe.ZScore(ctx, "ZSet_RecommendBaseItem_Creation", strconv.FormatInt(id, 10))
 
 	_, err := pipe.Exec(ctx)
 	if err != nil {
@@ -403,7 +399,9 @@ func SetRecommendBaseItem(id int64, ids []int64) error {
 	}
 
 	pipe := CacheClient.Pipeline()
+	// 作品的相似视频集合
 	pipe.SAdd(ctx, fmt.Sprintf("Set_RecommendBaseItem_%d", id), values...)
+	// 作品的相似视频集合的过期时间
 	pipe.ZAdd(ctx, "ZSet_RecommendBaseItem_Creation", &redis.Z{
 		Member: id,
 		Score:  float64(time.Now().Unix()),
@@ -431,14 +429,20 @@ func UpdateHistories(data []*generated.Interaction) error {
 			creationId := base.GetCreationId()
 			timestampScore := option.GetUpdatedAt().GetSeconds()
 
-			key := fmt.Sprintf("ZSet_Histories_%d", userId)
-			pipe.ZAdd(ctx, key, &redis.Z{
+			// 用户的历史记录 基于用户协同过滤
+			keyUser := fmt.Sprintf("ZSet_User_Histories_%d", userId)
+			pipe.ZAdd(ctx, keyUser, &redis.Z{
 				Score:  float64(timestampScore),
 				Member: creationId,
 			})
 
-			viewKey := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
-			pipe.HIncrBy(ctx, viewKey, "views", 1)
+			// 记录观看作品的用户 基于物品协同过滤
+			keyItem := fmt.Sprintf("ZSet_Item_Histories_%d", creationId)
+			pipe.ZAdd(ctx, keyItem, &redis.Z{
+				Score:  float64(timestampScore),
+				Member: userId,
+			})
+
 		}
 		_, err := pipe.Exec(ctx)
 		if err != nil {
@@ -472,14 +476,19 @@ func ModifyCollections(data []*generated.Interaction) error {
 			creationId := base.GetCreationId()
 			timestampScore := option.GetUpdatedAt().GetSeconds()
 
-			key := fmt.Sprintf("ZSet_Collections_%d", userId)
-			pipe.ZAdd(ctx, key, &redis.Z{
+			// 用户的收藏记录 基于用户协同过滤
+			keyUser := fmt.Sprintf("ZSet_User_Collections_%d", userId)
+			pipe.ZAdd(ctx, keyUser, &redis.Z{
 				Score:  float64(timestampScore),
 				Member: creationId,
 			})
 
-			collectionKey := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
-			pipe.HIncrBy(ctx, collectionKey, "saves", 1)
+			// 记录收藏作品的用户 基于物品协同过滤
+			keyItem := fmt.Sprintf("ZSet_Item_Collections_%d", creationId)
+			pipe.ZAdd(ctx, keyItem, &redis.Z{
+				Score:  float64(timestampScore),
+				Member: userId,
+			})
 		}
 		_, err := pipe.Exec(ctx)
 		if err != nil {
@@ -500,21 +509,32 @@ func ModifyCollections(data []*generated.Interaction) error {
 }
 
 // 点赞
-func ModifyLike(data []*generated.BaseInteraction) error {
+func ModifyLike(data []*generated.Interaction) error {
 	ctx := context.Background()
 	resultCh := make(chan error, 1)
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		ctx := context.Background()
 		pipe := CacheClient.Pipeline()
-		for _, base := range data {
+		for _, option := range data {
+			base := option.GetBase()
 
 			userId := base.GetUserId()
 			creationId := base.GetCreationId()
-			key := fmt.Sprintf("Set_Likes_%d", userId)
-			pipe.SAdd(ctx, key, creationId)
+			timestampScore := option.GetUpdatedAt().GetSeconds()
 
-			likeKey := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
-			pipe.HIncrBy(ctx, likeKey, "likes", 1)
+			// 用户的点赞记录 基于用户协同过滤
+			keyUser := fmt.Sprintf("ZSet_User_Likes_%d", userId)
+			pipe.ZAdd(ctx, keyUser, &redis.Z{
+				Score:  float64(timestampScore),
+				Member: creationId,
+			})
+
+			// 记录点赞作品的用户 基于物品协同过滤
+			keyItem := fmt.Sprintf("ZSet_Item_Likes_%d", creationId)
+			pipe.ZAdd(ctx, keyItem, &redis.Z{
+				Score:  float64(timestampScore),
+				Member: userId,
+			})
 		}
 		_, err := pipe.Exec(ctx)
 		if err != nil {
@@ -543,13 +563,13 @@ func DelHistories(data []*generated.BaseInteraction) error {
 		ctx := context.Background()
 		pipe := CacheClient.Pipeline()
 		for _, base := range data {
-
 			userId := base.GetUserId()
 			creationId := base.GetCreationId()
 
-			key := fmt.Sprintf("ZSet_Histories_%d", userId)
+			key := fmt.Sprintf("ZSet_User_Histories_%d", userId)
 			pipe.ZRem(ctx, key, creationId)
 		}
+
 		_, err := pipe.Exec(ctx)
 		if err != nil {
 			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
@@ -575,15 +595,11 @@ func DelCollections(data []*generated.BaseInteraction) error {
 		ctx := context.Background()
 		pipe := CacheClient.Pipeline()
 		for _, base := range data {
-
 			userId := base.GetUserId()
 			creationId := base.GetCreationId()
 
-			key := fmt.Sprintf("ZSet_Collections_%d", userId)
+			key := fmt.Sprintf("ZSet_User_Collections_%d", userId)
 			pipe.ZRem(ctx, key, creationId)
-
-			collectionKey := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
-			pipe.HIncrBy(ctx, collectionKey, "saves", -1)
 		}
 
 		_, err := pipe.Exec(ctx)
@@ -611,16 +627,13 @@ func DelLike(data []*generated.BaseInteraction) error {
 		ctx := context.Background()
 		pipe := CacheClient.Pipeline()
 		for _, base := range data {
-
 			userId := base.GetUserId()
 			creationId := base.GetCreationId()
 
-			key := fmt.Sprintf("Set_Likes_%d", creationId)
+			key := fmt.Sprintf("ZSet_Likes_%d", creationId)
 			pipe.ZRem(ctx, key, userId)
-
-			likeKey := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
-			pipe.HIncrBy(ctx, likeKey, "likes", -1)
 		}
+
 		_, err := pipe.Exec(ctx)
 		if err != nil {
 			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
@@ -688,7 +701,7 @@ func GetAllInteractions(idStrs []string) (map[int64]map[int64]float64, error) {
 
 	// 依次遍历用户 ID，把请求加入 pipeline
 	for i, str := range idStrs {
-		historyKey := fmt.Sprintf("ZSet_Histories_%s", str) // 观看记录 (ZSet)
+		historyKey := fmt.Sprintf("ZSet_User_Histories_%s", str) // 观看记录 (ZSet)
 
 		// 用 ZRange 取 ZSet，避免用 SMembers 读错数据类型
 		historyCmds[i] = pipe.ZRevRange(ctx, historyKey, 0, 199)
@@ -707,7 +720,7 @@ func GetAllInteractions(idStrs []string) (map[int64]map[int64]float64, error) {
 	for i, str := range idStrs {
 		vSet, err := historyCmds[i].Result()
 		if err != nil {
-			log.Printf("error: ZSet_Histories %v", err)
+			log.Printf("error: ZSet_User_Histories %v", err)
 			return nil, err
 		}
 

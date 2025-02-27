@@ -4,15 +4,21 @@ import (
 	"fmt"
 	"log"
 
+	event "github.com/Yux77Yux/platform_backend/generated/common/event"
 	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue"
+)
+
+const (
+	UPDATE_CREATION_ACTION_COUNT = "InteractionCount"
+
+	ADD_VIEW = "ADD_VIEW"
 )
 
 var (
 	connStr         string
 	messageQueue    MessagequeueInterface
 	ExchangesConfig = map[string]string{
-		// : "direct",
-		// Add more exchanges here
+		event.Exchange_EXCHANGE_ADD_VIEW.String(): "direct",
 	}
 )
 

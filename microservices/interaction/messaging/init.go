@@ -10,6 +10,9 @@ import (
 const (
 	ComputeSimilarCreation = "ComputeSimilarCreation"
 	ComputeUser            = "ComputeUser"
+
+	// Creation
+	UPDATE_CREATION_ACTION_COUNT = "InteractionCount"
 )
 
 var (

@@ -8,19 +8,19 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
-	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
+	common "github.com/Yux77Yux/platform_backend/generated/common"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/aggregator/messaging"
 )
 
-func InitialLikeCacheChain() *LikeCacheChain {
-	_chain := &LikeCacheChain{
-		Head:       &LikeListener{prev: nil},
-		Tail:       &LikeListener{next: nil},
+func InitialUpdateCountChain() *UpdateCountChain {
+	_chain := &UpdateCountChain{
+		Head:       &UpdateCountListener{prev: nil},
+		Tail:       &UpdateCountListener{next: nil},
 		Count:      0,
-		exeChannel: make(chan *[]*generated.Interaction, EXE_CHANNEL_COUNT),
+		exeChannel: make(chan *[]*common.UserAction, EXE_CHANNEL_COUNT),
 		listenerPool: sync.Pool{
 			New: func() any {
-				return &LikeListener{
+				return &UpdateCountListener{
 					timeoutDuration: 10 * time.Second,
 					updateInterval:  3 * time.Second,
 				}
@@ -34,35 +34,37 @@ func InitialLikeCacheChain() *LikeCacheChain {
 }
 
 // 责任链
-type LikeCacheChain struct {
-	Head         *LikeListener // 责任链的头部
-	Tail         *LikeListener
+type UpdateCountChain struct {
+	Head         *UpdateCountListener // 责任链的头部
+	Tail         *UpdateCountListener
 	Count        int32 // 监听者数量
 	nodeMux      sync.Mutex
-	exeChannel   chan *[]*generated.Interaction
+	exeChannel   chan *[]*common.UserAction
 	listenerPool sync.Pool
 }
 
-func (chain *LikeCacheChain) ExecuteBatch() {
-	log.Printf("我他妈来啦!!！ ")
-	for interactionsPtr := range chain.exeChannel {
-		go func(interactionsPtr *[]*generated.Interaction) {
-			interactions := *interactionsPtr
+func (chain *UpdateCountChain) ExecuteBatch() {
+	for UpdateCountsPtr := range chain.exeChannel {
+		go func(UpdateCountsPtr *[]*common.UserAction) {
+			views := *UpdateCountsPtr
+			anyViews := &common.AnyUserAction{
+				Actions: views,
+			}
 			// 插入数据库
-			err := cache.ModifyLike(interactions)
+			err := messaging.SendMessage(UpdateCount, UpdateCount, anyViews)
 			if err != nil {
-				log.Printf("error: ModifyLike error")
+				log.Printf("error: SendMessage UpdateCount error")
 			}
 
 			// 放回对象池
-			*interactionsPtr = interactions[:0]
-			interactionsPool.Put(interactionsPtr)
-		}(interactionsPtr)
+			*UpdateCountsPtr = views[:0]
+			insertPool.Put(UpdateCountsPtr)
+		}(UpdateCountsPtr)
 	}
 }
 
 // 处理评论请求的函数
-func (chain *LikeCacheChain) HandleRequest(data protoreflect.ProtoMessage) {
+func (chain *UpdateCountChain) HandleRequest(data protoreflect.ProtoMessage) {
 	listener := chain.FindListener(data)
 	if listener == nil {
 		// 如果没有找到合适的监听者，创建一个新的监听者
@@ -72,7 +74,7 @@ func (chain *LikeCacheChain) HandleRequest(data protoreflect.ProtoMessage) {
 }
 
 // 查找责任链中的合适监听者
-func (chain *LikeCacheChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
+func (chain *UpdateCountChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
 	chain.nodeMux.Lock()
 	next := chain.Head.next
 	prev := chain.Tail.prev
@@ -100,8 +102,8 @@ func (chain *LikeCacheChain) FindListener(data protoreflect.ProtoMessage) Listen
 }
 
 // 创建一个新的监听者
-func (chain *LikeCacheChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := chain.listenerPool.Get().(*LikeListener)
+func (chain *UpdateCountChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
+	newListener := chain.listenerPool.Get().(*UpdateCountListener)
 	newListener.exeChannel = chain.exeChannel
 
 	// 头插法，将新的监听者挂到链中
@@ -122,11 +124,11 @@ func (chain *LikeCacheChain) CreateListener(data protoreflect.ProtoMessage) List
 }
 
 // 销毁监听者
-func (chain *LikeCacheChain) DestroyListener(listener ListenerInterface) {
+func (chain *UpdateCountChain) DestroyListener(listener ListenerInterface) {
 	// 找到前一个节点（假设 chain.Head 是链表的头部）
-	current, ok := listener.(*LikeListener)
+	current, ok := listener.(*UpdateCountListener)
 	if !ok {
-		log.Printf("invalid type: expected *LikeListener")
+		log.Printf("invalid type: expected *UpdateCountListener")
 	}
 
 	chain.nodeMux.Lock()

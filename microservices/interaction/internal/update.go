@@ -40,7 +40,7 @@ func ClickCollection(req *generated.UpdateInteractionRequest) (*generated.Update
 		Base:      base_interaction,
 		SaveAt:    timest,
 		UpdatedAt: timest,
-		ActionTag: int32(OperateInteraction.GetAction()),
+		ActionTag: int32(generated.Operate_COLLECT),
 	}
 	go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
 	go dispatch.HandleRequest(interaction, dispatch.CollectionCache)
@@ -82,7 +82,7 @@ func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateIntera
 		Base:      base_interaction,
 		SaveAt:    timest,
 		UpdatedAt: timest,
-		ActionTag: int32(OperateInteraction.GetAction()),
+		ActionTag: int32(generated.Operate_LIKE),
 	}
 	go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
 	go dispatch.HandleRequest(base_interaction, dispatch.LikeCache)
@@ -126,13 +126,15 @@ func CancelCollections(req *generated.UpdateInteractionsRequest) (*generated.Upd
 		log.Printf("error: DelCollections %v", err)
 	}
 
+	actionNumber := int32(generated.Operate_CANCEL_COLLECT)
 	for _, val := range base_interactions {
 		interaction := &generated.Interaction{
 			Base:      val,
 			UpdatedAt: timestamppb.Now(),
-			ActionTag: int32(OperateInteraction.GetAction()),
+			ActionTag: actionNumber,
 		}
 		go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
+		go dispatch.HandleRequest(interaction, dispatch.CancelCollectionCache)
 	}
 
 	response.Msg = &common.ApiResponse{
@@ -172,13 +174,15 @@ func DelHistories(req *generated.UpdateInteractionsRequest) (*generated.UpdateIn
 		log.Printf("error: DelHistories %v", err)
 	}
 
+	actionNumber := int32(generated.Operate_DEL_VIEW)
 	for _, val := range base_interactions {
 		interaction := &generated.Interaction{
 			Base:      val,
 			UpdatedAt: timestamppb.Now(),
-			ActionTag: int32(OperateInteraction.GetAction()),
+			ActionTag: actionNumber,
 		}
 		go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
+		go dispatch.HandleRequest(interaction, dispatch.CancelViewCache)
 	}
 
 	response.Msg = &common.ApiResponse{
@@ -212,9 +216,10 @@ func CancelLike(req *generated.UpdateInteractionRequest) (*generated.UpdateInter
 	base_interaction := OperateInteraction.GetInteraction()
 	base_interaction.UserId = userId
 
+	actionNumber := int32(generated.Operate_DEL_VIEW)
 	interaction := &generated.Interaction{
 		Base:      base_interaction,
-		ActionTag: int32(OperateInteraction.GetAction()),
+		ActionTag: actionNumber,
 		UpdatedAt: timestamppb.Now(),
 	}
 	go dispatch.HandleRequest(interaction, dispatch.DbInteraction)

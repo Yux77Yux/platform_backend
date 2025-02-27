@@ -60,5 +60,6 @@ func PendingCreationProcessor(msg amqp.Delivery) error {
 	}
 
 	err = SendMessage(New_review, New_review, newReview)
+	log.Printf("error: SendMessage: %v", err)
 	return err
 }
