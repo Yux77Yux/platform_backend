@@ -665,6 +665,26 @@ func UpdateCreationStatusInTransaction(creation *generated.CreationUpdateStatus)
 	return nil
 }
 
+func PublishCreationInTransaction(creationId int64, publishTime *timestamppb.Timestamp) error {
+	query := `
+		UPDATE db_creation_engagment_1.CreationEngagement
+		SET publish_time = CASE 
+    		WHEN publish_time IS NULL THEN ? 
+    		ELSE publish_time 
+		END
+		WHERE id = ?`
+	_, err := db.Exec(
+		query,
+		publishTime.AsTime(),
+		creationId,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func UpdateCreationCount(ctx context.Context, creationId int64, saveCount, likeCount, viewCount int32) error {
 	const (
 		saveSql = "saves = saves + ?"

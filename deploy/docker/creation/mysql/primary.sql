@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS CreationEngagement (
     views INT DEFAULT 0,                 -- 播放数
     likes INT DEFAULT 0,                 -- 点赞数
     saves INT DEFAULT 0,                 -- 收藏数
-    publish_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 作品发布时间
+    publish_time TIMESTAMP NULL, -- 作品发布时间
 
     PRIMARY KEY (creation_id),                   -- 使用 id 作为主键
     INDEX idx_creation_views (views),    -- 按 creation_id 和 views 联合索引，最多播放

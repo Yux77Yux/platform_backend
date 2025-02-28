@@ -11,6 +11,7 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 	"github.com/go-redis/redis/v8"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // POST
@@ -60,6 +61,42 @@ func CreationAddInCache(creationInfo *generated.CreationInfo) error {
 		}
 		return nil
 	}
+}
+
+func AddSpaceCreations(ctx context.Context, authorId, creationId int64, publishTime *timestamppb.Timestamp) error {
+	timeScore := float64(publishTime.Seconds)
+
+	pipeline := CacheClient.TxPipeline()
+	pipeline.ZAddNX(ctx, fmt.Sprintf("ZSet_Space_ByPublished_Time_%d", authorId), &redis.Z{
+		Score:  timeScore,
+		Member: creationId,
+	})
+	pipeline.ZAddNX(ctx, fmt.Sprintf("ZSet_Space_ByViews_%d", authorId), &redis.Z{
+		Score:  0,
+		Member: creationId,
+	})
+	pipeline.ZAddNX(ctx, fmt.Sprintf("ZSet_Space_ByCollections_%d", authorId), &redis.Z{
+		Score:  0,
+		Member: creationId,
+	})
+	pipeline.ZAddNX(ctx, fmt.Sprintf("ZSet_Space_ByLikes_%d", authorId), &redis.Z{
+		Score:  0,
+		Member: creationId,
+	})
+
+	results, err := pipeline.Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	// 检查每个命令的执行结果（如果需要）
+	for _, res := range results {
+		if res.Err() != nil {
+			return res.Err()
+		}
+	}
+
+	return nil
 }
 
 // GET
@@ -245,8 +282,8 @@ func GetSpaceCreationList(ctx context.Context, user_id int64, page int32, typeSt
 
 	pipe := CacheClient.Pipeline()
 
-	strsCmd := pipe.ZRevRange(ctx, fmt.Sprintf("ZSet_SpaceCreation_%s_%d", typeStr, user_id), start, stop)
-	countCmd := pipe.ZCard(ctx, fmt.Sprintf("ZSet_SpaceCreation_%s_%d", typeStr, user_id))
+	strsCmd := pipe.ZRevRange(ctx, fmt.Sprintf("ZSet_Space_%s_%d", typeStr, user_id), start, stop)
+	countCmd := pipe.ZCard(ctx, fmt.Sprintf("ZSet_Space_%s_%d", typeStr, user_id))
 
 	_, err := pipe.Exec(ctx)
 	if err != nil {
@@ -417,32 +454,100 @@ func UpdateCreationStatus(creation *generated.CreationUpdateStatus) error {
 	return err
 }
 
-func UpdateCreationCount(ctx context.Context, actions []*common.UserAction) error {
-	pipeline := CacheClient.Pipeline()
+func getAuthorIdMap(ctx context.Context, creationIds []int64) (map[int64]string, error) {
+	authorMap := make(map[int64]string) // 获取作者id
 
-	for _, action := range actions {
+	pipeline := CacheClient.Pipeline()
+	strCmds := make([]*redis.StringCmd, len(creationIds))
+	for i, creationId := range creationIds {
+		key := fmt.Sprintf("Hash_CreationInfo_%d", creationId) // 作品表的
+		strCmds[i] = pipeline.HGet(ctx, key, "author_id")
+	}
+	_, err := pipeline.Exec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, cmd := range strCmds {
+		if cmd == nil {
+			continue
+		}
+		authorId, err := cmd.Result()
+		if err == redis.Nil {
+			log.Printf("warning: author_id not found for action index %d", i)
+			continue
+		} else if err != nil {
+			log.Printf("error: failed to get author_id for action index %d: %v", i, err)
+			continue
+		}
+		creationId := creationIds[i]
+		authorMap[creationId] = authorId
+	}
+
+	return authorMap, nil
+}
+
+func UpdateCreationCount(ctx context.Context, actions []*common.UserAction) error {
+	length := len(actions)
+	creationIds := make([]int64, length)
+	for i, action := range actions {
 		creationIdBody := action.GetId()
 		if creationIdBody == nil {
 			return fmt.Errorf("error: common.CreationId is null")
 		}
-		creationId := creationIdBody.GetId()
-		operate := action.GetOperate()
+		creationIds[i] = creationIdBody.GetId()
+	}
+
+	authorIdMap, err := getAuthorIdMap(ctx, creationIds)
+	if err != nil {
+		return err
+	}
+
+	pipeline := CacheClient.Pipeline()
+	for i, action := range actions {
+		creationId := creationIds[i]
+
 		key := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
+		authorIdStr := authorIdMap[creationId]
+		spaceByViewsKey := fmt.Sprintf("ZSet_Space_ByViews_%s", authorIdStr)
+		spaceByCollectionsKey := fmt.Sprintf("ZSet_Space_ByCollections_%s", authorIdStr)
+		spaceByLikesKey := fmt.Sprintf("ZSet_Space_ByLikes_%s", authorIdStr)
+
+		operate := action.GetOperate()
 		switch operate {
 		case common.Operate_CANCEL_COLLECT:
 			pipeline.HIncrBy(ctx, key, "saves", -1)
+			pipeline.ZIncr(ctx, spaceByCollectionsKey, &redis.Z{
+				Score:  -1,
+				Member: creationId,
+			})
 		case common.Operate_CANCEL_LIKE:
 			pipeline.HIncrBy(ctx, key, "likes", -1)
+			pipeline.ZIncr(ctx, spaceByLikesKey, &redis.Z{
+				Score:  -1,
+				Member: creationId,
+			})
 		case common.Operate_VIEW:
 			pipeline.HIncrBy(ctx, key, "views", 1)
+			pipeline.ZIncr(ctx, spaceByViewsKey, &redis.Z{
+				Score:  1,
+				Member: creationId,
+			})
 		case common.Operate_LIKE:
 			pipeline.HIncrBy(ctx, key, "likes", 1)
+			pipeline.ZIncr(ctx, spaceByLikesKey, &redis.Z{
+				Score:  1,
+				Member: creationId,
+			})
 		case common.Operate_COLLECT:
 			pipeline.HIncrBy(ctx, key, "saves", 1)
+			pipeline.ZIncr(ctx, spaceByCollectionsKey, &redis.Z{
+				Score:  1,
+				Member: creationId,
+			})
 		default:
-			err := fmt.Errorf("error: unknown action: %v", operate)
-			log.Println(err)
-			return err
+			log.Printf("warning: unknown action: %v", operate)
+			continue
 		}
 	}
 

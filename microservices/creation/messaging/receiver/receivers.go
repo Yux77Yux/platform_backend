@@ -9,6 +9,7 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
@@ -107,20 +108,46 @@ func updateCreationStatusProcessor(msg amqp.Delivery) error {
 		return err
 	}
 
+	creationId := creation.GetCreationId()
 	status := creation.GetStatus()
+	// 已经是发布状态
+	if status == generated.CreationStatus_PUBLISHED {
+		// 更改发布时间
+		publishedTime := timestamppb.Now()
+		err = db.PublishCreationInTransaction(creationId, publishedTime)
+		if err != nil {
+			log.Printf("error: %v", err)
+			return err
+		}
+
+		// 更改作品的缓存
+		err = messaging.SendMessage(UpdateCacheCreation, UpdateCacheCreation, &common.CreationId{
+			Id: creationId,
+		})
+		if err != nil {
+			log.Printf("error: %v", err)
+			return err
+		}
+
+		// 获取作者id
+		authorId, err := db.GetAuthorIdInTransaction(context.Background(), creationId)
+		if err != nil {
+			log.Printf("error: %v", err)
+			return err
+		}
+
+		// 将作品id加入空间
+		err = cache.AddSpaceCreations(context.Background(), authorId, creationId, publishedTime)
+		if err != nil {
+			log.Printf("error: %v", err)
+			return err
+		}
+	}
+
 	// 作者想发布
 	if status == generated.CreationStatus_PENDING {
 		err = messaging.SendMessage(PendingCreation, PendingCreation, &common.CreationId{
-			Id: creation.GetCreationId(),
-		})
-		log.Printf("error: %v", err)
-		return err
-	}
-
-	// 已经是发布状态
-	if status == generated.CreationStatus_PUBLISHED {
-		err = messaging.SendMessage(UpdateCacheCreation, UpdateCacheCreation, &common.CreationId{
-			Id: creation.GetCreationId(),
+			Id: creationId,
 		})
 		log.Printf("error: %v", err)
 		return err
@@ -155,15 +182,15 @@ func deleteCreationProcessor(msg amqp.Delivery) error {
 
 // 从aggrator interaction过来
 func addInteractionCount(msg amqp.Delivery) error {
-	anyCctions := new(common.AnyUserAction)
+	anyAction := new(common.AnyUserAction)
 	// 反序列化
-	err := proto.Unmarshal(msg.Body, anyCctions)
+	err := proto.Unmarshal(msg.Body, anyAction)
 	if err != nil {
 		log.Printf("Error unmarshaling message: %v", err)
 		return fmt.Errorf("addInteractionCount processor error: %w", err)
 	}
 
-	actions := anyCctions.GetActions()
+	actions := anyAction.GetActions()
 	err = cache.UpdateCreationCount(context.Background(), actions)
 	if err != nil {
 		// 入死信，没做

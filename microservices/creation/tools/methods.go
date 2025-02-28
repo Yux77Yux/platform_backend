@@ -14,12 +14,14 @@ import (
 func GetSpaceCreationCountType(byWhat generated.GetSpaceCreationsRequest_ByCount) string {
 	typeStr := ""
 	switch byWhat {
-	case generated.GetSpaceCreationsRequest_COLLECTIONS:
-		typeStr = "Collections"
 	case generated.GetSpaceCreationsRequest_VIEWS:
-		typeStr = "Views"
+		typeStr = "ByViews"
+	case generated.GetSpaceCreationsRequest_LIKES:
+		typeStr = "ByLikes"
+	case generated.GetSpaceCreationsRequest_COLLECTIONS:
+		typeStr = "ByCollections"
 	default:
-		typeStr = "Published_Time"
+		typeStr = "ByPublished_Time"
 	}
 	return typeStr
 }

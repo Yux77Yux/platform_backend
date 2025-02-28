@@ -179,7 +179,17 @@ func GetSpaceCreations(ctx context.Context, req *generated.GetSpaceCreationsRequ
 		return response, err
 	}
 
-	response.CreationInfoGroup = infos
+	filter := make([]*generated.CreationInfo, 0, len(infos))
+	for _, info := range infos {
+		creation := info.GetCreation()
+		base := creation.GetBaseInfo()
+		if base.GetStatus() != generated.CreationStatus_PUBLISHED {
+			continue
+		}
+		filter = append(filter, info)
+	}
+
+	response.CreationInfoGroup = filter
 	response.Count = count
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
