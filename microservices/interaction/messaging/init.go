@@ -11,20 +11,19 @@ const (
 	ComputeSimilarCreation = "ComputeSimilarCreation"
 	ComputeUser            = "ComputeUser"
 
+	UpdateDb      = "UpdateDb"
+	BatchUpdateDb = "BatchUpdateDb"
+	AddCollection = "AddCollection"
+	AddLike       = "AddLike"
+	AddView       = "AddView"
+	CancelLike    = "CancelLike"
+
 	// Creation
 	UPDATE_CREATION_ACTION_COUNT = "InteractionCount"
 )
 
 var (
-	connStr         string
-	ExchangesConfig = map[string]string{
-		ComputeSimilarCreation: "direct",
-		ComputeUser:            "direct",
-		// Add more exchanges here
-	}
-	ListenRPCs = []string{
-		"agg_user",
-	}
+	connStr string
 )
 
 func InitStr(_str string) {
@@ -40,39 +39,4 @@ func GetRabbitMQ() MessageQueueInterface {
 	}
 
 	return messageQueue
-}
-
-// 非RPC类型的消息队列的交换机声明
-func Init() {
-	rabbitMQ := GetRabbitMQ()
-	defer rabbitMQ.Close()
-
-	if rabbitMQ == nil {
-		log.Printf("error: message queue open failed")
-		return
-	}
-	for exchange, kind := range ExchangesConfig {
-		if err := rabbitMQ.ExchangeDeclare(exchange, kind, true, false, false, false, nil); err != nil {
-			wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
-			log.Printf("error: %v", wiredErr)
-		}
-
-		switch exchange {
-
-		// 不同的exchange使用不同函数
-		case ComputeSimilarCreation:
-			go ListenToQueue(exchange, ComputeSimilarCreation, ComputeSimilarCreation, computeSimilarProcessor)
-		case ComputeUser:
-			go ListenToQueue(exchange, ComputeUser, ComputeUser, computeUserProcessor)
-		}
-	}
-
-	for _, exchange := range ListenRPCs {
-		switch exchange {
-		// 不同的exchange使用不同函数
-		// case "agg_user":
-		// 	go ListenRPC(exchange, "getUser", "getUser", getUserProcessor)
-		}
-	}
-
 }

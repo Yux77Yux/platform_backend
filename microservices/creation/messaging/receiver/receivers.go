@@ -14,6 +14,7 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
+	dispatch "github.com/Yux77Yux/platform_backend/microservices/creation/messaging/dispatch"
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 )
 
@@ -152,13 +153,26 @@ func deleteCreationProcessor(msg amqp.Delivery) error {
 	return nil
 }
 
+// 从aggrator interaction过来
 func addInteractionCount(msg amqp.Delivery) error {
-	actions := new(common.AnyUserAction)
+	anyCctions := new(common.AnyUserAction)
 	// 反序列化
-	err := proto.Unmarshal(msg.Body, actions)
+	err := proto.Unmarshal(msg.Body, anyCctions)
 	if err != nil {
 		log.Printf("Error unmarshaling message: %v", err)
 		return fmt.Errorf("addInteractionCount processor error: %w", err)
+	}
+
+	actions := anyCctions.GetActions()
+	err = cache.UpdateCreationCount(context.Background(), actions)
+	if err != nil {
+		// 入死信，没做
+
+		return err
+	}
+
+	for _, action := range actions {
+		go dispatch.HandleRequest(action, dispatch.UpdateCount)
 	}
 
 	return nil

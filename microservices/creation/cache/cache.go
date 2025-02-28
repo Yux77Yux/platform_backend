@@ -7,6 +7,7 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 	"github.com/go-redis/redis/v8"
@@ -414,4 +415,48 @@ func UpdateCreationStatus(creation *generated.CreationUpdateStatus) error {
 	ctx := context.Background()
 	err := CacheClient.SetFieldsHash(ctx, "CreationInfo", strconv.FormatInt(creationId, 10), values...)
 	return err
+}
+
+func UpdateCreationCount(ctx context.Context, actions []*common.UserAction) error {
+	pipeline := CacheClient.Pipeline()
+
+	for _, action := range actions {
+		creationIdBody := action.GetId()
+		if creationIdBody == nil {
+			return fmt.Errorf("error: common.CreationId is null")
+		}
+		creationId := creationIdBody.GetId()
+		operate := action.GetOperate()
+		key := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
+		switch operate {
+		case common.Operate_CANCEL_COLLECT:
+			pipeline.HIncrBy(ctx, key, "saves", -1)
+		case common.Operate_CANCEL_LIKE:
+			pipeline.HIncrBy(ctx, key, "likes", -1)
+		case common.Operate_VIEW:
+			pipeline.HIncrBy(ctx, key, "views", 1)
+		case common.Operate_LIKE:
+			pipeline.HIncrBy(ctx, key, "likes", 1)
+		case common.Operate_COLLECT:
+			pipeline.HIncrBy(ctx, key, "saves", 1)
+		default:
+			err := fmt.Errorf("error: unknown action: %v", operate)
+			log.Println(err)
+			return err
+		}
+	}
+
+	results, err := pipeline.Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	// 检查每个命令的执行结果（如果需要）
+	for _, res := range results {
+		if res.Err() != nil {
+			log.Printf("Redis pipeline error: %v", res.Err())
+		}
+	}
+
+	return nil
 }

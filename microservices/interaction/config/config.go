@@ -5,6 +5,7 @@ import (
 
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 	mq "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
+	receiver "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/receiver"
 	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
 	service "github.com/Yux77Yux/platform_backend/microservices/interaction/service"
 )
@@ -28,7 +29,7 @@ func init() {
 	cache.InitStr(REDIS_STR, REDIS_PASSWORD)
 	db.InitStr(MYSQL_READER_STR, MYSQL_WRITER_STR)
 
-	mq.Init()
+	receiver.Init()
 	db.Init()
 	cache.Init()
 }

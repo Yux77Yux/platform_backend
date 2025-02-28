@@ -185,7 +185,7 @@ func GetOtherUserHistories(ctx context.Context, userId int64, page int32) ([]*ge
 }
 
 // UPDATE
-func UpdateInteractions(req []*generated.Interaction) error {
+func UpdateInteractions(req []*generated.OperateInteraction) error {
 	const (
 		QM = "(?,?,?,?,?)"
 	)
@@ -196,7 +196,7 @@ func UpdateInteractions(req []*generated.Interaction) error {
 		sqlStr[i] = QM
 		values[i*5] = val.GetBase().GetUserId()
 		values[i*5+1] = val.GetBase().GetCreationId()
-		values[i*5+2] = val.GetActionTag()
+		values[i*5+2] = val.GetAction().Number()
 		values[i*5+3] = val.GetUpdatedAt().AsTime()
 		saveTime := val.GetSaveAt().AsTime()
 		var value sql.NullTime

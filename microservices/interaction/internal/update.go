@@ -8,8 +8,8 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
-	// mq "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
-	dispatch "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/dispatch"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
+
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
@@ -31,19 +31,31 @@ func ClickCollection(req *generated.UpdateInteractionRequest) (*generated.Update
 		}
 		return response, nil
 	}
-	OperateInteraction := req.GetOperateInteraction()
-	base_interaction := OperateInteraction.GetInteraction()
+
+	base_interaction := req.GetBase()
 	base_interaction.UserId = userId
 
 	timest := timestamppb.Now()
-	interaction := &generated.Interaction{
-		Base:      base_interaction,
-		SaveAt:    timest,
+	operateInteraction := &generated.OperateInteraction{
+		Base: &generated.BaseInteraction{
+			UserId:     userId,
+			CreationId: req.GetBase().GetCreationId(),
+		},
+		Action:    common.Operate_VIEW,
 		UpdatedAt: timest,
-		ActionTag: int32(generated.Operate_COLLECT),
+		SaveAt:    timest,
 	}
-	go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
-	go dispatch.HandleRequest(interaction, dispatch.CollectionCache)
+
+	err = messaging.SendMessage(messaging.AddCollection, messaging.AddCollection, operateInteraction)
+	if err != nil {
+		log.Printf("error: SendMessage %v", err)
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, nil
+	}
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
@@ -73,19 +85,29 @@ func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateIntera
 		return response, nil
 	}
 
-	OperateInteraction := req.GetOperateInteraction()
-	base_interaction := OperateInteraction.GetInteraction()
+	base_interaction := req.GetBase()
 	base_interaction.UserId = userId
 
 	timest := timestamppb.Now()
-	interaction := &generated.Interaction{
-		Base:      base_interaction,
-		SaveAt:    timest,
+	operateInteraction := &generated.OperateInteraction{
+		Base: &generated.BaseInteraction{
+			UserId:     userId,
+			CreationId: req.GetBase().GetCreationId(),
+		},
+		Action:    common.Operate_VIEW,
 		UpdatedAt: timest,
-		ActionTag: int32(generated.Operate_LIKE),
 	}
-	go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
-	go dispatch.HandleRequest(base_interaction, dispatch.LikeCache)
+
+	err = messaging.SendMessage(messaging.AddLike, messaging.AddLike, operateInteraction)
+	if err != nil {
+		log.Printf("error: SendMessage %v", err)
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, nil
+	}
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
@@ -96,7 +118,6 @@ func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateIntera
 }
 
 func CancelCollections(req *generated.UpdateInteractionsRequest) (*generated.UpdateInteractionResponse, error) {
-	log.Printf("req %v", req.GetOperateInteraction())
 	token := req.GetAccessToken().GetValue()
 	response := new(generated.UpdateInteractionResponse)
 	pass, userId, err := auth.Auth("update", "interaction", token)
@@ -115,8 +136,7 @@ func CancelCollections(req *generated.UpdateInteractionsRequest) (*generated.Upd
 		return response, nil
 	}
 
-	OperateInteraction := req.GetOperateInteraction()
-	base_interactions := OperateInteraction.GetAnyInteraction()
+	base_interactions := req.GetBases()
 	for _, val := range base_interactions {
 		val.UserId = userId
 	}
@@ -124,24 +144,42 @@ func CancelCollections(req *generated.UpdateInteractionsRequest) (*generated.Upd
 	err = cache.DelCollections(base_interactions)
 	if err != nil {
 		log.Printf("error: DelCollections %v", err)
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, nil
 	}
 
-	actionNumber := int32(generated.Operate_CANCEL_COLLECT)
-	for _, val := range base_interactions {
-		interaction := &generated.Interaction{
-			Base:      val,
-			UpdatedAt: timestamppb.Now(),
-			ActionTag: actionNumber,
+	timest := timestamppb.Now()
+	length := len(base_interactions)
+	operateInteractions := make([]*generated.OperateInteraction, length)
+	for i := 0; i < length; i++ {
+		operateInteractions[i] = &generated.OperateInteraction{
+			Base:      base_interactions[i],
+			UpdatedAt: timest,
+			Action:    common.Operate_CANCEL_COLLECT,
 		}
-		go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
-		go dispatch.HandleRequest(interaction, dispatch.CancelCollectionCache)
+	}
+
+	anyOperateInteraction := &generated.AnyOperateInteraction{
+		OperateInteractions: operateInteractions,
+	}
+	err = messaging.SendMessage(messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
 	}
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "202",
 	}
-
 	return response, nil
 }
 
@@ -163,8 +201,7 @@ func DelHistories(req *generated.UpdateInteractionsRequest) (*generated.UpdateIn
 		}
 		return response, nil
 	}
-	OperateInteraction := req.GetOperateInteraction()
-	base_interactions := OperateInteraction.GetAnyInteraction()
+	base_interactions := req.GetBases()
 	for _, val := range base_interactions {
 		val.UserId = userId
 	}
@@ -174,15 +211,28 @@ func DelHistories(req *generated.UpdateInteractionsRequest) (*generated.UpdateIn
 		log.Printf("error: DelHistories %v", err)
 	}
 
-	actionNumber := int32(generated.Operate_DEL_VIEW)
-	for _, val := range base_interactions {
-		interaction := &generated.Interaction{
-			Base:      val,
-			UpdatedAt: timestamppb.Now(),
-			ActionTag: actionNumber,
+	timest := timestamppb.Now()
+	length := len(base_interactions)
+	operateInteractions := make([]*generated.OperateInteraction, length)
+	for i := 0; i < length; i++ {
+		operateInteractions[i] = &generated.OperateInteraction{
+			Base:      base_interactions[i],
+			UpdatedAt: timest,
+			Action:    common.Operate_DEL_VIEW,
 		}
-		go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
-		go dispatch.HandleRequest(interaction, dispatch.CancelViewCache)
+	}
+
+	anyOperateInteraction := &generated.AnyOperateInteraction{
+		OperateInteractions: operateInteractions,
+	}
+	err = messaging.SendMessage(messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
 	}
 
 	response.Msg = &common.ApiResponse{
@@ -212,18 +262,18 @@ func CancelLike(req *generated.UpdateInteractionRequest) (*generated.UpdateInter
 		return response, nil
 	}
 
-	OperateInteraction := req.GetOperateInteraction()
-	base_interaction := OperateInteraction.GetInteraction()
+	base_interaction := req.GetBase()
 	base_interaction.UserId = userId
 
-	actionNumber := int32(generated.Operate_DEL_VIEW)
-	interaction := &generated.Interaction{
+	interaction := &generated.OperateInteraction{
 		Base:      base_interaction,
-		ActionTag: actionNumber,
+		Action:    common.Operate_DEL_VIEW,
 		UpdatedAt: timestamppb.Now(),
 	}
-	go dispatch.HandleRequest(interaction, dispatch.DbInteraction)
-	go dispatch.HandleRequest(base_interaction, dispatch.CancelLikeCache)
+	err = messaging.SendMessage(messaging.CancelLike, messaging.CancelLike, interaction)
+	if err != nil {
+		log.Printf("error: SendMessage CancelLike %v", err)
+	}
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,

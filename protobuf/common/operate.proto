@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package interaction.messages;
+package common;
 
-option go_package = "github.com/Yux77Yux/platform_backend/generated/interaction";
+option go_package = "github.com/Yux77Yux/platform_backend/generated/common;";
 
 enum Operate {
   NONE = 0;

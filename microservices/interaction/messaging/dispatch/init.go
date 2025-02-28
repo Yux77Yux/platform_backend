@@ -14,13 +14,14 @@ const (
 	EXE_CHANNEL_COUNT      = 5
 
 	// sql的插入更新删除都用一套
-	DbInteraction = "DbInteraction"
+	DbInteraction      = "DbInteraction"
+	DbBatchInteraction = "DbBatchInteraction"
 
 	ViewCache             = "ViewCache"
 	LikeCache             = "LikeCache"
 	CollectionCache       = "CollectionCache"
+	DelViewCache          = "DelViewCache"
 	CancelLikeCache       = "CancelLikeCache"
-	CancelViewCache       = "CancelViewCache"
 	CancelCollectionCache = "CancelCollectionCache"
 )
 
@@ -32,15 +33,13 @@ var (
 	collectionCacheChain *CollectionCacheChain
 	interactionsPool     = sync.Pool{
 		New: func() any {
-			slice := make([]*generated.Interaction, 0, MAX_BATCH_SIZE)
+			slice := make([]*generated.OperateInteraction, 0, MAX_BATCH_SIZE)
 			return &slice
 		},
 	}
 
-	cancelCollectionCacheChain *CancelCollectionCacheChain
-	cancelLikeCacheChain       *CancelLikeCacheChain
-	cancelViewCacheChain       *CancelViewCacheChain
-	baseInteractionsPool       = sync.Pool{
+	cancelLikeCacheChain *CancelLikeCacheChain
+	baseInteractionsPool = sync.Pool{
 		New: func() any {
 			slice := make([]*generated.BaseInteraction, 0, MAX_BATCH_SIZE)
 			return &slice
@@ -57,15 +56,12 @@ func init() {
 	collectionCacheChain = InitialCollectionCacheChain()
 
 	cancelLikeCacheChain = InitialCancelLikeCacheChain()
-	cancelCollectionCacheChain = InitialCancelCollectionCacheChain()
-	cancelViewCacheChain = InitialCancelViewCacheChain()
 }
 
 func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 	switch typeName {
 	case DbInteraction:
 		dbInteractionsChain.HandleRequest(msg)
-
 	case ViewCache:
 		viewCacheChain.HandleRequest(msg)
 	case LikeCache:
@@ -74,9 +70,9 @@ func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 		collectionCacheChain.HandleRequest(msg)
 	case CancelLikeCache:
 		cancelLikeCacheChain.HandleRequest(msg)
-	case CancelCollectionCache:
-		cancelCollectionCacheChain.HandleRequest(msg)
-	case CancelViewCache:
-		cancelViewCacheChain.HandleRequest(msg)
+	case DbBatchInteraction:
+		req := msg.(*generated.AnyOperateInteraction)
+		operateInteractions := req.GetOperateInteractions()
+		dbInteractionsChain.exeChannel <- &operateInteractions
 	}
 }

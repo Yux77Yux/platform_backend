@@ -46,4 +46,5 @@ type CacheInterface interface {
 	GetScoreCountZSet(ctx context.Context, kind, unique, min, max string) (int64, error)
 
 	Pipeline() redis.Pipeliner
+	TxPipeline() redis.Pipeliner
 }

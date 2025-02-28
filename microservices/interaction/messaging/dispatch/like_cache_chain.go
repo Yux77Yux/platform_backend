@@ -17,7 +17,7 @@ func InitialLikeCacheChain() *LikeCacheChain {
 		Head:       &LikeListener{prev: nil},
 		Tail:       &LikeListener{next: nil},
 		Count:      0,
-		exeChannel: make(chan *[]*generated.Interaction, EXE_CHANNEL_COUNT),
+		exeChannel: make(chan *[]*generated.OperateInteraction, EXE_CHANNEL_COUNT),
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &LikeListener{
@@ -39,14 +39,14 @@ type LikeCacheChain struct {
 	Tail         *LikeListener
 	Count        int32 // 监听者数量
 	nodeMux      sync.Mutex
-	exeChannel   chan *[]*generated.Interaction
+	exeChannel   chan *[]*generated.OperateInteraction
 	listenerPool sync.Pool
 }
 
 func (chain *LikeCacheChain) ExecuteBatch() {
 	log.Printf("我他妈来啦!!！ ")
 	for interactionsPtr := range chain.exeChannel {
-		go func(interactionsPtr *[]*generated.Interaction) {
+		go func(interactionsPtr *[]*generated.OperateInteraction) {
 			interactions := *interactionsPtr
 			// 插入数据库
 			err := cache.ModifyLike(interactions)

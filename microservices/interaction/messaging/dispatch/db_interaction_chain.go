@@ -19,7 +19,7 @@ func InitialDbChain() *DbInteractionChain {
 		Head:       &DbInteractionsListener{prev: nil},
 		Tail:       &DbInteractionsListener{next: nil},
 		Count:      0,
-		exeChannel: make(chan *[]*generated.Interaction, EXE_CHANNEL_COUNT),
+		exeChannel: make(chan *[]*generated.OperateInteraction, EXE_CHANNEL_COUNT),
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &DbInteractionsListener{
@@ -41,14 +41,14 @@ type DbInteractionChain struct {
 	Tail         *DbInteractionsListener
 	Count        int32 // 监听者数量
 	nodeMux      sync.Mutex
-	exeChannel   chan *[]*generated.Interaction
+	exeChannel   chan *[]*generated.OperateInteraction
 	listenerPool sync.Pool
 }
 
 func (chain *DbInteractionChain) ExecuteBatch() {
 	log.Printf("我他妈来啦!!！ ")
 	for interactionsPtr := range chain.exeChannel {
-		go func(interactionsPtr *[]*generated.Interaction) {
+		go func(interactionsPtr *[]*generated.OperateInteraction) {
 			interactions := *interactionsPtr
 			// 插入数据库
 			err := db.UpdateInteractions(interactions)
@@ -60,15 +60,15 @@ func (chain *DbInteractionChain) ExecuteBatch() {
 			// 发到消息队列，异步更新数据库中的likes，saves
 			actions := make([]*common.UserAction, 0, len(interactions))
 			for _, interaction := range interactions {
-				action := interaction.GetActionTag()
-				if action == 1 || action == 6 {
+				action := interaction.GetAction()
+				if action == common.Operate_VIEW || action == common.Operate_DEL_VIEW {
 					continue
 				} else {
 					actions = append(actions, &common.UserAction{
 						Id: &common.CreationId{
 							Id: interaction.GetBase().GetCreationId(),
 						},
-						ActionTag: action,
+						Operate: action,
 					})
 				}
 			}

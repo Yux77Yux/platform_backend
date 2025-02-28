@@ -52,7 +52,7 @@ func addViewProcessor(msg amqp.Delivery) error {
 		Id: &common.CreationId{
 			Id: id,
 		},
-		ActionTag: 1,
+		Operate: common.Operate_VIEW,
 	}
 	go dispatch.HandleRequest(action, dispatch.AddView)
 

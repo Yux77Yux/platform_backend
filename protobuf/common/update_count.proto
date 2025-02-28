@@ -5,10 +5,12 @@ package common;
 option go_package = "github.com/Yux77Yux/platform_backend/generated/common;";
 
 import "common/creation.common.proto";
+import "common/operate.proto";
+
 
 message UserAction {
   common.CreationId id = 1;
-  int32 action_tag = 2;
+  common.Operate operate = 2;
 }
 
 message AnyUserAction {

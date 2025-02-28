@@ -11,8 +11,8 @@ import (
 
 // 监听者结构体
 type DbInteractionsListener struct {
-	exeChannel   chan *[]*generated.Interaction // 批量发送评论的通道
-	datasChannel chan *generated.Interaction    // 用于接收评论的通道
+	exeChannel   chan *[]*generated.OperateInteraction // 批量发送评论的通道
+	datasChannel chan *generated.OperateInteraction    // 用于接收评论的通道
 	count        uint32
 
 	timeoutDuration     time.Duration           // 超时持续时间（触发销毁）
@@ -29,7 +29,7 @@ func (listener *DbInteractionsListener) GetId() int64 {
 
 // 启动监听者
 func (listener *DbInteractionsListener) StartListening() {
-	listener.datasChannel = make(chan *generated.Interaction, LISTENER_CHANNEL_COUNT)
+	listener.datasChannel = make(chan *generated.OperateInteraction, LISTENER_CHANNEL_COUNT)
 	go listener.RestartUpdateIntervalTimer()
 	go listener.RestartTimeoutTimer()
 }
@@ -39,7 +39,7 @@ func (listener *DbInteractionsListener) Dispatch(data protoreflect.ProtoMessage)
 	// 长度加1
 	count := atomic.AddUint32(&listener.count, 1)
 
-	_data := data.(*generated.Interaction)
+	_data := data.(*generated.OperateInteraction)
 	// 处理评论的逻辑
 	listener.datasChannel <- _data
 
@@ -59,7 +59,7 @@ func (listener *DbInteractionsListener) SendBatch() {
 		return
 	}
 
-	datasPtr := interactionsPool.Get().(*[]*generated.Interaction)
+	datasPtr := interactionsPool.Get().(*[]*generated.OperateInteraction)
 	*datasPtr = (*datasPtr)[:count]
 	insertUsers := *datasPtr
 	for i := 0; uint32(i) < count; i++ {

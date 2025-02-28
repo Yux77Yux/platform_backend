@@ -1,11 +1,13 @@
 package internal
 
 import (
+	"log"
+
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
-	dispatch "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/dispatch"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
@@ -30,16 +32,25 @@ func PostInteraction(req *generated.PostInteractionRequest) (*generated.PostInte
 		}, nil
 	}
 
-	interaciton := &generated.Interaction{
+	operateInteraction := &generated.OperateInteraction{
 		Base: &generated.BaseInteraction{
 			UserId:     userId,
 			CreationId: req.GetBase().GetCreationId(),
 		},
-		ActionTag: int32(generated.Operate_VIEW),
+		Action:    common.Operate_VIEW,
 		UpdatedAt: timestamppb.Now(),
 	}
-	go dispatch.HandleRequest(interaciton, dispatch.DbInteraction)
-	go dispatch.HandleRequest(interaciton, dispatch.ViewCache)
+
+	err = messaging.SendMessage(messaging.AddView, messaging.AddView, operateInteraction)
+	if err != nil {
+		log.Printf("error: SendMessage %v", err)
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, nil
+	}
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,

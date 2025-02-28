@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -9,56 +10,59 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/aggregator/messaging"
+	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 )
+
+type ExeBody struct {
+	id           int64
+	newLikeCount int32
+	newSaveCount int32
+	newViewCount int32
+}
 
 func InitialUpdateCountChain() *UpdateCountChain {
 	_chain := &UpdateCountChain{
-		Head:       &UpdateCountListener{prev: nil},
-		Tail:       &UpdateCountListener{next: nil},
 		Count:      0,
-		exeChannel: make(chan *[]*common.UserAction, EXE_CHANNEL_COUNT),
+		exeChannel: make(chan *ExeBody, EXE_CHANNEL_COUNT),
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &UpdateCountListener{
-					timeoutDuration: 10 * time.Second,
-					updateInterval:  3 * time.Second,
+					timeoutDuration: 3 * time.Minute,
+					updateInterval:  10 * time.Second,
 				}
 			},
 		},
 	}
-	_chain.Head.next = _chain.Tail
-	_chain.Tail.prev = _chain.Head
+
 	go _chain.ExecuteBatch()
 	return _chain
 }
 
 // 责任链
 type UpdateCountChain struct {
-	Head         *UpdateCountListener // 责任链的头部
-	Tail         *UpdateCountListener
+	listenerMap  sync.Map
 	Count        int32 // 监听者数量
-	nodeMux      sync.Mutex
-	exeChannel   chan *[]*common.UserAction
+	exeChannel   chan *ExeBody
 	listenerPool sync.Pool
 }
 
 func (chain *UpdateCountChain) ExecuteBatch() {
 	for UpdateCountsPtr := range chain.exeChannel {
-		go func(UpdateCountsPtr *[]*common.UserAction) {
-			views := *UpdateCountsPtr
-			anyViews := &common.AnyUserAction{
-				Actions: views,
-			}
-			// 插入数据库
-			err := messaging.SendMessage(UpdateCount, UpdateCount, anyViews)
-			if err != nil {
-				log.Printf("error: SendMessage UpdateCount error")
-			}
+		go func(UpdateCountsPtr *ExeBody) {
+			counts := UpdateCountsPtr
 
-			// 放回对象池
-			*UpdateCountsPtr = views[:0]
-			insertPool.Put(UpdateCountsPtr)
+			// 插入数据库
+			err := db.UpdateCreationCount(
+				context.Background(),
+				counts.id,
+				counts.newSaveCount,
+				counts.newLikeCount,
+				counts.newViewCount,
+			)
+			if err != nil {
+				log.Printf("error: UpdateCreationCount %v", err)
+				// 死信，没做
+			}
 		}(UpdateCountsPtr)
 	}
 }
@@ -75,52 +79,45 @@ func (chain *UpdateCountChain) HandleRequest(data protoreflect.ProtoMessage) {
 
 // 查找责任链中的合适监听者
 func (chain *UpdateCountChain) FindListener(data protoreflect.ProtoMessage) ListenerInterface {
-	chain.nodeMux.Lock()
-	next := chain.Head.next
-	prev := chain.Tail.prev
-	for {
-		if prev == chain.Head {
-			break
-		}
-		if atomic.LoadUint32(&next.count) < LISTENER_CHANNEL_COUNT {
-			chain.nodeMux.Unlock()
-			return next
-		}
-		if atomic.LoadUint32(&prev.count) < LISTENER_CHANNEL_COUNT {
-			chain.nodeMux.Unlock()
-			return prev
-		}
-		if prev == next || prev.prev == next {
-			// 找不到
-			break
-		}
-		prev = prev.prev
-		next = next.next
+	action, ok := data.(*common.UserAction)
+	if !ok {
+		log.Printf(": expected *common.UserAction")
 	}
-	chain.nodeMux.Unlock()
-	return nil // 没有找到合适的监听者
+
+	creationId := action.GetId().GetId()
+
+	// 尝试从 listenerMap 中获取监听者
+	if listener, exist := chain.listenerMap.Load(creationId); exist {
+		return listener.(ListenerInterface)
+	}
+
+	return nil
 }
 
 // 创建一个新的监听者
 func (chain *UpdateCountChain) CreateListener(data protoreflect.ProtoMessage) ListenerInterface {
-	newListener := chain.listenerPool.Get().(*UpdateCountListener)
-	newListener.exeChannel = chain.exeChannel
+	action, ok := data.(*common.UserAction)
+	if !ok {
+		log.Printf(": expected *common.UserAction")
+	}
+	creationId := action.GetId().GetId()
 
-	// 头插法，将新的监听者挂到链中
-	chain.nodeMux.Lock()
-	next := chain.Head.next
+	// 如果不存在，从对象池获取新的监听者
+	newListener, ok := chain.listenerPool.Get().(*UpdateCountListener)
+	if !ok {
+		log.Printf("FindListener: failed to get listener from pool")
+		return nil
+	}
+	atomic.StoreInt64(&newListener.id, creationId)
 
-	newListener.next = next
-	newListener.prev = chain.Head
+	// 存入 map 中
+	actual, _ := chain.listenerMap.LoadOrStore(creationId, newListener)
 
-	chain.Head.next = newListener
-	next.prev = newListener
-	chain.nodeMux.Unlock()
-
+	// 增加计数
 	atomic.AddInt32(&chain.Count, 1)
 
-	newListener.StartListening() // 启动监听
-	return newListener
+	// `actual` 是 map 中实际存储的监听者，如果别的协程抢先存入，`newListener` 不会被使用
+	return actual.(ListenerInterface)
 }
 
 // 销毁监听者
@@ -131,12 +128,8 @@ func (chain *UpdateCountChain) DestroyListener(listener ListenerInterface) {
 		log.Printf("invalid type: expected *UpdateCountListener")
 	}
 
-	chain.nodeMux.Lock()
-	prev := current.prev
-	next := current.next
-	prev.next = next
-	next.prev = prev
-	chain.nodeMux.Unlock()
+	id := current.GetId()
+	chain.listenerMap.Delete(id)
 
 	atomic.AddInt32(&chain.Count, -1)
 	chain.listenerPool.Put(listener)

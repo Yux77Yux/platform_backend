@@ -10,12 +10,12 @@ import "common/api_response.proto";
 import "common/access_token.proto";
 
 message UpdateInteractionRequest {
-  interaction.messages.OperateInteraction operate_interaction = 1;
+  interaction.messages.BaseInteraction base = 1;
   common.AccessToken access_token = 2;
 }
 
 message UpdateInteractionsRequest {
-  interaction.messages.OperateAnyInteraction operate_interaction = 1;
+  repeated interaction.messages.BaseInteraction bases = 1;
   common.AccessToken access_token = 2;
 }
 

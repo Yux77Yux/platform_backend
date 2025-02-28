@@ -11,61 +11,63 @@ import (
 
 // 监听者结构体
 type UpdateCountListener struct {
-	exeChannel   chan *[]*common.UserAction // 批量发送评论的通道
-	datasChannel chan *common.UserAction    // 用于接收评论的通道
-	count        uint32
+	exeChannel chan *ExeBody
 
-	timeoutDuration     time.Duration        // 超时持续时间（触发销毁）
-	timeoutTimer        *time.Timer          // 用于刷新存活时间
-	updateInterval      time.Duration        // 批量插入的间隔时间
-	updateIntervalTimer *time.Timer          // 用于周期性执行批量更新
-	next                *UpdateCountListener // 下一个监听者
-	prev                *UpdateCountListener // 上一个监听者
+	id int64
+
+	viewCount int32
+	likeCount int32
+	saveCount int32
+
+	timeoutDuration     time.Duration // 超时持续时间（触发销毁）
+	timeoutTimer        *time.Timer   // 用于刷新存活时间
+	updateInterval      time.Duration // 批量插入的间隔时间
+	updateIntervalTimer *time.Timer   // 用于周期性执行批量更新
 }
 
 func (listener *UpdateCountListener) GetId() int64 {
-	return 0
+	return atomic.LoadInt64(&listener.id)
 }
 
 // 启动监听者
 func (listener *UpdateCountListener) StartListening() {
-	listener.datasChannel = make(chan *common.UserAction, LISTENER_CHANNEL_COUNT)
 	go listener.RestartUpdateIntervalTimer()
 	go listener.RestartTimeoutTimer()
 }
 
-// 分发评论至通道
 func (listener *UpdateCountListener) Dispatch(data protoreflect.ProtoMessage) {
-	// 长度加1
-	count := atomic.AddUint32(&listener.count, 1)
-
 	_data := data.(*common.UserAction)
-	// 处理评论的逻辑
-	listener.datasChannel <- _data
 
-	if count%MAX_BATCH_SIZE == 0 {
-		go listener.SendBatch()
-		listener.RestartUpdateIntervalTimer()
+	operate := _data.GetOperate()
+
+	switch operate {
+	case common.Operate_VIEW:
+		atomic.AddInt32(&listener.viewCount, 1)
+	case common.Operate_LIKE:
+		atomic.AddInt32(&listener.likeCount, 1)
+	case common.Operate_COLLECT:
+		atomic.AddInt32(&listener.saveCount, 1)
+
+	case common.Operate_CANCEL_COLLECT:
+		atomic.AddInt32(&listener.saveCount, -1)
+	case common.Operate_CANCEL_LIKE:
+		atomic.AddInt32(&listener.viewCount, -1)
 	}
 }
 
 // 执行批量更新
 func (listener *UpdateCountListener) SendBatch() {
-	const BatchSize = MAX_BATCH_SIZE
+	datasPtr := updatePool.Get().(*ExeBody)
 
-	count := atomic.LoadUint32(&listener.count)
-	count = calculateBatchSize(count, BatchSize)
-	if count == 0 {
-		return
-	}
+	id := atomic.LoadInt64(&listener.id)
+	saveCount := atomic.SwapInt32(&listener.saveCount, 0)
+	likeCount := atomic.SwapInt32(&listener.likeCount, 0)
+	viewCount := atomic.SwapInt32(&listener.viewCount, 0)
 
-	datasPtr := insertPool.Get().(*[]*common.UserAction)
-	*datasPtr = (*datasPtr)[:count]
-	insertUsers := *datasPtr
-	for i := 0; uint32(i) < count; i++ {
-		insertUsers[i] = <-listener.datasChannel
-	}
-	atomic.AddUint32(&listener.count, ^uint32(count-1)) //再减去
+	datasPtr.id = id
+	datasPtr.newSaveCount = saveCount
+	datasPtr.newLikeCount = likeCount
+	datasPtr.newViewCount = viewCount
 
 	listener.exeChannel <- datasPtr // 送去批量执行,可能被阻塞
 }
@@ -85,9 +87,11 @@ func (listener *UpdateCountListener) RestartUpdateIntervalTimer() {
 
 	// 再执行
 	listener.updateIntervalTimer = time.AfterFunc(listener.updateInterval, func() {
-		count := atomic.LoadUint32(&listener.count)
+		likeCount := atomic.LoadInt32(&listener.likeCount)
+		saveCount := atomic.LoadInt32(&listener.saveCount)
+		viewCount := atomic.LoadInt32(&listener.viewCount)
 
-		if count > 0 {
+		if likeCount > 0 || saveCount > 0 || viewCount > 0 {
 			go listener.SendBatch() // 执行批量更新
 			listener.RestartTimeoutTimer()
 		}
@@ -111,9 +115,11 @@ func (listener *UpdateCountListener) RestartTimeoutTimer() {
 	}
 
 	listener.timeoutTimer = time.AfterFunc(listener.timeoutDuration, func() {
-		count := atomic.LoadUint32(&listener.count)
+		likeCount := atomic.LoadInt32(&listener.likeCount)
+		saveCount := atomic.LoadInt32(&listener.saveCount)
+		viewCount := atomic.LoadInt32(&listener.viewCount)
 
-		if count == 0 {
+		if likeCount == 0 && saveCount == 0 && viewCount == 0 {
 			// 超时后销毁监听者
 			listener.Cleanup()
 			updateCountChain.DestroyListener(listener)
@@ -125,9 +131,6 @@ func (listener *UpdateCountListener) RestartTimeoutTimer() {
 
 // 清理监听者资源
 func (listener *UpdateCountListener) Cleanup() {
-	// 关闭评论通道
-	close(listener.datasChannel)
-
 	// 清理其他资源（例如定时器、缓存等）
 	if listener.timeoutTimer != nil {
 		listener.timeoutTimer.Stop() // 停止定时器

@@ -417,7 +417,7 @@ func SetRecommendBaseItem(id int64, ids []int64) error {
 
 // POST & UPDATE
 // 历史记录 更新时间戳
-func UpdateHistories(data []*generated.Interaction) error {
+func UpdateHistories(data []*generated.OperateInteraction) error {
 	ctx := context.Background()
 	resultCh := make(chan error, 1)
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
@@ -463,7 +463,7 @@ func UpdateHistories(data []*generated.Interaction) error {
 }
 
 // 收藏夹
-func ModifyCollections(data []*generated.Interaction) error {
+func ModifyCollections(data []*generated.OperateInteraction) error {
 	ctx := context.Background()
 	resultCh := make(chan error, 1)
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
@@ -509,7 +509,7 @@ func ModifyCollections(data []*generated.Interaction) error {
 }
 
 // 点赞
-func ModifyLike(data []*generated.Interaction) error {
+func ModifyLike(data []*generated.OperateInteraction) error {
 	ctx := context.Background()
 	resultCh := make(chan error, 1)
 	cacheRequestChannel <- func(CacheClient CacheInterface) {

@@ -664,3 +664,44 @@ func UpdateCreationStatusInTransaction(creation *generated.CreationUpdateStatus)
 	}
 	return nil
 }
+
+func UpdateCreationCount(ctx context.Context, creationId int64, saveCount, likeCount, viewCount int32) error {
+	const (
+		saveSql = "saves = saves + ?"
+		likeSql = "likes = likes + ?"
+		viewSql = "views = views + ?"
+	)
+
+	sqlStr := make([]string, 0, 3)
+	values := make([]any, 0, 4)
+	if saveCount != 0 {
+		sqlStr = append(sqlStr, saveSql)
+		values = append(values, saveCount)
+	}
+	if likeCount != 0 {
+		sqlStr = append(sqlStr, likeSql)
+		values = append(values, likeCount)
+	}
+	if viewCount != 0 {
+		sqlStr = append(sqlStr, viewSql)
+		values = append(values, viewCount)
+	}
+	if len(sqlStr) <= 0 {
+		return nil
+	}
+	values = append(values, creationId)
+
+	query := fmt.Sprintf(`
+		UPDATE db_creation_engagment_1.CreationEngagement 
+		SET 
+			%s
+		WHERE creation_id = ?
+	`, strings.Join(sqlStr, ","))
+
+	_, err := db.ExecContext(
+		ctx,
+		query,
+		values...,
+	)
+	return err
+}

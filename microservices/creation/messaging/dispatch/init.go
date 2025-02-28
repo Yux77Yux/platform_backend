@@ -4,8 +4,6 @@ import (
 	"sync"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
-
-	common "github.com/Yux77Yux/platform_backend/generated/common"
 )
 
 const (
@@ -18,9 +16,9 @@ const (
 
 var (
 	updateCountChain *UpdateCountChain
-	insertPool       = sync.Pool{
+	updatePool       = sync.Pool{
 		New: func() any {
-			slice := make([]*common.UserAction, 0, MAX_BATCH_SIZE)
+			slice := new(ExeBody)
 			return &slice
 		},
 	}
