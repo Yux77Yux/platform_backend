@@ -47,6 +47,19 @@ func (s *Server) GetCreationList(ctx context.Context, req *generated.GetCreation
 	return response, nil
 }
 
+func (s *Server) GetUserCreations(ctx context.Context, req *generated.GetUserCreationsRequest) (*generated.GetCreationListResponse, error) {
+	log.Println("info: GetUserCreations service start")
+
+	response, err := internal.GetUserCreations(ctx, req)
+	if err != nil {
+		log.Println("error: get creation occur fail: ", err)
+		return response, nil
+	}
+
+	log.Println("info: get creation occur success")
+	return response, nil
+}
+
 func (s *Server) GetPublicCreationList(ctx context.Context, req *generated.GetCreationListRequest) (*generated.GetCreationListResponse, error) {
 	log.Println("info: GetPublicCreationList service start")
 

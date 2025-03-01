@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -160,7 +162,7 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 		views        int32
 		likes        int32
 		saves        int32
-		publish_time time.Time
+		publish_time sql.NullTime
 
 		parent      int32
 		name        string
@@ -244,7 +246,7 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 			Views:       views,
 			Likes:       likes,
 			Saves:       saves,
-			PublishTime: timestamppb.New(publish_time),
+			PublishTime: timestamppb.New(publish_time.Time),
 		},
 		Category: &generated.Category{
 			CategoryId:  category_id,
@@ -288,7 +290,177 @@ func GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, err
 	return author_id, nil
 }
 
-// 卡片型
+// Card型
+func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsRequest) ([]*generated.CreationInfo, int32, error) {
+	const LIMIT = 10
+	authorId := req.GetUserId()
+	page := req.GetPage()
+	if page == 0 {
+		page = 1
+	}
+	offset := (page - 1) * LIMIT
+	status := req.GetStatus().String()
+
+	// 主页,相似列表,分区
+	query := `SELECT
+			id,
+			src,
+			thumbnail,
+			title,
+			duration,
+			upload_time
+		FROM db_creation_1.Creation 
+		WHERE author_id = ?
+		AND status = ?
+		ORDER BY upload_time DESC
+		LIMIT ?
+		OFFSET ?`
+
+	queryCount := `SELECT
+		count(*)
+	FROM db_creation_1.Creation 
+	WHERE author_id = ?
+	AND status = ?`
+
+	sqlStr := make([]string, 0, LIMIT)
+	creationInfos := make([]*generated.CreationInfo, 0, 10)
+	creationIds := make([]any, 0, 10)
+	var count int32
+	select {
+	case <-ctx.Done():
+		return nil, -1, ctx.Err()
+	default:
+		if page <= 1 {
+			var num int32
+			err := db.QueryRowContext(
+				ctx,
+				queryCount,
+				authorId,
+				status,
+			).Scan(&num)
+			if err != nil {
+				return nil, -1, err
+			}
+			if num <= 0 {
+				return nil, 0, nil
+			}
+			count = int32(math.Ceil(float64(num) / float64(LIMIT)))
+		}
+
+		rows, err := db.QueryContext(
+			ctx,
+			query,
+			authorId,
+			status,
+			LIMIT,
+			offset,
+		)
+		if err != nil {
+			return nil, -1, err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var (
+				creationId  int64
+				src         string
+				thumbnail   string
+				title       string
+				duration    int32
+				upload_time time.Time
+			)
+			// 从当前行读取值，依次填充到变量中
+			err := rows.Scan(&creationId, &src, &thumbnail, &title, &duration, &upload_time)
+			if err != nil {
+				return nil, -1, err
+			}
+
+			// 存储 卡片基本信息切片
+			creationInfo := &generated.CreationInfo{
+				Creation: &generated.Creation{
+					CreationId: creationId,
+					BaseInfo: &generated.CreationUpload{
+						AuthorId:  authorId,
+						Src:       src,
+						Thumbnail: thumbnail,
+						Title:     title,
+						Duration:  duration,
+					},
+					UploadTime: timestamppb.New(upload_time),
+				},
+			}
+			creationIds = append(creationIds, creationId)
+			creationInfos = append(creationInfos, creationInfo)
+			sqlStr = append(sqlStr, "?")
+		}
+
+		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
+		if err = rows.Err(); err != nil {
+			return nil, -1, err
+		}
+
+		// 结束第一次查询
+		if err = rows.Close(); err != nil {
+			return nil, -1, err
+		}
+
+		if len(sqlStr) <= 0 {
+			return nil, 0, nil
+		}
+
+		queryCardEngagement := fmt.Sprintf(`
+		SELECT
+			views,
+			likes,
+			saves,
+			publish_time
+		FROM db_creation_engagment_1.CreationEngagement
+		WHERE creation_id IN (%s)`, strings.Join(sqlStr, ","))
+
+		// 查 统计数
+		rows, err = db.QueryContext(
+			ctx,
+			queryCardEngagement,
+			creationIds...,
+		)
+		if err != nil {
+			return nil, -1, err
+		}
+		defer rows.Close()
+
+		i := -1
+		for rows.Next() {
+			i++
+			var (
+				views        int32
+				likes        int32
+				saves        int32
+				publish_time sql.NullTime
+			)
+			// 从当前行读取值，依次填充到变量中
+			err := rows.Scan(&views, &likes, &saves, &publish_time)
+			if err != nil {
+				return nil, -1, err
+			}
+
+			// 存储 作品卡片的统计信息
+			creationEngagement := &generated.CreationEngagement{
+				CreationId:  creationInfos[i].Creation.CreationId,
+				Views:       views,
+				PublishTime: timestamppb.New(publish_time.Time),
+			}
+			creationInfos[i].CreationEngagement = creationEngagement
+		}
+
+		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
+		if err = rows.Err(); err != nil {
+			err = fmt.Errorf("rows iteration failed because %v", err)
+			return nil, -1, err
+		}
+	}
+
+	return creationInfos, count, nil
+}
 
 func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generated.CreationInfo, error) {
 	count := len(ids)
@@ -316,10 +488,9 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 			creation_id,
 			views,
 			publish_time
-		FROM db_creation_category_1.Category 
+		FROM db_creation_engagment_1.CreationEngagement 
 		WHERE creation_id IN (%s)`, str)
 
-	// 主页,相似列表,分区
 	query := fmt.Sprintf(`SELECT
 			id,
 			author_id,

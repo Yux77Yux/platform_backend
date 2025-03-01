@@ -51,7 +51,7 @@ func (chain *InsertChain) ExecuteBatch() {
 			// 插入数据库
 			err := db.PostReviews(Reviews)
 			if err != nil {
-				log.Printf("error: UpdateReviews error")
+				log.Printf("error: PostReviews %v", err)
 			}
 
 			// 放回对象池

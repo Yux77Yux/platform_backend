@@ -8,7 +8,6 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
-	dispatch "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/dispatch"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -39,15 +38,18 @@ func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequ
 	base := req.GetBase()
 	base.UserId = userId
 
-	newInteraction := &generated.Interaction{
-		Base:      base,
-		UpdatedAt: timestamppb.Now(),
-		ActionTag: 1,
-	}
+	go func() {
+		newInteraction := &generated.OperateInteraction{
+			Base:      base,
+			UpdatedAt: timestamppb.Now(),
+			Action:    common.Operate_VIEW,
+		}
 
-	// 更新历史
-	go dispatch.HandleRequest(newInteraction, dispatch.DbInteraction)
-	go dispatch.HandleRequest(newInteraction, dispatch.ViewCache)
+		err = messaging.SendMessage(messaging.AddView, messaging.AddView, newInteraction)
+		if err != nil {
+			log.Printf("error: SendMessage %v", err)
+		}
+	}()
 
 	interaction, err := cache.GetInteraction(ctx, base)
 	if err != nil {

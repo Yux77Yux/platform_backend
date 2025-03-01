@@ -8,8 +8,6 @@ import "google/protobuf/timestamp.proto";
 
 import "creation/messages/creation_upload.proto";
 
-
-
 message CreationInfo {
   Creation creation = 1;
   CreationEngagement creation_engagement = 2;
@@ -37,10 +35,10 @@ message Category {
   string description = 4;
 }
 
-message AnyCreation{
+message AnyCreation {
   repeated Creation any_creation = 1;
 }
 
-message AnyCreationEngagement{
+message AnyCreationEngagement {
   repeated CreationEngagement any_count = 1;
 }

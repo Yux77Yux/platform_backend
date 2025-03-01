@@ -5,7 +5,9 @@ package creation.methods;
 option go_package = "github.com/Yux77Yux/platform_backend/generated/creation";
 
 import "common/api_response.proto";
+import "common/access_token.proto";
 import "creation/messages/creation.proto";
+import "creation/messages/creation_status.proto";
 
 // 视频详细页
 message GetCreationRequest {
@@ -17,14 +19,22 @@ message GetCreationResponse {
   common.ApiResponse msg = 2;
 }
 
+enum ByCount {
+  PUBLISHED_TIME = 0;
+  VIEWS = 1;
+  LIKES = 2;
+  COLLECTIONS = 3;
+}
+
 // 空间
+message GetUserCreationsRequest {
+  creation.messages.CreationStatus status = 1;
+  int64 user_id = 2;
+  int32 page = 3;
+  common.AccessToken access_token = 4;
+}
+
 message GetSpaceCreationsRequest {
-  enum ByCount {
-    PUBLISHED_TIME = 0;
-    VIEWS = 1;
-    LIKES = 2;
-    COLLECTIONS = 3;
-  }
   int64 user_id = 1;
   int32 page = 2;
   ByCount by_what = 3;

@@ -11,17 +11,32 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func GetSpaceCreationCountType(byWhat generated.GetSpaceCreationsRequest_ByCount) string {
+func GetSpaceCreationCountType(byWhat generated.ByCount) string {
 	typeStr := ""
 	switch byWhat {
-	case generated.GetSpaceCreationsRequest_VIEWS:
+	case generated.ByCount_VIEWS:
 		typeStr = "ByViews"
-	case generated.GetSpaceCreationsRequest_LIKES:
+	case generated.ByCount_LIKES:
 		typeStr = "ByLikes"
-	case generated.GetSpaceCreationsRequest_COLLECTIONS:
+	case generated.ByCount_COLLECTIONS:
 		typeStr = "ByCollections"
 	default:
 		typeStr = "ByPublished_Time"
+	}
+	return typeStr
+}
+
+func GetUserCreationsCountType(byWhat generated.ByCount) string {
+	typeStr := ""
+	switch byWhat {
+	case generated.ByCount_VIEWS:
+		typeStr = "views"
+	case generated.ByCount_LIKES:
+		typeStr = "likes"
+	case generated.ByCount_COLLECTIONS:
+		typeStr = "saves"
+	default:
+		typeStr = "publish_time"
 	}
 	return typeStr
 }

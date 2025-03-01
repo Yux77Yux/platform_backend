@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS Creation (
     upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 默认当前时间
 
     PRIMARY KEY (id),                   -- 使用 id 作为主键
-    INDEX idx_author (author_id,upload_time)       -- 按作者 ID 索引 ，查询作者的作品
+    INDEX idx_author (author_id,status)       -- 按作者 ID 索引 ，查询作者的作品
 );
 
 -- 使用 db_engagment_1 数据库

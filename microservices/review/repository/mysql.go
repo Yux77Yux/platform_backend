@@ -104,7 +104,7 @@ func PostReviews(reviews []*generated.NewReview) error {
 
 		values[FieldsCount*i] = review.GetId()
 		values[FieldsCount*i+1] = review.GetTargetId()
-		values[FieldsCount*i+2] = review.GetTargetType()
+		values[FieldsCount*i+2] = review.GetTargetType().String()
 		values[FieldsCount*i+3] = nil
 		msg := review.GetMsg()
 		if msg != "" {

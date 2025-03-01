@@ -35,6 +35,12 @@ service CreationService {
     };
   }
 
+  rpc GetUserCreations(creation.methods.GetUserCreationsRequest) returns (creation.methods.GetCreationListResponse) {
+    option (google.api.http) = {
+      post: "/api/manager/creations"
+    };
+  }
+
   rpc GetCreationList(creation.methods.GetCreationListRequest) returns (creation.methods.GetCreationListResponse);
   rpc GetPublicCreationList(creation.methods.GetCreationListRequest) returns (creation.methods.GetCreationListResponse);
 

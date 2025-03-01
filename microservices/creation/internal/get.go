@@ -6,6 +6,7 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
+	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 
 	cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
@@ -39,7 +40,7 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 				Message: "Internal Server Error",
 				Details: err.Error(),
 			}
-			return response, nil
+			return response, err
 		}
 
 		status = creation.GetCreation().GetBaseInfo().GetStatus()
@@ -147,7 +148,7 @@ func GetPublicCreationList(ctx context.Context, req *generated.GetCreationListRe
 	return response, nil
 }
 
-// 拿用户id，然后author_id = id 作为筛选条件
+// 拿用户id
 func GetSpaceCreations(ctx context.Context, req *generated.GetSpaceCreationsRequest) (*generated.GetCreationListResponse, error) {
 	response := new(generated.GetCreationListResponse)
 	id := req.GetUserId()
@@ -190,6 +191,47 @@ func GetSpaceCreations(ctx context.Context, req *generated.GetSpaceCreationsRequ
 	}
 
 	response.CreationInfoGroup = filter
+	response.Count = count
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
+}
+
+func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsRequest) (*generated.GetCreationListResponse, error) {
+	response := new(generated.GetCreationListResponse)
+	pass, author_id, err := auth.Auth("get", "creation", req.GetAccessToken().GetValue())
+	if err != nil {
+		return &generated.GetCreationListResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_FAILED,
+				Code:   "500",
+			},
+		}, err
+	}
+	if !pass {
+		return &generated.GetCreationListResponse{
+			Msg: &common.ApiResponse{
+				Status: common.ApiResponse_ERROR,
+				Code:   "403",
+			},
+		}, nil
+	}
+
+	req.UserId = author_id
+
+	infos, count, err := db.GetUserCreations(ctx, req)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
+	response.CreationInfoGroup = infos
 	response.Count = count
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
