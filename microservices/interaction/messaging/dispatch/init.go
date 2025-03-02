@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"log"
 	"sync"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -71,7 +72,11 @@ func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 	case CancelLikeCache:
 		cancelLikeCacheChain.HandleRequest(msg)
 	case DbBatchInteraction:
-		req := msg.(*generated.AnyOperateInteraction)
+		req, ok := msg.(*generated.AnyOperateInteraction)
+		if !ok {
+			log.Printf("error: req not *generated.AnyOperateInteraction")
+			return
+		}
 		operateInteractions := req.GetOperateInteractions()
 		dbInteractionsChain.exeChannel <- &operateInteractions
 	}

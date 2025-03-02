@@ -20,6 +20,7 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 	creationId := req.GetCreationId()
 	creation, err := cache.GetCreationInfo(ctx, creationId)
 	if err != nil {
+		log.Printf("error: GetCreationInfo %v", err)
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
 			Code:    "500",

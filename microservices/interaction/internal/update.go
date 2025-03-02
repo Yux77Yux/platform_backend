@@ -41,7 +41,7 @@ func ClickCollection(req *generated.UpdateInteractionRequest) (*generated.Update
 			UserId:     userId,
 			CreationId: req.GetBase().GetCreationId(),
 		},
-		Action:    common.Operate_VIEW,
+		Action:    common.Operate_COLLECT,
 		UpdatedAt: timest,
 		SaveAt:    timest,
 	}
@@ -94,7 +94,7 @@ func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateIntera
 			UserId:     userId,
 			CreationId: req.GetBase().GetCreationId(),
 		},
-		Action:    common.Operate_VIEW,
+		Action:    common.Operate_LIKE,
 		UpdatedAt: timest,
 	}
 
@@ -267,7 +267,7 @@ func CancelLike(req *generated.UpdateInteractionRequest) (*generated.UpdateInter
 
 	interaction := &generated.OperateInteraction{
 		Base:      base_interaction,
-		Action:    common.Operate_DEL_VIEW,
+		Action:    common.Operate_CANCEL_LIKE,
 		UpdatedAt: timestamppb.Now(),
 	}
 	err = messaging.SendMessage(messaging.CancelLike, messaging.CancelLike, interaction)

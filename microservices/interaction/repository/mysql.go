@@ -206,7 +206,6 @@ func UpdateInteractions(req []*generated.OperateInteraction) error {
 			value = sql.NullTime{Valid: false}
 		}
 		values[i*5+4] = value
-		values[i*5+4] = value
 	}
 
 	query := fmt.Sprintf(`
@@ -225,10 +224,7 @@ func UpdateInteractions(req []*generated.OperateInteraction) error {
         	WHEN VALUES(updated_at) IS NOT NULL THEN VALUES(updated_at)
         	ELSE updated_at
 		END,
-    		save_at = CASE
-        	WHEN VALUES(save_at) IS NOT NULL THEN VALUES(save_at)
-        	ELSE save_at
-    	END;`, strings.Join(sqlStr, ","))
+    		save_at = VALUES(save_at);`, strings.Join(sqlStr, ","))
 
 	ctx := context.Background()
 

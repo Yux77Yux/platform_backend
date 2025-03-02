@@ -140,7 +140,7 @@ func cancelLikeProcessor(msg amqp.Delivery) error {
 		return err
 	}
 
-	go dispatch.HandleRequest(req, dispatch.CancelLikeCache)
+	go dispatch.HandleRequest(req.GetBase(), dispatch.CancelLikeCache)
 	err = messaging.SendMessage(messaging.UpdateDb, messaging.UpdateDb, req)
 	if err != nil {
 		log.Printf("error: SendMessage %v", err)
@@ -157,7 +157,6 @@ func batchUpdateDbProcessor(msg amqp.Delivery) error {
 		log.Printf("error: Unmarshal %v", err)
 		return err
 	}
-
 	go dispatch.HandleRequest(req, dispatch.DbBatchInteraction)
 	return nil
 }

@@ -181,7 +181,7 @@ func GetUsers(creationId int64) ([]int64, error) {
 	resultCh := make(chan *ResultStr, 1)
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		results, err := CacheClient.RevRangeZSet(ctx, "Item_Users", creationIdStr, 0, 199)
+		results, err := CacheClient.RevRangeZSet(ctx, "Item_Histories", creationIdStr, 0, 199)
 		if err != nil {
 			resultCh <- &ResultStr{
 				err: err,
@@ -630,8 +630,8 @@ func DelLike(data []*generated.BaseInteraction) error {
 			userId := base.GetUserId()
 			creationId := base.GetCreationId()
 
-			key := fmt.Sprintf("ZSet_Likes_%d", creationId)
-			pipe.ZRem(ctx, key, userId)
+			key := fmt.Sprintf("ZSet_User_Likes_%d", userId)
+			pipe.ZRem(ctx, key, creationId)
 		}
 
 		_, err := pipe.Exec(ctx)
@@ -656,7 +656,7 @@ func DelLike(data []*generated.BaseInteraction) error {
 func ScanZSetsByHistories() ([]string, error) {
 	ctx := context.Background()
 
-	results, _, err := CacheClient.ScanZSet(ctx, "Histories", "*", 0, 2500)
+	results, _, err := CacheClient.ScanZSet(ctx, "User_Histories", "*", 0, 2500)
 	if err != nil {
 		return nil, err
 	}
@@ -674,7 +674,7 @@ func ScanZSetsByHistories() ([]string, error) {
 func ScanZSetsByCreationId() ([]string, error) {
 	ctx := context.Background()
 
-	results, _, err := CacheClient.ScanZSet(ctx, "Item_Users", "*", 0, 2500)
+	results, _, err := CacheClient.ScanZSet(ctx, "Item_Histories", "*", 0, 2500)
 	if err != nil {
 		return nil, err
 	}
@@ -755,7 +755,7 @@ func GetAllItemUsers(idStrs []string) (map[int64]map[int64]float64, error) {
 
 	// 依次遍历作品 ID，把请求加入 pipeline
 	for i, str := range idStrs {
-		historyKey := fmt.Sprintf("ZSet_Item_Users_%s", str) // 观看记录 (ZSet)
+		historyKey := fmt.Sprintf("ZSet_Item_Histories_%s", str) // 观看记录 (ZSet)
 
 		// 用 ZRange 取 ZSet，避免用 SMembers 读错数据类型
 		historyCmds[i] = pipe.ZRevRange(ctx, historyKey, 0, 199)
@@ -774,7 +774,7 @@ func GetAllItemUsers(idStrs []string) (map[int64]map[int64]float64, error) {
 	for i, str := range idStrs {
 		vSet, err := historyCmds[i].Result()
 		if err != nil {
-			log.Printf("error: ZSet_Item_Users_ %v", err)
+			log.Printf("error: ZSet_Item_Histories_ %v", err)
 			return nil, err
 		}
 

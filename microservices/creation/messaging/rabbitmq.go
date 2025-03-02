@@ -96,7 +96,7 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 	for msg := range msgs {
 		log.Println("info: creation processor handle start")
 		if err := handler(msg); err != nil {
-			log.Printf("error: message processing failed: %v", err)
+			log.Printf("error: message processing %s failed: %v", routeKey, err)
 			msg.Nack(false, false) // Negatively acknowledge
 		} else {
 			msg.Ack(false) // Acknowledge successful processing
@@ -148,7 +148,7 @@ func ListenRPC(exchange, queue, routeKey string, handler func(amqp.Delivery) (pr
 	for msg := range msgs {
 		responseMsg, err := handler(msg)
 		if err != nil {
-			log.Printf("error: message processing failed: %v", err)
+			log.Printf("error: message processing %s failed: %v", routeKey, err)
 		}
 		body, err := proto.Marshal(responseMsg)
 		if err != nil {

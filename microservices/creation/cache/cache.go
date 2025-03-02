@@ -465,7 +465,9 @@ func getAuthorIdMap(ctx context.Context, creationIds []int64) (map[int64]string,
 	}
 	_, err := pipeline.Exec(ctx)
 	if err != nil {
-		return nil, err
+		if err != redis.Nil {
+			return nil, err
+		}
 	}
 
 	for i, cmd := range strCmds {
@@ -509,6 +511,10 @@ func UpdateCreationCount(ctx context.Context, actions []*common.UserAction) erro
 
 		key := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
 		authorIdStr := authorIdMap[creationId]
+		if authorIdStr == "" {
+			log.Printf("waring: authorId is not exist")
+			continue
+		}
 		spaceByViewsKey := fmt.Sprintf("ZSet_Space_ByViews_%s", authorIdStr)
 		spaceByCollectionsKey := fmt.Sprintf("ZSet_Space_ByCollections_%s", authorIdStr)
 		spaceByLikesKey := fmt.Sprintf("ZSet_Space_ByLikes_%s", authorIdStr)
@@ -553,7 +559,9 @@ func UpdateCreationCount(ctx context.Context, actions []*common.UserAction) erro
 
 	results, err := pipeline.Exec(ctx)
 	if err != nil {
-		return err
+		if err != redis.Nil {
+			return err
+		}
 	}
 
 	// 检查每个命令的执行结果（如果需要）
