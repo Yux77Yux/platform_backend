@@ -44,7 +44,6 @@ type ViewCacheChain struct {
 }
 
 func (chain *ViewCacheChain) ExecuteBatch() {
-	log.Printf("我他妈来啦!!！ ")
 	for interactionsPtr := range chain.exeChannel {
 		go func(interactionsPtr *[]*generated.OperateInteraction) {
 			interactions := *interactionsPtr

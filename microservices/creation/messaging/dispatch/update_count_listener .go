@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"log"
 	"sync/atomic"
 	"time"
 
@@ -64,9 +65,13 @@ func (listener *UpdateCountListener) SendBatch() {
 	likeCount := atomic.SwapInt32(&listener.likeCount, 0)
 	viewCount := atomic.SwapInt32(&listener.viewCount, 0)
 
+	log.Println("info:id")
 	datasPtr.id = id
+	log.Printf("info:saveCount %v", saveCount)
 	datasPtr.newSaveCount = saveCount
+	log.Printf("info:likeCount %v", likeCount)
 	datasPtr.newLikeCount = likeCount
+	log.Printf("info:viewCount %v", viewCount)
 	datasPtr.newViewCount = viewCount
 
 	listener.exeChannel <- datasPtr // 送去批量执行,可能被阻塞

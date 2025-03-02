@@ -490,6 +490,7 @@ func getAuthorIdMap(ctx context.Context, creationIds []int64) (map[int64]string,
 }
 
 func UpdateCreationCount(ctx context.Context, actions []*common.UserAction) error {
+	// 通过redis获取authorId，如果作品不存在redis，说明作品未发布所以未缓存至Redis（作品未设置过期）
 	length := len(actions)
 	creationIds := make([]int64, length)
 	for i, action := range actions {

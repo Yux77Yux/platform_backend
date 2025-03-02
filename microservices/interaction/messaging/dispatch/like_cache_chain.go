@@ -44,7 +44,6 @@ type LikeCacheChain struct {
 }
 
 func (chain *LikeCacheChain) ExecuteBatch() {
-	log.Printf("我他妈来啦!!！ ")
 	for interactionsPtr := range chain.exeChannel {
 		go func(interactionsPtr *[]*generated.OperateInteraction) {
 			interactions := *interactionsPtr

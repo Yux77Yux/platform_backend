@@ -44,7 +44,6 @@ type CancelLikeCacheChain struct {
 }
 
 func (chain *CancelLikeCacheChain) ExecuteBatch() {
-	log.Printf("我他妈来啦!!！ ")
 	for interactionsPtr := range chain.exeChannel {
 		go func(interactionsPtr *[]*generated.BaseInteraction) {
 			interactions := *interactionsPtr

@@ -18,8 +18,7 @@ var (
 	updateCountChain *UpdateCountChain
 	updatePool       = sync.Pool{
 		New: func() any {
-			slice := new(ExeBody)
-			return &slice
+			return new(ExeBody)
 		},
 	}
 )

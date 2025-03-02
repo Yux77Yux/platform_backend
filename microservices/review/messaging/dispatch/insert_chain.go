@@ -44,7 +44,6 @@ type InsertChain struct {
 }
 
 func (chain *InsertChain) ExecuteBatch() {
-	log.Printf("我他妈来啦!!！ ")
 	for ReviewsPtr := range chain.exeChannel {
 		go func(ReviewsPtr *[]*generated.NewReview) {
 			Reviews := *ReviewsPtr

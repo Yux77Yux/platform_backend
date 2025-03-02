@@ -781,7 +781,7 @@ func UpdateCreationInTransaction(creation *generated.CreationUpdated) error {
 	query := fmt.Sprintf(`
 		UPDATE db_creation_1.Creation
 		SET 
-			status = 'PENDING'
+			status = 'PENDING',
 			%s
 		WHERE 
 			id = ? 

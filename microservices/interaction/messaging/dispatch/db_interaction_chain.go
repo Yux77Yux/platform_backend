@@ -46,7 +46,6 @@ type DbInteractionChain struct {
 }
 
 func (chain *DbInteractionChain) ExecuteBatch() {
-	log.Printf("我他妈来啦!!！ ")
 	for interactionsPtr := range chain.exeChannel {
 		go func(interactionsPtr *[]*generated.OperateInteraction) {
 			interactions := *interactionsPtr
@@ -73,6 +72,9 @@ func (chain *DbInteractionChain) ExecuteBatch() {
 				}
 			}
 			go func() {
+				if len(actions) <= 0 {
+					return
+				}
 				messagingErr := messaging.SendMessage(messaging.UPDATE_CREATION_ACTION_COUNT, messaging.UPDATE_CREATION_ACTION_COUNT, &common.AnyUserAction{
 					Actions: actions,
 				})
@@ -81,7 +83,6 @@ func (chain *DbInteractionChain) ExecuteBatch() {
 				}
 			}()
 
-			// 放回对象池
 			*interactionsPtr = interactions[:0]
 			interactionsPool.Put(interactionsPtr)
 		}(interactionsPtr)

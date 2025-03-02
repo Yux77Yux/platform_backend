@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	"log"
+	"math"
 	"sync"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -78,6 +79,25 @@ func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 			return
 		}
 		operateInteractions := req.GetOperateInteractions()
-		dbInteractionsChain.exeChannel <- &operateInteractions
+
+		// 计算操作批次的大小
+		batchSize := len(operateInteractions)
+		batchCount := int(math.Ceil(float64(batchSize) / float64(MAX_BATCH_SIZE))) // 计算需要的批次数
+
+		// 分批处理
+		for i := 0; i < batchCount; i++ {
+			start := i * MAX_BATCH_SIZE
+			end := (i + 1) * MAX_BATCH_SIZE
+			if end > batchSize {
+				end = batchSize
+			}
+
+			// 将分批后的部分赋值给池中的切片
+			poolObj := interactionsPool.Get().(*[]*generated.OperateInteraction)
+			*poolObj = operateInteractions[start:end]
+
+			// 发往 exeChannel 处理
+			dbInteractionsChain.exeChannel <- poolObj
+		}
 	}
 }

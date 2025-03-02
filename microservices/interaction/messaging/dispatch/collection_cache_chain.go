@@ -44,7 +44,6 @@ type CollectionCacheChain struct {
 }
 
 func (chain *CollectionCacheChain) ExecuteBatch() {
-	log.Printf("我他妈来啦!! ")
 	for interactionsPtr := range chain.exeChannel {
 		go func(interactionsPtr *[]*generated.OperateInteraction) {
 			interactions := *interactionsPtr
@@ -54,7 +53,6 @@ func (chain *CollectionCacheChain) ExecuteBatch() {
 				log.Printf("error: ModifyCollections error")
 			}
 
-			// 放回对象池
 			*interactionsPtr = interactions[:0]
 			interactionsPool.Put(interactionsPtr)
 		}(interactionsPtr)

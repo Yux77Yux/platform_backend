@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"log"
 	"sync/atomic"
 	"time"
 
@@ -60,7 +61,15 @@ func (listener *DbInteractionsListener) SendBatch() {
 	}
 
 	datasPtr := interactionsPool.Get().(*[]*generated.OperateInteraction)
-	*datasPtr = (*datasPtr)[:count]
+
+	log.Printf("Got from pool: len=%d, cap=%d\n", len(*datasPtr), cap(*datasPtr))
+	if cap(*datasPtr) < int(count) {
+		log.Printf("Capacity not enough! Expected at least %d, got %d\n", count, cap(*datasPtr))
+		*datasPtr = make([]*generated.OperateInteraction, 0, MAX_BATCH_SIZE) // 扩容
+	} else {
+		*datasPtr = (*datasPtr)[:count]
+	}
+
 	insertUsers := *datasPtr
 	for i := 0; uint32(i) < count; i++ {
 		insertUsers[i] = <-listener.datasChannel

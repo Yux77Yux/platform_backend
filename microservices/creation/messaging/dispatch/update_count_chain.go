@@ -27,8 +27,8 @@ func InitialUpdateCountChain() *UpdateCountChain {
 		listenerPool: sync.Pool{
 			New: func() any {
 				return &UpdateCountListener{
-					timeoutDuration: 3 * time.Minute,
-					updateInterval:  10 * time.Second,
+					timeoutDuration: 12 * time.Second,
+					updateInterval:  5 * time.Second,
 				}
 			},
 		},
@@ -48,7 +48,9 @@ type UpdateCountChain struct {
 
 func (chain *UpdateCountChain) ExecuteBatch() {
 	for UpdateCountsPtr := range chain.exeChannel {
+		log.Println("收到")
 		go func(UpdateCountsPtr *ExeBody) {
+			log.Println("数据库")
 			counts := UpdateCountsPtr
 
 			// 插入数据库
@@ -108,16 +110,18 @@ func (chain *UpdateCountChain) CreateListener(data protoreflect.ProtoMessage) Li
 		log.Printf("FindListener: failed to get listener from pool")
 		return nil
 	}
-	atomic.StoreInt64(&newListener.id, creationId)
-
 	// 存入 map 中
 	actual, _ := chain.listenerMap.LoadOrStore(creationId, newListener)
+	atomic.AddInt32(&chain.Count, 1) // 增加计数
 
-	// 增加计数
-	atomic.AddInt32(&chain.Count, 1)
+	// 初始化
+	listenerInMap := actual.(*UpdateCountListener)
+	listenerInMap.exeChannel = chain.exeChannel
+	atomic.StoreInt64(&listenerInMap.id, creationId)
 
-	// `actual` 是 map 中实际存储的监听者，如果别的协程抢先存入，`newListener` 不会被使用
-	return actual.(ListenerInterface)
+	// 开始监听
+	listenerInMap.StartListening()
+	return listenerInMap
 }
 
 // 销毁监听者

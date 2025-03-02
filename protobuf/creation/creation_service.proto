@@ -23,9 +23,10 @@ service CreationService {
 
   // GET
   rpc GetCreation(creation.methods.GetCreationRequest) returns (creation.methods.GetCreationResponse);
-  rpc GetCreationPrivate(creation.methods.GetCreationRequest) returns (creation.methods.GetCreationResponse) {
+  rpc GetCreationPrivate(creation.methods.GetCreationPrivateRequest) returns (creation.methods.GetCreationResponse) {
     option (google.api.http) = {
-      get: "/api/creation/private/{creation_id}"
+      post: "/api/creation/private"
+      body: "*"
     };
   }
 

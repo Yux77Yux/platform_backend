@@ -72,29 +72,56 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 	return response, nil
 }
 
-func GetCreationPrivate(ctx context.Context, req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {
+func GetCreationPrivate(ctx context.Context, req *generated.GetCreationPrivateRequest) (*generated.GetCreationResponse, error) {
+	response := new(generated.GetCreationResponse)
 	// 取数据
-	creationId := req.GetCreationId()
-
-	creation, err := db.GetDetailInTransaction(ctx, creationId)
+	token := req.GetAccessToken().GetValue()
+	pass, authorId, err := auth.Auth("get", "creation", token)
 	if err != nil {
-		return &generated.GetCreationResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
-				Message: "Internal Server Error",
-				Details: err.Error(),
-			},
-		}, nil
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Message: "Internal Server Error",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if !pass {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "403",
+			Details: "you are not pass the auth",
+		}
+		return response, nil
 	}
 
-	return &generated.GetCreationResponse{
-		CreationInfo: creation,
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "200",
-		},
-	}, nil
+	creationId := req.GetCreationId()
+	creationInfo, err := db.GetDetailInTransaction(ctx, creationId)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Message: "Internal Server Error",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
+	if creationInfo.Creation.BaseInfo.GetAuthorId() != authorId {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "403",
+			Details: "the req not pass the auth",
+		}
+		return response, nil
+	}
+
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	response.CreationInfo = creationInfo
+	return response, nil
 }
 
 func GetCreationList(ctx context.Context, req *generated.GetCreationListRequest) (*generated.GetCreationListResponse, error) {
