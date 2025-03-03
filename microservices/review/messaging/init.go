@@ -14,6 +14,9 @@ const (
 	Creation_review = "Creation_review"
 	PendingCreation = "PendingCreation"
 
+	Update      = "Update"
+	BatchUpdate = "BatchUpdate"
+
 	// USER
 	USER_APPROVE  = "UpdateUserStatus"
 	USER_REJECTED = "UpdateUserStatus"
@@ -33,10 +36,9 @@ var (
 	connStr         string
 	ExchangesConfig = map[string]string{
 		New_review:      "direct",
-		Comment_review:  "direct",
-		User_review:     "direct",
-		Creation_review: "direct",
 		PendingCreation: "direct",
+		Update:          "direct",
+		BatchUpdate:     "direct",
 		// Add more exchanges here
 	}
 )
@@ -78,6 +80,10 @@ func Init() {
 			go ListenToQueue(exchange, New_review, New_review, NewReviewProcessor)
 		case PendingCreation:
 			go ListenToQueue(exchange, PendingCreation, PendingCreation, PendingCreationProcessor)
+		case BatchUpdate:
+			go ListenToQueue(exchange, BatchUpdate, BatchUpdate, BatchUpdateProcessor)
+		case Update:
+			go ListenToQueue(exchange, Update, Update, UpdateProcessor)
 		}
 	}
 }

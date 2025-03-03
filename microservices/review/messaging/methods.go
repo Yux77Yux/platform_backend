@@ -1,17 +1,27 @@
 package messaging
 
 import (
+	"log"
+
 	"google.golang.org/protobuf/proto"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
-	dispatch "github.com/Yux77Yux/platform_backend/microservices/review/messaging/dispatch"
 )
 
 // 这里拿取新的审核请求
 func GetPendingReviews(reviewerId int64, reviewType generated.TargetType) ([]*generated.Review, error) {
-	typeName := reviewType.String()
+	const LIMIT = 8
+	typeName := ""
+	switch reviewType {
+	case generated.TargetType_COMMENT:
+		typeName = Comment_review
+	case generated.TargetType_USER:
+		typeName = User_review
+	case generated.TargetType_CREATION:
+		typeName = Creation_review
+	}
 
-	news := GetMsgs(typeName, typeName, typeName, 8)
+	news := GetMsgs(typeName, typeName, typeName, LIMIT)
 
 	length := len(news)
 	reviews := make([]*generated.Review, length)
@@ -28,8 +38,16 @@ func GetPendingReviews(reviewerId int64, reviewType generated.TargetType) ([]*ge
 		}
 
 		reviews[i] = review
-		go dispatch.HandleRequest(review, dispatch.Update)
 	}
+	go func() {
+		anyReview := &generated.AnyReview{
+			Reviews: reviews,
+		}
+		err := SendMessage(BatchUpdate, BatchUpdate, anyReview)
+		if err != nil {
+			log.Printf("error: BatchUpdate SendMessage %v", err)
+		}
+	}()
 
 	return reviews, nil
 }

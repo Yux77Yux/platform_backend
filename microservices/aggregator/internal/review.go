@@ -133,6 +133,7 @@ func GetUserReviews(ctx context.Context, req *generated.GetReviewsRequest) (*gen
 	}
 
 	response.Reviews = cards
+	response.Count = reviewResponse.GetCount()
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",
@@ -332,6 +333,7 @@ func GetCreationReviews(ctx context.Context, req *generated.GetReviewsRequest) (
 		return response, nil
 	}
 
+	response.Count = reviewResponse.GetCount()
 	response.Reviews = cards
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
@@ -533,6 +535,7 @@ func GetCommentReviews(ctx context.Context, req *generated.GetReviewsRequest) (*
 	}
 
 	response.Reviews = cards
+	response.Count = reviewResponse.GetCount()
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",

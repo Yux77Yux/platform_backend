@@ -25,5 +25,5 @@ CREATE TABLE IF NOT EXISTS Review (
     remark varchar(255),       -- 审核备注，最大255字符
     reviewer_id BIGINT, -- 审核人ID
 
-    INDEX idx_reviewer (reviewer_id,target_type,status)       -- 按审核人 ID 索引
+    INDEX idx_reviewer (reviewer_id,target_type,status,created_at, id)       -- 按审核人 ID 索引
 );

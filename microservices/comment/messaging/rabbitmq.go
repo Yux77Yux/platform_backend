@@ -83,7 +83,7 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(amqp.Deliv
 		queue.Name, // queue
 		"",         // consumer
 		false,      // auto ack
-		true,       // exclusive
+		false,      // exclusive
 		false,      // no local
 		false,      // no wait
 		nil,        // args
@@ -94,7 +94,7 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(amqp.Deliv
 	}
 
 	for msg := range msgs {
-		log.Printf("info: %s handle start", err)
+		log.Printf("info: %s handle start", routeKey)
 		if err := handler(msg); err != nil {
 			log.Printf("error: message processing failed: %v", err)
 			msg.Nack(false, false) // Negatively acknowledge
@@ -133,7 +133,7 @@ func ListenRPC(exchange, queue, routeKey string, handler func(amqp.Delivery) (pr
 		requestQueue.Name, // queue
 		"",                // consumer
 		false,             // auto ack
-		false,             // exclusive
+		true,              // exclusive
 		false,             // no local
 		false,             // no wait
 		nil,               // args

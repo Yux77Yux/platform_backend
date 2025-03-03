@@ -141,7 +141,7 @@ func StoreEmail(credentials []*generated.UserCredentials) error {
 		}
 		fieldValues = append(fieldValues, email, data)
 	}
-	log.Printf("len(fieldValues) %v", len(fieldValues))
+
 	if len(fieldValues) == 0 {
 		return nil
 	}
@@ -512,9 +512,17 @@ func GetUserCredentials(ctx context.Context, userCrdentials *generated.UserCrede
 
 	cacheRequestChannel <- func(CacheClient CacheInterface) {
 		result, err := CacheClient.GetHash(ctx, "User", "Credentials", field)
+		if err != nil {
+			if err != redis.Nil {
+				resultCh <- Credential{
+					credentials: "",
+					err:         err,
+				}
+			}
+		}
 		resultCh <- Credential{
 			credentials: result,
-			err:         err,
+			err:         nil,
 		}
 	}
 

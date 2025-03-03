@@ -24,6 +24,7 @@ message GetNewReviewsRequest {
 message GetReviewsResponse {
   common.ApiResponse msg = 1;
   repeated review.messages.Review reviews = 2;
+  int32 count = 3;
 }
 
 // 用于给 用户 查看 是否审核完毕

@@ -50,7 +50,7 @@ func (chain *UpdateChain) ExecuteBatch() {
 			// 更新数据库
 			err := db.UpdateReviews(Reviews)
 			if err != nil {
-				log.Printf("error: UpdateReviews error")
+				log.Printf("error: UpdateReviews %v", err)
 			}
 
 			// 放回对象池

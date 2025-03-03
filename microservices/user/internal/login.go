@@ -56,6 +56,13 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 				},
 			}, err
 		}
+
+		go func() {
+			err = userMQ.SendMessage(userMQ.StoreCredentials, userMQ.StoreCredentials, user_part_info)
+			if err != nil {
+				log.Printf("error: SendMessage StoreCredentials %v", err)
+			}
+		}()
 	}
 
 	if user_part_info == nil {
@@ -104,7 +111,7 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 				UserName: result["user_name"],
 			},
 			UserAvatar: result["user_avatar"],
-			UserRole:   user_info.GetUserRole(),
+			UserRole:   user_part_info.GetUserRole(),
 		}
 	} else {
 		// redis未存有，则从数据库取信息

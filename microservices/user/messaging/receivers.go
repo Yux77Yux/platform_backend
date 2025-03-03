@@ -47,6 +47,8 @@ func storeCredentialsProcessor(msg amqp.Delivery) error {
 		return fmt.Errorf("storeCredentials processor error: %w", err)
 	}
 
+	log.Printf("cred %v", credentials)
+
 	go dispatch.HandleRequest(credentials, dispatch.RegisterCache)
 	return nil
 }
@@ -96,11 +98,7 @@ func registerProcessor(msg amqp.Delivery) error {
 	}
 
 	go dispatch.HandleRequest(user_info, dispatch.InsertUser)
-	go dispatch.HandleRequest(user_info, dispatch.InsertUserCache)
-
 	go dispatch.HandleRequest(credentials, dispatch.Register)
-	go dispatch.HandleRequest(credentials, dispatch.RegisterCache)
-
 	return nil
 }
 

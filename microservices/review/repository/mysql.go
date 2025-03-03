@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -17,8 +19,9 @@ func GetReviews(
 	reviewType generated.TargetType,
 	status generated.ReviewStatus,
 	page int32,
-) ([]*generated.Review, error) {
-	const Limit = 50
+) ([]*generated.Review, int32, error) {
+	const Limit = 10
+	var count int32 = 0
 	offset := (page - 1) * Limit
 	query := `
 		SELECT 
@@ -34,9 +37,37 @@ func GetReviews(
 			target_type = ?
 		AND 
 			status = ?
-		ORDER BY created_at
+		ORDER BY created_at, id
 		LIMIT ? 
 		OFFSET ?`
+
+	if page <= 1 {
+		var num int32 = 0
+		queryCount := `
+		SELECT 
+			count(*) AS count
+		FROM db_review_1.Review
+		WHERE reviewer_id = ? 
+		AND 
+			target_type = ?
+		AND 
+			status = ?`
+		err := db.QueryRowContext(
+			ctx,
+			queryCount,
+			reviewId,
+			reviewType.String(),
+			status.String(),
+		).Scan(&num)
+		if err != nil {
+			return nil, -1, err
+		}
+		if num <= 0 {
+			return nil, 0, nil
+		}
+
+		count = int32(math.Ceil(float64(num) / float64(Limit)))
+	}
 
 	rows, err := db.QueryContext(
 		ctx,
@@ -48,7 +79,7 @@ func GetReviews(
 		offset,
 	)
 	if err != nil {
-		return nil, err
+		return nil, -1, err
 	}
 	defer rows.Close()
 
@@ -60,12 +91,12 @@ func GetReviews(
 			detail     string
 			updated_at time.Time
 			created_at time.Time
-			remark     string
+			remark     sql.NullString
 		)
 
 		err := rows.Scan(&id, &target_id, &detail, &updated_at, &created_at, &remark)
 		if err != nil {
-			return nil, err
+			return nil, -1, err
 		}
 
 		review := &generated.Review{
@@ -78,13 +109,27 @@ func GetReviews(
 			},
 			ReviewerId: reviewId,
 			Status:     status,
-			Remark:     remark,
+			Remark:     remark.String,
 			UpdatedAt:  timestamppb.New(updated_at),
 		}
 		reviews = append(reviews, review)
 	}
 
-	return reviews, nil
+	return reviews, count, nil
+}
+
+func GetTargetId(id int64) (int64, error) {
+	query := `
+		SELECT target_id
+		FROM db_review_1.Review
+		WHERE id = ? `
+
+	var targetId int64
+	err := db.QueryRow(query, id).Scan(&targetId)
+	if err != nil {
+		return -1, err
+	}
+	return targetId, nil
 }
 
 // POST
@@ -138,30 +183,29 @@ func UpdateReviews(reviews []*generated.Review) error {
 	if length <= 0 {
 		return nil
 	}
-	idStart := FieldsCount * length
 
 	QMS := make([]string, length)
 	sqlStr := make([]string, length)
-	values := make([]any, length+idStart)
+	values := make([]any, length*7)
 	for i, review := range reviews {
 		QMS[i] = QM
 		sqlStr[i] = QQM
 		id := review.GetNew().GetId()
 
-		values[FieldsCount*i] = id
-		values[FieldsCount*i+1] = review.GetStatus().String()
+		values[i*2+0] = id
+		values[i*2+1] = review.GetStatus().String()
 
-		values[FieldsCount*i+2] = id
-		values[FieldsCount*i+3] = nil
+		values[length*2+i*2+0] = id
+		values[length*2+i*2+1] = nil
 		msg := review.GetRemark()
 		if msg != "" {
-			values[FieldsCount*i+3] = msg
+			values[length+i*2+1] = msg
 		}
 
-		values[FieldsCount*i+4] = id
-		values[FieldsCount*i+5] = review.GetReviewerId()
+		values[length*4+i*2+0] = id
+		values[length*4+i*2+1] = review.GetReviewerId()
 
-		values[idStart+i] = id
+		values[length*6+i] = id
 	}
 
 	join := strings.Join(sqlStr, " ")

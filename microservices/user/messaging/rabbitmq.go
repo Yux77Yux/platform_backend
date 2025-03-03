@@ -83,7 +83,7 @@ func ListenToQueue(exchange, queueName, routeKey string, handler func(d amqp.Del
 		queue.Name, // queue
 		"",         // consumer
 		false,      // auto ack
-		true,       // exclusive
+		false,      // exclusive
 		false,      // no local
 		false,      // no wait
 		nil,        // args
@@ -133,7 +133,7 @@ func ListenRPC(exchange, queue, routeKey string, handler func(amqp.Delivery) (pr
 		requestQueue.Name, // queue
 		"",                // consumer
 		false,             // auto ack
-		false,             // exclusive
+		true,              // exclusive
 		false,             // no local
 		false,             // no wait
 		nil,               // args

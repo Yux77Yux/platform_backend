@@ -12,7 +12,11 @@ import "google/protobuf/timestamp.proto";
 message Review {
   review.messages.NewReview new = 1;
   int64 reviewer_id = 2;
-  review.messages.ReviewStatus status = 3; // 对象类型 
+  review.messages.ReviewStatus status = 3;// 对象类型 
   string remark = 4;
   google.protobuf.Timestamp updated_at = 5;
+}
+
+message AnyReview {
+  repeated Review reviews = 1;
 }

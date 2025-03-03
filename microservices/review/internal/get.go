@@ -11,7 +11,7 @@ import (
 
 func GetReviews(ctx context.Context, req *generated.GetReviewsRequest) (*generated.GetReviewsResponse, error) {
 	reviewerId := req.GetReviewerId()
-	reviews, err := db.GetReviews(ctx, reviewerId, req.GetType(), req.GetStatus(), req.GetPage())
+	reviews, count, err := db.GetReviews(ctx, reviewerId, req.GetType(), req.GetStatus(), req.GetPage())
 	if err != nil {
 		return &generated.GetReviewsResponse{
 			Msg: &common.ApiResponse{
@@ -23,6 +23,7 @@ func GetReviews(ctx context.Context, req *generated.GetReviewsRequest) (*generat
 	}
 
 	return &generated.GetReviewsResponse{
+		Count:   count,
 		Reviews: reviews,
 		Msg: &common.ApiResponse{
 			Code:   "200",

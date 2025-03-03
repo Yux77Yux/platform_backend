@@ -582,7 +582,7 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 			var (
 				creation_id  int64
 				views        int32
-				publish_time time.Time
+				publish_time sql.NullTime
 			)
 			// 从当前行读取值，依次填充到变量中
 			err := rows.Scan(&creation_id, &views, &publish_time)
@@ -594,7 +594,7 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 			creationEngagement := &generated.CreationEngagement{
 				CreationId:  creation_id,
 				Views:       views,
-				PublishTime: timestamppb.New(publish_time),
+				PublishTime: timestamppb.New(publish_time.Time),
 			}
 			creationEngagements = append(creationEngagements, creationEngagement)
 		}

@@ -86,18 +86,20 @@ func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 
 		// 分批处理
 		for i := 0; i < batchCount; i++ {
-			start := i * MAX_BATCH_SIZE
-			end := (i + 1) * MAX_BATCH_SIZE
-			if end > batchSize {
-				end = batchSize
-			}
+			go func() {
+				start := i * MAX_BATCH_SIZE
+				end := (i + 1) * MAX_BATCH_SIZE
+				if end > batchSize {
+					end = batchSize
+				}
 
-			// 将分批后的部分赋值给池中的切片
-			poolObj := interactionsPool.Get().(*[]*generated.OperateInteraction)
-			*poolObj = operateInteractions[start:end]
+				// 将分批后的部分赋值给池中的切片
+				poolObj := interactionsPool.Get().(*[]*generated.OperateInteraction)
+				*poolObj = operateInteractions[start:end]
 
-			// 发往 exeChannel 处理
-			dbInteractionsChain.exeChannel <- poolObj
+				// 发往 exeChannel 处理
+				dbInteractionsChain.exeChannel <- poolObj
+			}()
 		}
 	}
 }

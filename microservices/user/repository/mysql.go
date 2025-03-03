@@ -589,9 +589,11 @@ func UserVerifyInTranscation(ctx context.Context, user_credential *generated.Use
 	}
 
 	return &generated.UserCredentials{
+		Username:  user_credential.GetUsername(),
 		UserEmail: user_email,
 		UserRole:  generated.UserRole(generated.UserRole_value[role]),
 		UserId:    id,
+		Password:  passwordHash,
 	}, nil
 }
 

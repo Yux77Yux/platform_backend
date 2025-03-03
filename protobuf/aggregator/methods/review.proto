@@ -30,6 +30,7 @@ message GetCreationReviewsResponse {
   }
   common.ApiResponse msg = 1;
   repeated CreationReview reviews = 2;
+  int32 count = 3;
 }
 
 message GetUserReviewsResponse {
@@ -39,6 +40,7 @@ message GetUserReviewsResponse {
   }
   common.ApiResponse msg = 1;
   repeated UserReview reviews = 2;
+  int32 count = 3;
 }
 
 message GetCommentReviewsResponse {
@@ -48,4 +50,5 @@ message GetCommentReviewsResponse {
   }
   common.ApiResponse msg = 1;
   repeated CommentReview reviews = 2;
+  int32 count = 3;
 }
