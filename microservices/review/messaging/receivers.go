@@ -182,9 +182,6 @@ func UpdateUserReview(review *generated.Review) error {
 	case generated.ReviewStatus_APPROVED:
 		updateUser.UserStatus = user.UserStatus_INACTIVE
 		err = SendMessage(USER_APPROVE, USER_APPROVE, updateUser)
-	case generated.ReviewStatus_DELETED:
-		updateUser.UserStatus = user.UserStatus_DELETE
-		err = SendMessage(USER_DELETED, USER_DELETED, updateUser)
 	}
 
 	return err

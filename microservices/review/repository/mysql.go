@@ -118,18 +118,23 @@ func GetReviews(
 	return reviews, count, nil
 }
 
-func GetTargetId(id int64) (int64, error) {
+func GetTarget(id int64) (int64, *generated.TargetType, error) {
 	query := `
-		SELECT target_id
+		SELECT target_id,target_type
 		FROM db_review_1.Review
 		WHERE id = ? `
 
-	var targetId int64
-	err := db.QueryRow(query, id).Scan(&targetId)
+	var (
+		targetId   int64
+		targetType string
+	)
+
+	err := db.QueryRow(query, id).Scan(&targetId, &targetType)
 	if err != nil {
-		return -1, err
+		return -1, nil, err
 	}
-	return targetId, nil
+	target_Type := generated.TargetType(generated.TargetType_value[targetType])
+	return targetId, &target_Type, nil
 }
 
 // POST

@@ -20,7 +20,6 @@ const (
 	// USER
 	USER_APPROVE  = "UpdateUserStatus"
 	USER_REJECTED = "UpdateUserStatus"
-	USER_DELETED  = "DeleteUser"
 
 	// CREATION
 	CREATION_APPROVE  = "UpdateCreationStatus"

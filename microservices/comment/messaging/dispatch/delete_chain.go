@@ -64,7 +64,7 @@ func (chain *DeleteChain) ExecuteBatch() {
 			}
 			// 更新Redis
 			id := delComments[0].GetCreationId()
-			err = cache.UpdateCommentsCount(id, affectedCount)
+			err = cache.UpdateCommentsCount(id, affectedCount*-1)
 			if err != nil {
 				log.Printf("error: UpdateCommentsCount %v", err)
 			}

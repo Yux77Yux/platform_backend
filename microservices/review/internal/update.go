@@ -30,7 +30,7 @@ func UpdateReview(req *generated.UpdateReviewRequest) (*generated.UpdateReviewRe
 
 	review := req.GetReview()
 
-	targetId, err := db.GetTargetId(review.New.GetId())
+	targetId, targetType, err := db.GetTarget(review.New.GetId())
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Code:    "500",
@@ -42,6 +42,8 @@ func UpdateReview(req *generated.UpdateReviewRequest) (*generated.UpdateReviewRe
 
 	review.ReviewerId = reviewerId
 	review.New.TargetId = targetId
+	review.New.TargetType = *targetType
+
 	err = messaging.SendMessage(messaging.Update, messaging.Update, review)
 	if err != nil {
 		response.Msg = &common.ApiResponse{

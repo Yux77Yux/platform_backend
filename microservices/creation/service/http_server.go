@@ -56,7 +56,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-type handlerFunc func(http.ResponseWriter, *http.Request)
+type handlerFunc = func(http.ResponseWriter, *http.Request)
 
 type CustomRouter struct {
 	mux *http.ServeMux

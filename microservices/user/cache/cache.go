@@ -422,7 +422,7 @@ func UpdateUserStatus(users []*generated.UserUpdateStatus) error {
 			pipe := CacheClient.Pipeline()
 			for _, user := range users {
 				pipe.HSet(ctx, fmt.Sprintf("Hash_UserInfo_%d", user.GetUserId()),
-					"user_status", user.GetUserStatus(),
+					"user_status", user.GetUserStatus().String(),
 					"user_updated_at", time.Now(),
 				)
 			}

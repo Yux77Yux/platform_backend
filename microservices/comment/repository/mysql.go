@@ -753,50 +753,92 @@ func BatchUpdateDeleteStatus(comments []*common.AfterAuth) (int64, error) {
 	}
 	var rowsAffected int64
 
+	join := strings.Join(queryCount, ",")
 	var (
 		queryComment = fmt.Sprintf(`
 				UPDATE db_comment_1.Comment 
 				SET status = "DELETED"
 				WHERE id 
-				IN (%s)`, strings.Join(queryCount, ","))
+				IN (%s)
+				OR root 
+				IN (%s)`, join, join)
 		queryArea = `
 				UPDATE db_comment_area_1.CommentArea 
 				SET
 					total_comments = total_comments - ?
 				WHERE creation_id = ?`
-		values     = make([]interface{}, 0, count)
+		values     = make([]interface{}, count*2)
 		creationId = comments[0].GetCreationId()
 	)
 
 	// 格式化输入
-	for _, comment := range comments {
-		values = append(values, comment.GetCommentId())
+	for i := 0; i < count; i++ {
+		values[i] = comments[i].GetCommentId()
+		values[count+i] = comments[i].GetCommentId()
 	}
+
+	tx, err := db.BeginTransaction()
+	if err != nil {
+		return -1, err
+	}
+
+	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("transaction failed because %v", r)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+		}
+	}()
 
 	select {
 	case <-ctx.Done():
+		err = fmt.Errorf("exec timeout :%w", ctx.Err())
+		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			err = fmt.Errorf("%w and %w", err, errSecond)
+		}
 		return -1, ctx.Err()
 	default:
-		result, err := db.ExecContext(
+		result, err := tx.ExecContext(
 			ctx,
 			queryComment,
 			values...,
 		)
 		if err != nil {
+			err = fmt.Errorf("transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
 			return -1, err
 		}
 
 		rowsAffected, err = result.RowsAffected()
 		if err != nil {
+			err = fmt.Errorf("transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
 			return -1, err
 		}
-		_, err = db.ExecContext(
+		_, err = tx.ExecContext(
 			ctx,
 			queryArea,
 			rowsAffected,
 			creationId,
 		)
 		if err != nil {
+			err = fmt.Errorf("transaction exec failed because %v", err)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				err = fmt.Errorf("%w and %w", err, errSecond)
+			}
+
+			return -1, err
+		}
+
+		if err = db.CommitTransaction(tx); err != nil {
 			return -1, err
 		}
 	}

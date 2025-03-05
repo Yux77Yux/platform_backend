@@ -56,7 +56,7 @@ func (chain *UserStatusCacheChain) ExecuteBatch() {
 			// 更新头像
 			err := cache.UpdateUserStatus(users)
 			if err != nil {
-				log.Printf("error: UserUserStatusCacheInTransaction error")
+				log.Printf("error: UserUserStatusCacheInTransaction error %v", err)
 			}
 
 			*usersPtr = users[:0]
