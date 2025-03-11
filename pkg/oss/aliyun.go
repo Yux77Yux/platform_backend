@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
+	"net/url"
 	"strings"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
@@ -92,13 +93,21 @@ func (o *OssClient) UploadFile(file io.Reader, objectName string) (string, error
 		return "", err
 	}
 
-	presignedURL, err := bucket.SignURL(objectName, oss.HTTPGet, 604800) // 31536000 秒有效期
-	if err != nil {
-		return "", err
-	}
+	// presignedURL, err := bucket.SignURL(objectName, oss.HTTPGet, 604800) // 31536000 秒有效期
+	// if err != nil {
+	// 	return "", err
+	// }
+	// parts := strings.Split(presignedURL, "?")
 
-	parts := strings.Split(presignedURL, "?")
-	return parts[0], nil
+	// 2. 编码路径组件
+	encodedPath := url.PathEscape(objectName)
+	// 注意：PathEscape会编码斜杠，需替换回来
+	encodedPath = strings.ReplaceAll(encodedPath, "%2F", "/")
+
+	return fmt.Sprintf("https://%s.%s/%s",
+		bucketName,
+		strings.TrimPrefix(Endpoint, "https://"),
+		encodedPath), nil
 }
 
 func (o *OssClient) UploadFirstSlice(file multipart.File, isEnd bool, size int64, partNumber int, fileName, objectName string) (*oss.InitiateMultipartUploadResult, error) {

@@ -18,7 +18,17 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
+	utils "github.com/Yux77Yux/platform_backend/pkg/utils"
 )
+
+func IsValidImageURL(url string) bool {
+	const urlPattern = `^(https?|ftp)://[^\s]+\.(jpg|jpeg|png|gif|bmp|svg|webp)$`
+	return utils.CheckString(url, urlPattern)
+}
+
+func CheckStringLength(obj string, min, max int) error {
+	return utils.CheckStringLength(obj, min, max)
+}
 
 // 验证
 func VerifyPassword(passwordInStore, password string) (bool, error) {

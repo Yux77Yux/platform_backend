@@ -8,8 +8,23 @@ import (
 	"time"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
+	utils "github.com/Yux77Yux/platform_backend/pkg/utils"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+func IsValidVideoURL(url string) bool {
+	const urlPattern = `^(https?|ftp)://[^\s]+\.(mp4|avi|mov|mkv|flv|wmv|webm)$`
+	return utils.CheckString(url, urlPattern)
+}
+
+func IsValidImageURL(url string) bool {
+	const urlPattern = `^(https?|ftp)://[^\s]+\.(jpg|jpeg|png|gif|bmp|svg|webp)$`
+	return utils.CheckString(url, urlPattern)
+}
+
+func CheckStringLength(obj string, min, max int) error {
+	return utils.CheckStringLength(obj, min, max)
+}
 
 func GetSpaceCreationCountType(byWhat generated.ByCount) string {
 	typeStr := ""

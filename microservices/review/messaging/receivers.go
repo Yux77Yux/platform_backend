@@ -8,6 +8,7 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	creation "github.com/Yux77Yux/platform_backend/generated/creation"
@@ -60,6 +61,7 @@ func PendingCreationProcessor(msg amqp.Delivery) error {
 		Id:         id,
 		TargetId:   creationId,
 		TargetType: generated.TargetType_CREATION,
+		CreatedAt:  timestamppb.Now(),
 		Msg:        "状态变更",
 	}
 

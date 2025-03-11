@@ -32,9 +32,11 @@ func GetPendingReviews(reviewerId int64, reviewType generated.TargetType) ([]*ge
 		if err != nil {
 			return nil, err
 		}
+
 		review := &generated.Review{
 			New:        newReview,
 			ReviewerId: reviewerId,
+			UpdatedAt:  newReview.GetCreatedAt(),
 		}
 
 		reviews[i] = review

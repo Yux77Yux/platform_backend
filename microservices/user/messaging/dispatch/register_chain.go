@@ -53,11 +53,10 @@ func (chain *RegisterChain) ExecuteBatch() {
 	for userCredentialsPtr := range chain.exeChannel {
 		go func(userCredentialsPtr *[]*generated.UserCredentials) {
 			userCredentials := *userCredentialsPtr
-			log.Printf("%v", userCredentials)
 			// 用户注册信息插入数据库
 			err := db.UserRegisterInTransaction(userCredentials)
 			if err != nil {
-				log.Printf("error: UserRegisterInTransaction error")
+				log.Printf("error: UserRegisterInTransaction %v", err)
 			}
 
 			// 放回对象池

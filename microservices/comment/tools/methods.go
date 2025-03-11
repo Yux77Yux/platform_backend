@@ -2,14 +2,16 @@ package tools
 
 import (
 	"fmt"
-	// "log"
 	"os"
 	"time"
 
+	utils "github.com/Yux77Yux/platform_backend/pkg/utils"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	// common "github.com/Yux77Yux/platform_backend/generated/common"
-	// generated "github.com/Yux77Yux/platform_backend/generated/comment"
 )
+
+func CheckStringLength(obj string, min, max int) error {
+	return utils.CheckStringLength(obj, min, max)
+}
 
 func SaveImage(fileBytes []byte, fileName string) error {
 	// 指定保存路径和文件名

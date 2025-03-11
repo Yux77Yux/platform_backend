@@ -10,30 +10,71 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
+	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 	snow "github.com/Yux77Yux/platform_backend/pkg/snow"
 )
 
 func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCreationResponse, error) {
+	response := new(generated.UploadCreationResponse)
 	pass, author_id, err := auth.Auth("post", "creation", req.GetAccessToken().GetValue())
 	if err != nil {
-		return &generated.UploadCreationResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_FAILED,
-				Code:   "500",
-			},
-		}, err
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_FAILED,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
 	}
 	if !pass {
-		return &generated.UploadCreationResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_ERROR,
-				Code:   "403",
-			},
-		}, nil
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "403",
+		}
+		return response, err
 	}
 	// 以上为鉴权
 	baseInfo := req.GetBaseInfo()
+
+	src := baseInfo.GetSrc()
+	if tools.IsValidVideoURL(src) {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "400",
+			Details: "Video source URL is invalid",
+		}
+		return response, err
+	}
+	thumbnail := baseInfo.GetThumbnail()
+	if tools.IsValidImageURL(thumbnail) {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "400",
+			Details: "Image URL is invalid",
+		}
+		return response, err
+	}
+
+	bio := baseInfo.GetBio()
+	if err := tools.CheckStringLength(bio, BIO_MIN_LENGTH, BIO_MAX_LENGTH); err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "400",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
+	title := baseInfo.GetTitle()
+	if err := tools.CheckStringLength(title, TITLE_MIN_LENGTH, TITLE_MAX_LENGTH); err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "400",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
 	baseInfo.AuthorId = author_id
 	status := baseInfo.GetStatus()
 
@@ -47,12 +88,12 @@ func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCrea
 	err = db.CreationAddInTransaction(creation)
 	if err != nil {
 		log.Printf("db CreationAddInTransaction occur error: %v", err)
-		return &generated.UploadCreationResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_ERROR,
-				Code:   "500",
-			},
-		}, err
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
 	}
 
 	// 异步处理
@@ -75,20 +116,18 @@ func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCrea
 				newErr = fmt.Errorf("%w,but  %w", newErr, errSecond)
 			}
 
-			return &generated.UploadCreationResponse{
-				Msg: &common.ApiResponse{
-					Status:  common.ApiResponse_ERROR,
-					Code:    "201",
-					Details: newErr.Error(),
-				},
-			}, newErr
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    "201",
+				Details: newErr.Error(),
+			}
+			return response, newErr
 		}
 	}
 
-	return &generated.UploadCreationResponse{
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "201",
-		},
-	}, nil
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_ERROR,
+		Code:   "201",
+	}
+	return response, nil
 }

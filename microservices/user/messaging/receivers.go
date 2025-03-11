@@ -84,7 +84,6 @@ func registerProcessor(msg amqp.Delivery) error {
 
 	credentials.Password = pwd
 	credentials.UserId = id
-	log.Printf("credentials: %v", credentials)
 
 	user_info := &generated.User{
 		UserDefault: &common.UserDefault{

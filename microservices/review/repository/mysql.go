@@ -21,9 +21,16 @@ func GetReviews(
 	page int32,
 ) ([]*generated.Review, int32, error) {
 	const Limit = 10
-	var count int32 = 0
+	var (
+		count   int32 = 0
+		orderBy       = " ORDER BY created_at, id "
+	)
+	if status != generated.ReviewStatus_PENDING {
+		orderBy = " ORDER BY updated_at DESC, id  "
+	}
+
 	offset := (page - 1) * Limit
-	query := `
+	query := fmt.Sprintf(`
 		SELECT 
 			id,
 			target_id,
@@ -36,10 +43,10 @@ func GetReviews(
 		AND 
 			target_type = ?
 		AND 
-			status = ?
-		ORDER BY created_at, id
+			status = ? 
+		%s
 		LIMIT ? 
-		OFFSET ?`
+		OFFSET ?`, orderBy)
 
 	if page <= 1 {
 		var num int32 = 0

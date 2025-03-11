@@ -6,6 +6,7 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
+	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
@@ -30,6 +31,46 @@ func UpdateCreation(req *generated.UpdateCreationRequest) (*generated.UpdateCrea
 	}
 
 	UpdateInfo := req.GetUpdateInfo()
+
+	src := UpdateInfo.GetSrc()
+	if tools.IsValidVideoURL(src) {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "400",
+			Details: "Video source URL is invalid",
+		}
+		return response, err
+	}
+	thumbnail := UpdateInfo.GetThumbnail()
+	if tools.IsValidImageURL(thumbnail) {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "400",
+			Details: "Image URL is invalid",
+		}
+		return response, err
+	}
+
+	bio := UpdateInfo.GetBio()
+	if err := tools.CheckStringLength(bio, BIO_MIN_LENGTH, BIO_MAX_LENGTH); err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "400",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
+	title := UpdateInfo.GetTitle()
+	if err := tools.CheckStringLength(title, TITLE_MIN_LENGTH, TITLE_MAX_LENGTH); err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "400",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
 	UpdateInfo.AuthorId = user_id
 	err = messaging.SendMessage(messaging.UpdateDbCreation, messaging.UpdateDbCreation, UpdateInfo)
 	if err != nil {
