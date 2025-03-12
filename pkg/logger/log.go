@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -45,6 +46,7 @@ const (
 	DEBUG   Level = "[DEBUG]"
 	WARNING Level = "[WARNING]"
 	ERROR   Level = "[ERROR]"
+	SUPER   Level = "[SUPER]"
 )
 
 // 日志消息结构
@@ -93,6 +95,16 @@ func (lm *LoggerManager) writeLog(msg *LogFile) {
 	key := msg.Path
 	writer, exists := lm.files[key]
 	if !exists {
+		// 获取文件所在目录
+		dir := filepath.Dir(key)
+		// 确认目录是否存在，如果不存在就创建
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				fmt.Println("创建目录失败:", err)
+				return
+			}
+		}
+
 		file, err := os.OpenFile(key, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			fmt.Printf("Failed to open log file: %s\n", err)
@@ -121,6 +133,15 @@ func (lm *LoggerManager) flushAll() {
 
 func (lm *LoggerManager) flushShared() {
 	filePath := "../../log/services.log"
+	// 获取文件所在目录
+	dir := filepath.Dir(filePath)
+	// 确认目录是否存在，如果不存在就创建
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			fmt.Println("创建目录失败:", err)
+			return
+		}
+	}
 
 	for {
 		lock := flock.New(filePath + ".lock")

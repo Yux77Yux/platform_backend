@@ -1,0 +1,8 @@
+{"level":"[INFO]","traceId":"c045326c-9910-48c0-bf9c-25852154437a","timestamp":"2025-03-13T02:15:16+08:00","message":"/user.UserService/GetUser start"}
+{"level":"[INFO]","traceId":"c045326c-9910-48c0-bf9c-25852154437a","timestamp":"2025-03-13T02:15:16+08:00","message":"/user.UserService/GetUser success"}
+{"level":"[INFO]","traceId":"4f667c23-9f62-42a4-bf5d-5bb7c6c03a9e","timestamp":"2025-03-13T02:15:16+08:00","message":"/creation.CreationService/GetCreation start"}
+{"level":"[INFO]","traceId":"4f667c23-9f62-42a4-bf5d-5bb7c6c03a9e","timestamp":"2025-03-13T02:15:16+08:00","message":"/creation.CreationService/GetCreation success"}
+{"level":"[INFO]","traceId":"80b24321-3d08-4a4b-bdb0-66a3f4a4d4bb","timestamp":"2025-03-13T02:15:16+08:00","message":"/interaction.InteractionService/GetActionTag start"}
+{"level":"[INFO]","traceId":"80b24321-3d08-4a4b-bdb0-66a3f4a4d4bb","timestamp":"2025-03-13T02:15:16+08:00","message":"/interaction.InteractionService/GetActionTag success"}
+{"level":"[INFO]","traceId":"36b66d0c-2bc5-4e47-9733-f17f572ba304","timestamp":"2025-03-13T02:15:16+08:00","message":"/aggregator.AggregatorService/WatchCreation start"}
+{"level":"[INFO]","traceId":"36b66d0c-2bc5-4e47-9733-f17f572ba304","timestamp":"2025-03-13T02:15:16+08:00","message":"/aggregator.AggregatorService/WatchCreation success"}

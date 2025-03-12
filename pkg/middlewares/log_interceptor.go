@@ -3,6 +3,7 @@ package middlewares
 import (
 	"context"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 	"time"
@@ -62,21 +63,22 @@ func LogInterceptor() grpc.UnaryServerInterceptor {
 		resp, err := handler(ctx, req)
 		end := time.Now().Truncate(time.Second)
 
-		isServerError, detail, c_err := GetMsg(req, traceId)
+		isServerError, detail, c_err := GetMsg(resp, traceId)
 		if c_err != nil {
+			// 反射的错误,警告
 			Extra := make(map[string]interface{})
 			Extra["Detail"] = c_err.Error()
 			go logManager.SharedLog(&logger.LogMessage{
-				Level:     logger.ERROR,
+				Level:     logger.SUPER,
 				TraceId:   traceId,
 				Timestamp: end,
 				Message:   fmt.Sprintf("%s start", fullName),
 				Extra:     Extra,
 			})
 			go logManager.Log(&logger.LogFile{
-				Path: fmt.Sprintf("./log/%s.log", methodName),
+				Path: fmt.Sprintf("./log/%s.super.log", methodName),
 				LogMessage: &logger.LogMessage{
-					Level:     logger.ERROR,
+					Level:     logger.SUPER,
 					TraceId:   traceId,
 					Timestamp: end,
 					Extra:     Extra,
@@ -95,7 +97,7 @@ func LogInterceptor() grpc.UnaryServerInterceptor {
 					Extra:     Extra,
 				})
 				go logManager.Log(&logger.LogFile{
-					Path: fmt.Sprintf("./log/%s.log", methodName),
+					Path: fmt.Sprintf("./log/%s.error.log", methodName),
 					LogMessage: &logger.LogMessage{
 						Level:     logger.ERROR,
 						TraceId:   traceId,
@@ -155,6 +157,10 @@ func LogInterceptor() grpc.UnaryServerInterceptor {
 
 // (ServerError?,ErrorDetail,error)
 func GetMsg(req any, traceId string) (bool, string, error) {
+	if req == nil {
+		return false, "", nil
+	}
+
 	v := reflect.ValueOf(req)
 	if !v.IsValid() {
 		// 不可用
@@ -171,14 +177,26 @@ func GetMsg(req any, traceId string) (bool, string, error) {
 		return false, "", nil
 	}
 
-	elem := v.Elem()
-	if elem.Type() == reflect.TypeOf(&emptypb.Empty{}) {
+	v = v.Elem()
+	if v.Type() == reflect.TypeOf(&emptypb.Empty{}) {
 		return false, "", nil
 	}
 
 	msgField := v.FieldByName("Msg")
-	if !msgField.IsValid() || msgField.IsNil() || msgField.Kind() != reflect.Ptr {
-		return true, "", fmt.Errorf("error: Msg 字段无效或为空")
+	if !msgField.IsValid() {
+		// Msg 字段不存在（结构体里根本没这个字段）
+		log.Printf("msgField %v", req)
+		return true, "", fmt.Errorf("error: 未找到 Msg 字段")
+	}
+
+	if msgField.Kind() != reflect.Ptr {
+		// Msg 字段存在但不是指针类型
+		return true, "", fmt.Errorf("error: Msg 字段类型错误，非指针")
+	}
+
+	if msgField.IsNil() {
+		// Msg 字段是指针，但为空（nil），这种情况不是错误
+		return false, "", nil
 	}
 
 	// 类型断言，确保 Msg 字段是 *common.ApiResponse 类型
