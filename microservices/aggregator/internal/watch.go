@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/aggregator"
 	comment "github.com/Yux77Yux/platform_backend/generated/comment"
@@ -14,35 +13,22 @@ import (
 	interaction "github.com/Yux77Yux/platform_backend/generated/interaction"
 	client "github.com/Yux77Yux/platform_backend/microservices/aggregator/client"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/aggregator/messaging"
-	"google.golang.org/grpc/metadata"
+	tools "github.com/Yux77Yux/platform_backend/microservices/aggregator/tools"
 )
 
 func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*generated.WatchCreationResponse, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	ipv4 := ""
-	if ok {
-		ipv4s := md.Get("x-forwarded-for")
-		if len(ipv4s) > 0 {
-			ipv4 = strings.Split(ipv4s[0], ",")[0]
-			ipv4 = strings.TrimSpace(ipv4) // 清理首尾空格
-			log.Printf("ipv4: %s", ipv4)
-		} else {
-			log.Println("warning: x-forwarded-for not found in metadata")
-		}
-	}
-
 	response := new(generated.WatchCreationResponse)
 	id := req.GetCreationId()
 
 	creation_client, err := client.GetCreationClient()
 	if err != nil {
-		err = fmt.Errorf("error: user client %w", err)
+		err = fmt.Errorf("error: creation client %w", err)
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	creationResponse, err := creation_client.GetCreation(ctx, &creation.GetCreationRequest{
 		CreationId: id,
@@ -61,13 +47,21 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 		response.Msg = msg
 		return response, err
 	}
-	if creationResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = creationResponse.Msg
-		return response, err
-	}
 
+	msg := creationResponse.GetMsg()
+	status := msg.GetStatus()
+	code := msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
+	}
 	creationInfo := creationResponse.GetCreationInfo()
+	response.CreationInfo = creationInfo
 	userId := creationInfo.GetCreation().GetBaseInfo().GetAuthorId()
+
 	user_client, err := client.GetUserClient()
 	if err != nil {
 		err = fmt.Errorf("error: user client %w", err)
@@ -76,7 +70,7 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	userResponse, err := user_client.GetUser(ctx, userId)
 	if err != nil {
@@ -93,16 +87,22 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 		response.Msg = msg
 		return response, err
 	}
-	if userResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = userResponse.Msg
-		return response, err
+
+	msg = userResponse.GetMsg()
+	status = msg.GetStatus()
+	code = msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	// 事件发布
 	// 播放数
-	if ipv4 == "" {
-		log.Println("info: event not sent because ipv4 is empty")
-	} else {
+	ipv4 := tools.GetMetadataValue(ctx, "x-forwarded-for")
+	if ipv4 != "" {
 		go func(id int64, ipv4 string) {
 			err := messaging.SendMessage(
 				event.Exchange_EXCHANGE_ADD_VIEW.String(),
@@ -121,12 +121,11 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 
 	// 组装开始
 	user := userResponse.GetUser()
-
-	response.CreationInfo = creationInfo
+	userDefault := user.GetUserDefault()
 	response.CreationUser = &common.UserCreationComment{
 		UserDefault: &common.UserDefault{
-			UserId:   user.GetUserDefault().GetUserId(),
-			UserName: user.GetUserDefault().GetUserName(),
+			UserId:   userDefault.GetUserId(),
+			UserName: userDefault.GetUserName(),
 		},
 		UserAvatar: user.GetUserAvatar(),
 		UserBio:    user.GetUserBio(),
@@ -152,7 +151,7 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	interactionResponse, err := interaction_client.GetRecommendBaseCreation(ctx, &interaction.GetRecommendRequest{
 		Id: id,
@@ -171,9 +170,16 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 		response.Msg = msg
 		return response, err
 	}
-	if interactionResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = interactionResponse.Msg
-		return response, err
+
+	msg := interactionResponse.GetMsg()
+	status := msg.GetStatus()
+	code := msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	creationIds := interactionResponse.GetCreations()
@@ -194,7 +200,7 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	creationResponse, err := creation_client.GetPublicCreationList(ctx, &creation.GetCreationListRequest{
 		Ids: creationIds,
@@ -213,9 +219,16 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 		response.Msg = msg
 		return response, err
 	}
-	if creationResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = creationResponse.Msg
-		return response, err
+
+	msg = creationResponse.GetMsg()
+	status = msg.GetStatus()
+	code = msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	creationInfos := creationResponse.GetCreationInfoGroup()
@@ -242,7 +255,7 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	userResponse, err := user_client.GetUsers(ctx, userIds)
 	if err != nil {
@@ -259,9 +272,16 @@ func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsReques
 		response.Msg = msg
 		return response, err
 	}
-	if userResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = userResponse.Msg
-		return response, err
+
+	msg = userResponse.GetMsg()
+	status = msg.GetStatus()
+	code = msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	// 构建 userId -> 用户信息的映射表
@@ -316,7 +336,7 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	commentsResponse, err := comment_client.InitialComments(ctx, &comment.InitialCommentsRequest{
 		CreationId: creationId,
@@ -335,10 +355,18 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 		response.Msg = msg
 		return response, err
 	}
-	if commentsResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = commentsResponse.Msg
-		return response, err
+
+	msg := commentsResponse.GetMsg()
+	status := msg.GetStatus()
+	code := msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
+
 	comments := commentsResponse.GetComments()
 	comments_len := len(comments)
 	if comments_len <= 0 {
@@ -363,7 +391,7 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	if len(userMap) <= 0 {
 		response.Msg = &common.ApiResponse{
@@ -412,7 +440,7 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	commentsResponse, err := comment_client.GetTopComments(ctx, &comment.GetTopCommentsRequest{
 		CreationId: creationId,
@@ -432,9 +460,16 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 		response.Msg = msg
 		return response, err
 	}
-	if commentsResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = commentsResponse.Msg
-		return response, err
+
+	msg := commentsResponse.GetMsg()
+	status := msg.GetStatus()
+	code := msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	comments := commentsResponse.GetComments()
@@ -461,7 +496,7 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	if len(userMap) <= 0 {
 		response.Msg = &common.ApiResponse{
@@ -508,7 +543,7 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	commentsResponse, err := comment_client.GetSecondComments(ctx, &comment.GetSecondCommentsRequest{
 		CreationId: creationId,
@@ -529,9 +564,16 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 		response.Msg = msg
 		return response, err
 	}
-	if commentsResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = commentsResponse.Msg
-		return response, err
+
+	msg := commentsResponse.GetMsg()
+	status := msg.GetStatus()
+	code := msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	comments := commentsResponse.GetComments()
@@ -562,7 +604,7 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	if len(userMap) <= 0 {
 		response.Msg = &common.ApiResponse{

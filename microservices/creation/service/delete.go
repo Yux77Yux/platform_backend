@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"log"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -11,14 +10,5 @@ import (
 )
 
 func (s *Server) DeleteCreation(ctx context.Context, req *generated.DeleteCreationRequest) (*emptypb.Empty, error) {
-	log.Println("info: delete creation service start")
-
-	err := internal.DeleteCreation(req)
-	if err != nil {
-		log.Println("error: delete creation occur fail: ", err)
-		return nil, err
-	}
-
-	log.Println("info: delete creation occur success")
-	return &emptypb.Empty{}, nil
+	return &emptypb.Empty{}, internal.DeleteCreation(req)
 }

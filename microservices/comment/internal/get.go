@@ -11,18 +11,17 @@ import (
 )
 
 func GetComments(ctx context.Context, req *generated.GetCommentsRequest) (*generated.GetCommentsResponse, error) {
+	response := new(generated.GetCommentsResponse)
 	ids := req.GetIds()
 
 	comments, err := db.GetComments(ctx, ids)
 	if err != nil {
-		return &generated.GetCommentsResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
-				Message: err.Error(),
-				Details: err.Error(),
-			},
-		}, nil
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
 	}
 
 	return &generated.GetCommentsResponse{

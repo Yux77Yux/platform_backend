@@ -17,16 +17,17 @@ type ContextKey string
 const RefreshTokenKey ContextKey = "refreshToken"
 
 func Refresh(req *generated.RefreshRequest) (*generated.RefreshResponse, error) {
+	response := new(generated.RefreshResponse)
 	token := req.GetRefreshToken().GetValue()
 	// 解密
 	refreshToken, err := jwt.VerifyRefreshToken(token)
 	if err != nil {
-		return &generated.RefreshResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_ERROR,
-				Code:   "403", // 返回状态码
-			},
-		}, err
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500", // 返回状态码
+			Details: err.Error(),
+		}
+		return response, err
 	}
 	// 检测refreshToken是否过期或无效
 	claims, err := jwt.ParseJWT(refreshToken)
@@ -44,12 +45,15 @@ func Refresh(req *generated.RefreshRequest) (*generated.RefreshResponse, error) 
 			statusCode = "500" // 解析失败，未知错误
 		}
 
-		return &generated.RefreshResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_ERROR,
-				Code:   statusCode, // 返回状态码
-			},
-		}, err
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    statusCode, // 返回状态码
+			Details: err.Error(),
+		}
+		if statusCode[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	userID := claims.UserID
@@ -60,22 +64,22 @@ func Refresh(req *generated.RefreshRequest) (*generated.RefreshResponse, error) 
 
 	accessToken, err := jwt.GenerateJWT(userID, role, RoleScopeMapping[role])
 	if err != nil {
-		return &generated.RefreshResponse{
-			Msg: &common.ApiResponse{
-				Status: common.ApiResponse_ERROR,
-				Code:   "500",
-			},
-		}, fmt.Errorf("failed to generate access token: %w", err)
+		err = fmt.Errorf("failed to generate access token: %w", err)
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
 	}
 
-	return &generated.RefreshResponse{
-		AccessToken: &common.AccessToken{
-			Value:     accessToken,
-			ExpiresAt: timestamppb.New(time.Now().Add(30 * time.Minute)),
-		},
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "200",
-		},
-	}, nil
+	response.AccessToken = &common.AccessToken{
+		Value:     accessToken,
+		ExpiresAt: timestamppb.New(time.Now().Add(30 * time.Minute)),
+	}
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
 }

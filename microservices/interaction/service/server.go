@@ -7,12 +7,13 @@ import (
 	"time"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
+	middlewares "github.com/Yux77Yux/platform_backend/pkg/middlewares"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 func ServerRun(done chan struct{}) func() {
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(middlewares.LogInterceptor()))
 	reflection.Register(grpcServer) // 启用 gRPC Reflection
 
 	go InitServer(grpcServer)
@@ -52,16 +53,10 @@ func InitServer(grpcServer *grpc.Server) {
 		log.Fatalf("%v", err)
 	}
 
-	go func() {
-		generated.RegisterInteractionServiceServer(grpcServer, &Server{}) // 注册 User 服务
-
-		log.Println("info: server is running on port ", addr)
-		if err = grpcServer.Serve(lis); err != nil {
-			err = fmt.Errorf("error: failed to serve: %w", err)
-			log.Fatalf("%v", err)
-		}
-	}()
-
-	forever := make(chan struct{})
-	<-forever
+	generated.RegisterInteractionServiceServer(grpcServer, &Server{}) // 注册 User 服务
+	log.Println("info: server is running on port ", addr)
+	if err = grpcServer.Serve(lis); err != nil {
+		err = fmt.Errorf("error: failed to serve: %w", err)
+		log.Fatalf("%v", err)
+	}
 }

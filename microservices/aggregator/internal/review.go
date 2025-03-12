@@ -40,8 +40,15 @@ func getUserReviewCards(ctx context.Context, reviews []*review.Review) ([]*gener
 	if err != nil {
 		return nil, err
 	}
-	if userResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		return nil, fmt.Errorf("error: userResponse %s", userResponse.Msg.GetDetails())
+
+	msg := userResponse.GetMsg()
+	code := msg.GetCode()
+	status := msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
+		if code[0] == '5' {
+			return nil, fmt.Errorf("error: userResponse %s", msg.GetDetails())
+		}
+		return nil, nil
 	}
 
 	users := userResponse.GetUsers()
@@ -95,7 +102,7 @@ func GetUserReviews(ctx context.Context, req *generated.GetReviewsRequest) (*gen
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	reviewResponse, err := review_client.GetReviews(ctx, &review.GetReviewsRequest{
 		Status:     req.GetStatus(),
@@ -117,8 +124,14 @@ func GetUserReviews(ctx context.Context, req *generated.GetReviewsRequest) (*gen
 		response.Msg = msg
 		return response, err
 	}
-	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = reviewResponse.Msg
+	msg := reviewResponse.GetMsg()
+	status := msg.GetStatus()
+	code := msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
 		return response, nil
 	}
 
@@ -129,7 +142,7 @@ func GetUserReviews(ctx context.Context, req *generated.GetReviewsRequest) (*gen
 			Status: common.ApiResponse_ERROR,
 			Code:   "500",
 		}
-		return response, nil
+		return response, err
 	}
 
 	response.Reviews = cards
@@ -170,7 +183,7 @@ func GetNewUserReviews(ctx context.Context, req *generated.GetNewReviewsRequest)
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	reviewResponse, err := review_client.GetNewReviews(ctx, &review.GetNewReviewsRequest{
 		Type:       review.TargetType_USER,
@@ -190,8 +203,15 @@ func GetNewUserReviews(ctx context.Context, req *generated.GetNewReviewsRequest)
 		response.Msg = msg
 		return response, err
 	}
-	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = reviewResponse.Msg
+
+	msg := reviewResponse.GetMsg()
+	status := msg.GetStatus()
+	code := msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
 		return response, nil
 	}
 
@@ -202,7 +222,7 @@ func GetNewUserReviews(ctx context.Context, req *generated.GetNewReviewsRequest)
 			Status: common.ApiResponse_ERROR,
 			Code:   "500",
 		}
-		return response, nil
+		return response, err
 	}
 
 	response.Reviews = cards
@@ -241,8 +261,15 @@ func getCreationReviewCards(ctx context.Context, reviews []*review.Review) ([]*g
 	if err != nil {
 		return nil, err
 	}
-	if creationResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		return nil, fmt.Errorf("error: creationResponse %s", creationResponse.Msg.GetDetails())
+
+	msg := creationResponse.GetMsg()
+	code := msg.GetCode()
+	status := msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
+		if code[0] == '5' {
+			return nil, fmt.Errorf("error: creationResponse %s", msg.GetDetails())
+		}
+		return nil, nil
 	}
 
 	infos := creationResponse.GetCreationInfoGroup()
@@ -296,7 +323,7 @@ func GetCreationReviews(ctx context.Context, req *generated.GetReviewsRequest) (
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	reviewResponse, err := review_client.GetReviews(ctx, &review.GetReviewsRequest{
 		Status:     req.GetStatus(),
@@ -318,8 +345,15 @@ func GetCreationReviews(ctx context.Context, req *generated.GetReviewsRequest) (
 		response.Msg = msg
 		return response, err
 	}
-	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = reviewResponse.Msg
+
+	msg := reviewResponse.GetMsg()
+	status := msg.GetStatus()
+	code := msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
 		return response, nil
 	}
 
@@ -330,7 +364,7 @@ func GetCreationReviews(ctx context.Context, req *generated.GetReviewsRequest) (
 			Status: common.ApiResponse_ERROR,
 			Code:   "500",
 		}
-		return response, nil
+		return response, err
 	}
 
 	response.Count = reviewResponse.GetCount()
@@ -371,7 +405,7 @@ func GetNewCreationReviews(ctx context.Context, req *generated.GetNewReviewsRequ
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	reviewResponse, err := review_client.GetNewReviews(ctx, &review.GetNewReviewsRequest{
 		Type:       review.TargetType_CREATION,
@@ -391,8 +425,15 @@ func GetNewCreationReviews(ctx context.Context, req *generated.GetNewReviewsRequ
 		response.Msg = msg
 		return response, err
 	}
-	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = reviewResponse.Msg
+
+	msg := reviewResponse.GetMsg()
+	status := msg.GetStatus()
+	code := msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
 		return response, nil
 	}
 
@@ -403,7 +444,7 @@ func GetNewCreationReviews(ctx context.Context, req *generated.GetNewReviewsRequ
 			Status: common.ApiResponse_ERROR,
 			Code:   "500",
 		}
-		return response, nil
+		return response, err
 	}
 
 	response.Reviews = cards
@@ -442,8 +483,15 @@ func getCommentReviewCards(ctx context.Context, reviews []*review.Review) ([]*ge
 	if err != nil {
 		return nil, err
 	}
-	if commentResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		return nil, fmt.Errorf("error: commentResponse %s", commentResponse.Msg.GetDetails())
+
+	msg := commentResponse.GetMsg()
+	code := msg.GetCode()
+	status := msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
+		if code[0] == '5' {
+			return nil, fmt.Errorf("error: commentResponse %s", msg.GetDetails())
+		}
+		return nil, nil
 	}
 
 	infos := commentResponse.GetComments()
@@ -497,7 +545,7 @@ func GetCommentReviews(ctx context.Context, req *generated.GetReviewsRequest) (*
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	reviewResponse, err := review_client.GetReviews(ctx, &review.GetReviewsRequest{
 		Status:     req.GetStatus(),
@@ -519,8 +567,15 @@ func GetCommentReviews(ctx context.Context, req *generated.GetReviewsRequest) (*
 		response.Msg = msg
 		return response, err
 	}
-	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = reviewResponse.Msg
+
+	msg := reviewResponse.GetMsg()
+	status := msg.GetStatus()
+	code := msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
 		return response, nil
 	}
 
@@ -531,7 +586,7 @@ func GetCommentReviews(ctx context.Context, req *generated.GetReviewsRequest) (*
 			Status: common.ApiResponse_ERROR,
 			Code:   "500",
 		}
-		return response, nil
+		return response, err
 	}
 
 	response.Reviews = cards
@@ -572,7 +627,7 @@ func GetNewCommentReviews(ctx context.Context, req *generated.GetNewReviewsReque
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	reviewResponse, err := review_client.GetNewReviews(ctx, &review.GetNewReviewsRequest{
 		Type:       review.TargetType_COMMENT,
@@ -592,8 +647,15 @@ func GetNewCommentReviews(ctx context.Context, req *generated.GetNewReviewsReque
 		response.Msg = msg
 		return response, err
 	}
-	if reviewResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		response.Msg = reviewResponse.Msg
+
+	msg := reviewResponse.GetMsg()
+	status := msg.GetStatus()
+	code := msg.GetCode()
+	if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+		response.Msg = msg
+		if code[0] == '5' {
+			return response, err
+		}
 		return response, nil
 	}
 
@@ -604,7 +666,7 @@ func GetNewCommentReviews(ctx context.Context, req *generated.GetNewReviewsReque
 			Status: common.ApiResponse_ERROR,
 			Code:   "500",
 		}
-		return response, nil
+		return response, err
 	}
 
 	response.Reviews = cards

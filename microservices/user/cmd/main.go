@@ -10,7 +10,6 @@ import (
 
 	userCache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
 	_ "github.com/Yux77Yux/platform_backend/microservices/user/config"
-	internal "github.com/Yux77Yux/platform_backend/microservices/user/internal"
 	userDB "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	service "github.com/Yux77Yux/platform_backend/microservices/user/service"
 )
@@ -22,10 +21,6 @@ func main() {
 	go func() {
 		closeServer = service.ServerRun(done)
 	}()
-	// 初始化internal dispatcher
-	mqMaster := internal.InitDispatch()
-	mqMaster.Start()
-	internal.EmpowerDispatch(mqMaster)
 	// 初始化cache
 	cacheMaster := userCache.InitDispatch()
 	cacheMaster.Start()
@@ -49,7 +44,6 @@ func main() {
 	// 等待关闭完成或超时
 	select {
 	case <-done:
-		mqMaster.Shutdown()
 		cacheMaster.Shutdown()
 		userCache.CloseClient()
 		userDB.CloseClient()

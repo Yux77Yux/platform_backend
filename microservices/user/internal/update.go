@@ -17,30 +17,23 @@ import (
 )
 
 func DelReviewer(req *generated.DelReviewerRequest) (*generated.DelReviewerResponse, error) {
-	reqIdCh := make(chan string, 1)
-	requestChannel <- func(reqID string) error {
-		reqIdCh <- reqID
-		log.Printf("info: handling updateUser request with ID: %s\n", reqID)
-
-		err := userMQ.SendMessage(userMQ.DelReviewer, userMQ.DelReviewer, req)
-		if err != nil {
-			return fmt.Errorf("err: request_id: %s ,message: %w", reqID, err)
+	response := new(generated.DelReviewerResponse)
+	err := userMQ.SendMessage(userMQ.DelReviewer, userMQ.DelReviewer, req)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
 		}
-
-		log.Printf("info: send to messaging queue updateUser request with ID: %s\n", reqID)
-
-		return nil
+		return response, err
 	}
-	reqId := <-reqIdCh
 
-	return &generated.DelReviewerResponse{
-		Msg: &common.ApiResponse{
-			Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-			Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-			Details: "DelReviewer processing",   // 更详细的成功信息
-			TraceId: reqId,
-		},
-	}, nil
+	response.Msg = &common.ApiResponse{
+		Status:  common.ApiResponse_SUCCESS,
+		Code:    "202",
+		Details: "DelReviewer processing",
+	}
+	return response, err
 }
 
 func UpdateUserSpace(req *generated.UpdateUserSpaceRequest) (*generated.UpdateUserResponse, error) {
@@ -66,31 +59,22 @@ func UpdateUserSpace(req *generated.UpdateUserSpaceRequest) (*generated.UpdateUs
 	space := req.GetUserUpdateSpace()
 	space.UserDefault.UserId = userId
 
-	reqIdCh := make(chan string, 1)
-	requestChannel <- func(reqID string) error {
-		reqIdCh <- reqID
-		log.Printf("info: handling updateUser request with ID: %s\n", reqID)
-
-		err = userMQ.SendMessage(userMQ.UpdateUserSpace, userMQ.UpdateUserSpace, space)
-		if err != nil {
-			return fmt.Errorf("err: request_id: %s ,message: %w", reqID, err)
+	err = userMQ.SendMessage(userMQ.UpdateUserSpace, userMQ.UpdateUserSpace, space)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
 		}
-
-		log.Printf("info: send to messaging queue updateUser request with ID: %s\n", reqID)
-
-		return nil
+		return response, err
 	}
-	reqId := <-reqIdCh
 
-	return &generated.UpdateUserResponse{
-		Msg: &common.ApiResponse{
-			Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-			Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-			Message: "OK",                       // 标识完成
-			Details: "UpdateUser success",       // 更详细的成功信息
-			TraceId: reqId,
-		},
-	}, nil
+	response.Msg = &common.ApiResponse{
+		Status:  common.ApiResponse_SUCCESS,
+		Code:    "202",
+		Message: "OK",
+	}
+	return response, err
 }
 
 func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.UpdateUserAvatarResponse, error) {
@@ -143,10 +127,10 @@ func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.Update
 	go dispatch.HandleRequest(updateAvatar, dispatch.UpdateUserAvatarCache)
 
 	response.Msg = &common.ApiResponse{
-		Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-		Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-		Message: "OK",                       // 标识完成
-		Details: "UpdateUser success",       // 更详细的成功信息
+		Status:  common.ApiResponse_SUCCESS,
+		Code:    "202",
+		Message: "OK",
+		Details: "UpdateUser success",
 	}
 	response.UserUpdateAvatar = updateAvatar
 	return response, nil
@@ -186,10 +170,10 @@ func UpdateUserStatus(req *generated.UpdateUserStatusRequest) (*generated.Update
 	}
 
 	response.Msg = &common.ApiResponse{
-		Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-		Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-		Message: "OK",                       // 标识完成
-		Details: "UpdateUser success",       // 更详细的成功信息
+		Status:  common.ApiResponse_SUCCESS,
+		Code:    "202",
+		Message: "OK",
+		Details: "UpdateUser success",
 	}
 	return response, nil
 }
@@ -221,10 +205,10 @@ func UpdateUserBio(req *generated.UpdateUserBioRequest) (*generated.UpdateUserRe
 	go dispatch.HandleRequest(updateBio, dispatch.UpdateUserBioCache)
 
 	response.Msg = &common.ApiResponse{
-		Status:  common.ApiResponse_SUCCESS, // 正确：使用常量表示枚举值
-		Code:    "202",                      // HTTP 状态码，202 请求已接受，但尚未处理，通常用于异步处理
-		Message: "OK",                       // 标识完成
-		Details: "UpdateUser success",       // 更详细的成功信息
+		Status:  common.ApiResponse_SUCCESS,
+		Code:    "202",
+		Message: "OK",
+		Details: "UpdateUser success",
 	}
 	return response, nil
 }

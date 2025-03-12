@@ -17,8 +17,9 @@ type AuthClient struct {
 }
 
 func NewAuthClient() (*AuthClient, error) {
+	unaryInterceptor := grpc.WithUnaryInterceptor(TraceIDInterceptor)
 	// 建立与服务器的连接
-	conn, err := grpc.NewClient(service_address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(service_address, grpc.WithTransportCredentials(insecure.NewCredentials()), unaryInterceptor)
 	if err != nil {
 		return nil, fmt.Errorf("did not connect: %v", err)
 	}

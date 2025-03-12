@@ -6,10 +6,12 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/aggregator"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	client "github.com/Yux77Yux/platform_backend/microservices/aggregator/client"
+	// tools "github.com/Yux77Yux/platform_backend/microservices/aggregator/tools"
 )
 
 func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginResponse, error) {
 	response := new(generated.LoginResponse)
+
 	auth_client, err := client.GetAuthClient()
 	if err != nil {
 		response.Msg = &common.ApiResponse{
@@ -45,9 +47,16 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 		response.Msg = msg
 		return response, err
 	}
-	if user_response.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+
+	msg := user_response.GetMsg()
+	code := msg.GetCode()
+	status := msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
 		response.Msg = user_response.Msg
-		return response, err
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	// 传递user_id至Auth Service 生成token并返回
@@ -66,9 +75,16 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 		response.Msg = msg
 		return response, err
 	}
-	if auth_response.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+
+	msg = auth_response.GetMsg()
+	code = msg.GetCode()
+	status = msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
 		response.Msg = auth_response.Msg
-		return response, err
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	// 组装返回至前端

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"log"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -11,14 +10,5 @@ import (
 )
 
 func (s *Server) CancelFollow(ctx context.Context, req *generated.FollowRequest) (*emptypb.Empty, error) {
-	log.Println("info: CancelFollow service start")
-
-	response, err := internal.CancelFollow(req)
-	if err != nil {
-		log.Printf("error: CancelFollow occur fail %v", err)
-		return response, nil
-	}
-
-	log.Println("info: CancelFollow occur success")
-	return response, nil
+	return &emptypb.Empty{}, internal.CancelFollow(req)
 }

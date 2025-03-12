@@ -41,7 +41,7 @@ func HomePage(ctx context.Context, req *generated.HomeRequest) (*generated.GetCa
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	interactionResponse, err := interaction_client.GetRecommendBaseUser(ctx, &interaction.GetRecommendRequest{
 		Id: userId,
@@ -60,9 +60,16 @@ func HomePage(ctx context.Context, req *generated.HomeRequest) (*generated.GetCa
 		response.Msg = msg
 		return response, err
 	}
-	if interactionResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+
+	msg := interactionResponse.GetMsg()
+	code := msg.GetCode()
+	status := msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
 		response.Msg = interactionResponse.Msg
-		return response, err
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	creationIds := interactionResponse.GetCreations()
@@ -82,7 +89,7 @@ func HomePage(ctx context.Context, req *generated.HomeRequest) (*generated.GetCa
 			Status:  common.ApiResponse_ERROR,
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	cards := make([]*generated.CreationCard, 0, len(creationInfos))
@@ -138,7 +145,7 @@ func Collections(ctx context.Context, req *generated.CollectionsRequest) (*gener
 			Code:    "500",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
 	interactionResponse, err := interaction_client.GetCollections(ctx, &interaction.GetCollectionsRequest{
 		UserId: userId,
@@ -157,9 +164,16 @@ func Collections(ctx context.Context, req *generated.CollectionsRequest) (*gener
 		response.Msg = msg
 		return response, err
 	}
-	if interactionResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+
+	msg := interactionResponse.GetMsg()
+	code := msg.GetCode()
+	status := msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
 		response.Msg = interactionResponse.Msg
-		return response, err
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	interactions := interactionResponse.GetAnyInteraction().GetAnyInterction()
@@ -171,7 +185,7 @@ func Collections(ctx context.Context, req *generated.CollectionsRequest) (*gener
 			Status:  common.ApiResponse_ERROR,
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 	creationIds := make([]int64, length)
 	creationMap := make(map[int64]*creation.CreationInfo)
@@ -204,7 +218,7 @@ func Collections(ctx context.Context, req *generated.CollectionsRequest) (*gener
 			Status:  common.ApiResponse_ERROR,
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	for _, info := range creationInfos {
@@ -289,9 +303,16 @@ func History(ctx context.Context, req *generated.HistoryRequest) (*generated.Get
 		response.Msg = msg
 		return response, err
 	}
-	if interactionResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
+
+	msg := interactionResponse.GetMsg()
+	code := msg.GetCode()
+	status := msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
 		response.Msg = interactionResponse.Msg
-		return response, err
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
 	}
 
 	interactions := interactionResponse.GetAnyInteraction().GetAnyInterction()
@@ -304,7 +325,7 @@ func History(ctx context.Context, req *generated.HistoryRequest) (*generated.Get
 			Status:  common.ApiResponse_ERROR,
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 	creationIds := make([]int64, length)
 	creationMap := make(map[int64]*creation.CreationInfo)
@@ -337,7 +358,7 @@ func History(ctx context.Context, req *generated.HistoryRequest) (*generated.Get
 			Status:  common.ApiResponse_ERROR,
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	for _, info := range creationInfos {
@@ -386,8 +407,15 @@ func getUserMap(ctx context.Context, creationIds []int64) (map[int64]*common.Use
 	if err != nil {
 		return nil, nil, err
 	}
-	if creationResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		return nil, nil, fmt.Errorf("error: %s", creationResponse.Msg.GetDetails())
+
+	msg := creationResponse.GetMsg()
+	code := msg.GetCode()
+	status := msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
+		if code[0] == '5' {
+			return nil, nil, fmt.Errorf("error: %s", msg.GetDetails())
+		}
+		return nil, nil, nil
 	}
 
 	creationInfos := creationResponse.GetCreationInfoGroup()
@@ -410,8 +438,15 @@ func getUserMap(ctx context.Context, creationIds []int64) (map[int64]*common.Use
 	if err != nil {
 		return nil, nil, err
 	}
-	if userResponse.Msg.GetStatus() != common.ApiResponse_SUCCESS {
-		return nil, nil, fmt.Errorf("%s", userResponse.Msg.GetDetails())
+
+	msg = userResponse.GetMsg()
+	code = msg.GetCode()
+	status = msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
+		if code[0] == '5' {
+			return nil, nil, fmt.Errorf("error: %s", msg.GetDetails())
+		}
+		return nil, nil, nil
 	}
 
 	// 构建 userId -> 用户信息的映射表

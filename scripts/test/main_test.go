@@ -17,8 +17,151 @@ import (
 	api "github.com/Yux77Yux/platform_backend/scripts/api"
 )
 
+// 集体改头像
+func UpdateAvatarInit() {
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		filename := "E:/xuexi/platform/platform_backend/scripts/result/register_ok.jsonl"
+
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
+		if err != nil {
+			log.Fatalf("无法创建临时文件 %s: %v", filename, err)
+		}
+
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			var p User
+			if err := json.Unmarshal(scanner.Bytes(), &p); err != nil {
+				log.Fatalf("error: json %s", err.Error())
+			}
+			RegisterOkMap[p.Id] = &p
+		}
+	}()
+
+	wg.Wait()
+	log.Printf("init OKOK")
+}
+func TestUpdateAvatar(t *testing.T) {
+	UpdateAvatarInit()
+	totalRequests := len(RegisterOkMap)
+	errCh := make(chan *Login_ER, totalRequests)
+	okCh := make(chan *Login_OK, totalRequests)
+	concurrencyLimit := int32(2)
+
+	go func() {
+		path := "E:/xuexi/platform/platform_backend/scripts/result/login_err.jsonl"
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("file err %s", err.Error())
+		}
+		defer file.Close()
+
+		writer := bufio.NewWriter(file)
+		defer writer.Flush() // 最后统一刷新缓冲区
+
+		for e := range errCh {
+			b, err := json.Marshal(e)
+			if err != nil {
+				log.Fatalf("error Marshal %s", err.Error())
+			}
+
+			// 确保每条 JSON 都是独立一行
+			if _, err := writer.Write(append(b, '\n')); err != nil {
+				log.Fatalf("error writing to file: %s", err.Error())
+			}
+		}
+	}()
+
+	go func() {
+		path := "E:/xuexi/platform/platform_backend/scripts/result/login_ok.jsonl"
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("file err %s", err.Error())
+		}
+		defer file.Close()
+
+		writer := bufio.NewWriter(file)
+		defer writer.Flush() // 最后统一刷新缓冲区
+
+		for e := range okCh {
+			b, err := json.Marshal(e)
+			if err != nil {
+				log.Fatalf("error Marshal %s", err.Error())
+			}
+
+			// 确保每条 JSON 都是独立一行
+			if _, err := writer.Write(append(b, '\n')); err != nil {
+				log.Fatalf("error writing to file: %s", err.Error())
+			}
+		}
+	}()
+
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, concurrencyLimit) // 信号量控制并发数
+	startTime := time.Now()                      // 记录整个测试开始时间
+	for _, user := range RegisterOkMap {
+		wg.Add(1)
+		sem <- struct{}{} // 信号量申请，超出则阻塞
+		go func(user *User) {
+			defer func() {
+				wg.Done()
+				<-sem // 释放信号量
+			}()
+			ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+			start := time.Now()
+			response, err := api.Login(ctx, user.Id)
+			cancel()
+			end := time.Now()
+			if err != nil {
+				errCh <- &Login_ER{
+					User:  user,
+					Error: err.Error(),
+				}
+				return
+			}
+
+			msg := response.GetMsg()
+			status := msg.GetStatus()
+			if status != common.ApiResponse_SUCCESS {
+				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errCh <- &Login_ER{
+					User:  user,
+					Error: err.Error(),
+				}
+				return
+			}
+
+			lgUser := response.GetUserLogin()
+			tokens := response.GetTokens()
+			okCh <- &Login_OK{
+				User:         user,
+				IdInDb:       lgUser.UserDefault.GetUserId(),
+				RefreshToken: tokens.GetRefreshToken(),
+				Duration:     math.Round(float64(end.Sub(start).Milliseconds())*100) / 100,
+			}
+		}(user)
+	}
+	wg.Wait()
+	endTime := time.Now() // 记录整个测试结束时间
+	totalDuration := endTime.Sub(startTime).Seconds()
+	// 计算吞吐量
+	throughput := float64(totalRequests) / totalDuration
+
+	log.Printf("ConcurrencyLimit: %d\n", concurrencyLimit)
+	log.Printf("Total Requests: %d\n", totalRequests)
+	log.Printf("Total Duration: %.2f seconds\n", totalDuration)
+	log.Printf("Throughput: %.2f requests/second\n", throughput)
+
+	close(errCh)
+	close(okCh)
+}
+
 // 计算平均值
-// 38.14 ms
+// LoginByDbInit 38.14 ms
+// LoginByCacheInit 29.93 ms
 func LoginByDbInit() {
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -45,8 +188,6 @@ func LoginByDbInit() {
 	wg.Wait()
 	log.Printf("init OKOK")
 }
-
-// 29.93 ms
 func LoginByCacheInit() {
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -127,8 +268,10 @@ func LoginInit() {
 }
 func TestLogin(t *testing.T) {
 	LoginInit()
-	errCh := make(chan *Login_ER, 5)
-	okCh := make(chan *Login_OK, 5)
+	totalRequests := len(RegisterOkMap)
+	errCh := make(chan *Login_ER, totalRequests)
+	okCh := make(chan *Login_OK, totalRequests)
+	concurrencyLimit := int32(2)
 
 	go func() {
 		path := "E:/xuexi/platform/platform_backend/scripts/result/login_err.jsonl"
@@ -178,40 +321,62 @@ func TestLogin(t *testing.T) {
 		}
 	}()
 
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, concurrencyLimit) // 信号量控制并发数
+	startTime := time.Now()                      // 记录整个测试开始时间
 	for _, user := range RegisterOkMap {
-		ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
-		start := time.Now()
-		response, err := api.Login(ctx, user.Id)
-		cancel()
-		end := time.Now()
-		if err != nil {
-			errCh <- &Login_ER{
-				User:  user,
-				Error: err.Error(),
+		wg.Add(1)
+		sem <- struct{}{} // 信号量申请，超出则阻塞
+		go func(user *User) {
+			defer func() {
+				wg.Done()
+				<-sem // 释放信号量
+			}()
+			ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+			start := time.Now()
+			response, err := api.Login(ctx, user.Id)
+			cancel()
+			end := time.Now()
+			if err != nil {
+				errCh <- &Login_ER{
+					User:  user,
+					Error: err.Error(),
+				}
+				return
 			}
-			continue
-		}
 
-		msg := response.GetMsg()
-		status := msg.GetStatus()
-		if status != common.ApiResponse_SUCCESS {
-			err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
-			errCh <- &Login_ER{
-				User:  user,
-				Error: err.Error(),
+			msg := response.GetMsg()
+			status := msg.GetStatus()
+			if status != common.ApiResponse_SUCCESS {
+				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errCh <- &Login_ER{
+					User:  user,
+					Error: err.Error(),
+				}
+				return
 			}
-			continue
-		}
 
-		lgUser := response.GetUserLogin()
-		tokens := response.GetTokens()
-		okCh <- &Login_OK{
-			User:         user,
-			IdInDb:       lgUser.UserDefault.GetUserId(),
-			RefreshToken: tokens.GetRefreshToken(),
-			Duration:     math.Round(float64(end.Sub(start).Milliseconds())*100) / 100,
-		}
+			lgUser := response.GetUserLogin()
+			tokens := response.GetTokens()
+			okCh <- &Login_OK{
+				User:         user,
+				IdInDb:       lgUser.UserDefault.GetUserId(),
+				RefreshToken: tokens.GetRefreshToken(),
+				Duration:     math.Round(float64(end.Sub(start).Milliseconds())*100) / 100,
+			}
+		}(user)
 	}
+	wg.Wait()
+	endTime := time.Now() // 记录整个测试结束时间
+	totalDuration := endTime.Sub(startTime).Seconds()
+	// 计算吞吐量
+	throughput := float64(totalRequests) / totalDuration
+
+	log.Printf("ConcurrencyLimit: %d\n", concurrencyLimit)
+	log.Printf("Total Requests: %d\n", totalRequests)
+	log.Printf("Total Duration: %.2f seconds\n", totalDuration)
+	log.Printf("Throughput: %.2f requests/second\n", throughput)
+
 	close(errCh)
 	close(okCh)
 }
