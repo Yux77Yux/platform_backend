@@ -225,7 +225,7 @@ func (x *GetCreationResponse) GetMsg() *common.ApiResponse {
 	return nil
 }
 
-// 空间
+// 视频管理
 type GetUserCreationsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -295,6 +295,7 @@ func (x *GetUserCreationsRequest) GetAccessToken() *common.AccessToken {
 	return nil
 }
 
+// 空间
 type GetSpaceCreationsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

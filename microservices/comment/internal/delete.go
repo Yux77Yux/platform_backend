@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
@@ -9,7 +10,7 @@ import (
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
-func DeleteComment(req *generated.DeleteCommentRequest) error {
+func DeleteComment(ctx context.Context, req *generated.DeleteCommentRequest) error {
 	accessToken := req.GetAccessToken().GetValue()
 	pass, user_id, err := auth.Auth("delete", "comment", accessToken)
 	if err != nil {
@@ -25,7 +26,7 @@ func DeleteComment(req *generated.DeleteCommentRequest) error {
 		CommentId:  req.GetCommentId(),
 		CreationId: req.GetCreationId(),
 	}
-	err = messaging.SendMessage(messaging.DeleteComment, messaging.DeleteComment, afterAuth)
+	err = messaging.SendMessage(ctx, messaging.DeleteComment, messaging.DeleteComment, afterAuth)
 	if err != nil {
 		err = fmt.Errorf("error: SendMessage DeleteComment error %w", err)
 		return err

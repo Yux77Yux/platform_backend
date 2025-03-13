@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS db_user_credentials_1;
-CREATE DATABASE IF NOT EXISTS db_user_1;
+CREATE DATABASE IF NOT EXISTS db_user_credentials_1 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS db_user_1 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE USER 'yuxyuxx'@'%' IDENTIFIED WITH mysql_native_password BY 'yuxyuxx';
 
@@ -30,9 +30,9 @@ USE db_user_1;
 
 CREATE TABLE IF NOT EXISTS User (
     id BIGINT NOT NULL,                -- id 长度固定为 36 个字符
-    name NVARCHAR(36) NOT NULL,            -- 昵称
+    name VARCHAR(128) NOT NULL  COLLATE utf8mb4_unicode_ci,            -- 昵称
     avatar TEXT,                   -- 用户头像，可以存储头像的 URL 或文件路径
-    bio NVARCHAR(100),                     -- 用户简介
+    bio VARCHAR(512) COLLATE utf8mb4_unicode_ci,                     -- 用户简介
     status ENUM('INACTIVE', 'ACTIVE', 'HIDING', 'LIMITED', 'DELETE') NOT NULL DEFAULT 'INACTIVE',         -- 用户状态，使用枚举值，默认值为 INACTIVE（1）
     gender ENUM('UNDEFINED', 'MALE', 'FEMALE') NOT NULL DEFAULT 'UNDEFINED',         -- 用户性别，使用枚举值，默认值为 UNDEFINED（0）
     bday DATE,                             -- 用户生日，DATE 类型

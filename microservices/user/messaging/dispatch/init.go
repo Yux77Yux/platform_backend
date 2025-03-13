@@ -3,6 +3,7 @@ package dispatch
 import (
 	"sync"
 
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
@@ -126,40 +127,43 @@ func init() {
 }
 
 func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
+	// 用 msg 的类型创建一个新对象
+	copy := proto.Clone(msg)
+
 	switch typeName {
 	case Register:
-		registerChain.HandleRequest(msg)
+		registerChain.HandleRequest(copy)
 	case RegisterCache:
-		registerCacheChain.HandleRequest(msg)
+		registerCacheChain.HandleRequest(copy)
 
 	case InsertUser:
-		insertUsersChain.HandleRequest(msg)
+		insertUsersChain.HandleRequest(copy)
 	case InsertUserCache:
-		insertUsersCacheChain.HandleRequest(msg)
+		insertUsersCacheChain.HandleRequest(copy)
 
 	case UpdateUserAvatar:
-		userAvatarChain.HandleRequest(msg)
+		userAvatarChain.HandleRequest(copy)
 	case UpdateUserAvatarCache:
-		userAvatarCacheChain.HandleRequest(msg)
+		userAvatarCacheChain.HandleRequest(copy)
 
 	case UpdateUserSpace:
-		userSpaceChain.HandleRequest(msg)
+		userSpaceChain.HandleRequest(copy)
 	case UpdateUserSpaceCache:
-		userSpaceCacheChain.HandleRequest(msg)
+		userSpaceCacheChain.HandleRequest(copy)
 
 	case UpdateUserBio:
-		userBioChain.HandleRequest(msg)
+		userBioChain.HandleRequest(copy)
 	case UpdateUserBioCache:
-		userBioCacheChain.HandleRequest(msg)
+		userBioCacheChain.HandleRequest(copy)
 
 	case UpdateUserStatus:
-		userStatusChain.HandleRequest(msg)
+		userStatusChain.HandleRequest(copy)
 	case UpdateUserStatusCache:
-		userStatusCacheChain.HandleRequest(msg)
+		userStatusCacheChain.HandleRequest(copy)
 
 	case Follow:
-		followChain.HandleRequest(msg)
+		followChain.HandleRequest(copy)
 	case FollowCache:
-		followCacheChain.HandleRequest(msg)
+		followCacheChain.HandleRequest(copy)
 	}
 }

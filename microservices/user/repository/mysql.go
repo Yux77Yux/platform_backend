@@ -290,7 +290,9 @@ func UserGetInfoInTransaction(ctx context.Context, id int64) (*generated.User, e
 			&followees,
 		)
 		if err != nil {
-			return nil, err
+			if err != sql.ErrNoRows {
+				return nil, err
+			}
 		}
 
 		status, ok := generated.UserStatus_value[statusStr]
@@ -571,7 +573,9 @@ func UserVerifyInTranscation(ctx context.Context, user_credential *generated.Use
 	default:
 		err := db.QueryRow(query, value).Scan(&id, &passwordHash, &email, &role)
 		if err != nil {
-			return nil, err
+			if err != sql.ErrNoRows {
+				return nil, err
+			}
 		}
 	}
 
@@ -683,7 +687,7 @@ func UserEmailUpdateInTransaction(user_credentials []*generated.UserCredentials)
 func UserUpdateSpaceInTransaction(users []*generated.UserUpdateSpace) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
-	const fieldsCount = 4*2 + 1 // 一行4*2+1个问号
+	const fieldsCount = 4*2 + 1 // 一个用户需要4*2+1个问号
 	count := len(users)
 	if count == 0 {
 		return nil // 没有需要更新的内容
@@ -691,26 +695,39 @@ func UserUpdateSpaceInTransaction(users []*generated.UserUpdateSpace) error {
 
 	// 构建 CASE 表达式
 	Cases := make([]string, count)
+
+	casesFillCount := count * 2
+	nameCount := casesFillCount * 0
+	bioCount := casesFillCount * 1
+	genderCount := casesFillCount * 2
+	bdayCount := casesFillCount * 3
+
 	sqlStr := make([]string, count)
 
-	capacity := count * fieldsCount
-	length := capacity - count
+	caseLength := casesFillCount * 4
+	capacity := fieldsCount * count
 
 	values := make([]any, capacity)
 	for i, user := range users {
 		sqlStr[i] = QM
 		Cases[i] = Conf
-		id := user.GetUserDefault().GetUserId()
 
-		values[i*8] = id
-		values[i*8+1] = user.GetUserDefault().GetUserName()
-		values[i*8+2] = id
-		values[i*8+3] = user.GetUserBio()
-		values[i*8+4] = id
-		values[i*8+5] = user.GetUserGender().String()
-		values[i*8+6] = id
-		values[i*8+7] = user.GetUserBday().AsTime()
-		values[length+i] = id
+		userDefault := user.GetUserDefault()
+		id := userDefault.GetUserId()
+
+		values[nameCount+i*2] = id
+		values[nameCount+i*2+1] = userDefault.GetUserName()
+
+		values[bioCount+i*2] = id
+		values[bioCount+i*2+1] = user.GetUserBio()
+
+		values[genderCount+i*2] = id
+		values[genderCount+i*2+1] = user.GetUserGender().String()
+
+		values[bdayCount+i*2] = id
+		values[bdayCount+i*2+1] = user.GetUserBday().AsTime()
+
+		values[caseLength+i] = id
 	}
 
 	// 拼接最终的 SQL
@@ -740,50 +757,15 @@ func UserUpdateSpaceInTransaction(users []*generated.UserUpdateSpace) error {
 
 	ctx := context.Background()
 
-	tx, err := db.BeginTransaction()
+	_, err := db.ExecContext(
+		ctx,
+		query,
+		values...,
+	)
+
 	if err != nil {
 		return err
 	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return err
-	default:
-		_, err := tx.ExecContext(
-			ctx,
-			query,
-			values...,
-		)
-
-		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
-			return err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -1069,7 +1051,9 @@ func DelReviewer(reviewerId int64) (string, string, error) {
 	// 查询 username 并加行锁
 	err = tx.QueryRowContext(ctx, querySELECT, reviewerId).Scan(&username, &email)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to query username: %w", err)
+		if err != sql.ErrNoRows {
+			return "", "", fmt.Errorf("failed to query username: %w", err)
+		}
 	}
 
 	// 更新角色

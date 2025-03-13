@@ -5,10 +5,9 @@ package receiver
 import (
 	"context"
 	"fmt"
-	"log"
+	"time"
 
-	amqp "github.com/rabbitmq/amqp091-go"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
@@ -19,174 +18,152 @@ import (
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 )
 
-func storeCreationProcessor(msg amqp.Delivery) error {
-	creation_info := new(generated.CreationInfo)
+func storeCreationProcessor(ctx context.Context, msg *anypb.Any) error {
+	req := new(generated.CreationInfo)
 	// 反序列化
-	err := proto.Unmarshal(msg.Body, creation_info)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("register processor error: %w", err)
+		return fmt.Errorf("storeCreationProcessor error: %w", err)
 	}
 
 	// 写入缓存
-	err = cache.CreationAddInCache(creation_info)
+	err = cache.CreationAddInCache(req)
 	if err != nil {
-		log.Printf("cache CreationAddInCache occur error: %v", err)
+		return fmt.Errorf("cache CreationAddInCache occur error: %w", err)
 	}
 
 	return nil
 }
 
-func updateCreationDbProcessor(msg amqp.Delivery) error {
-	creation := new(generated.CreationUpdated)
+func updateCreationDbProcessor(ctx context.Context, msg *anypb.Any) error {
+	req := new(generated.CreationUpdated)
+	err := msg.UnmarshalTo(req)
 	// 反序列化
-	err := proto.Unmarshal(msg.Body, creation)
 	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("register processor error: %w", err)
+		return fmt.Errorf("updateCreationDbProcessor error: %w", err)
 	}
 
 	// 更新数据库
-	err = db.UpdateCreationInTransaction(creation)
+	err = db.UpdateCreationInTransaction(ctx, req)
 	if err != nil {
-		log.Printf("db CreationAddInTransaction occur error: %v", err)
+		err = fmt.Errorf("db UpdateCreationInTransaction occur error: %w", err)
 		return err
 	}
 
-	creationId := creation.GetCreationId()
-	err = messaging.SendMessage(PendingCreation, PendingCreation, &common.CreationId{
-		Id: creationId,
+	reqId := req.GetCreationId()
+	return messaging.SendMessage(ctx, PendingCreation, PendingCreation, &common.CreationId{
+		Id: reqId,
 	})
-
-	return err
 }
 
-func updateCreationCacheProcessor(msg amqp.Delivery) error {
-	creationId := new(common.CreationId)
+func updateCreationCacheProcessor(ctx context.Context, msg *anypb.Any) error {
+	req := new(common.CreationId)
+	err := msg.UnmarshalTo(req)
 	// 反序列化
-	err := proto.Unmarshal(msg.Body, creationId)
 	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("register processor error: %w", err)
+		return fmt.Errorf("updateCreationCacheProcessor error: %w", err)
 	}
-	id := creationId.GetId()
+	id := req.GetId()
 	if id <= 0 {
-		log.Printf("creationId not exist")
-		return fmt.Errorf("creationId not exist")
+		return fmt.Errorf("reqId not exist")
 	}
 
 	// 更新缓存
-	creation, err := db.GetDetailInTransaction(context.Background(), id)
+	creationInfo, err := db.GetDetailInTransaction(context.Background(), id)
 	if err != nil {
-		log.Printf("error: creation %v", err)
 		return err
 	}
 
-	go func(creation *generated.CreationInfo) {
-		err := messaging.SendMessage(StoreCreationInfo, StoreCreationInfo, creation)
-		if err != nil {
-			log.Printf("error: GetCreation messaging.SendMessage %v", err)
-		}
-	}(creation)
-
-	return nil
+	return messaging.SendMessage(context.Background(), StoreCreationInfo, StoreCreationInfo, creationInfo)
 }
 
-func updateCreationStatusProcessor(msg amqp.Delivery) error {
-	creation := new(generated.CreationUpdateStatus)
+func updateCreationStatusProcessor(ctx context.Context, msg *anypb.Any) error {
+	req := new(generated.CreationUpdateStatus)
 	// 反序列化
-	err := proto.Unmarshal(msg.Body, creation)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
 		return fmt.Errorf("updateCreationStatusProcessor processor error: %w", err)
 	}
 
 	// 更新数据库
-	err = db.UpdateCreationStatusInTransaction(creation)
+	err = db.UpdateCreationStatusInTransaction(req)
 	if err != nil {
-		log.Printf("db UpdateCreationStatusInTransaction occur error: %v", err)
-		return err
+		return fmt.Errorf("db UpdateCreationStatusInTransaction occur : %w", err)
 	}
 
-	creationId := creation.GetCreationId()
-	status := creation.GetStatus()
+	reqId := req.GetCreationId()
+	status := req.GetStatus()
 	// 已经是发布状态
 	if status == generated.CreationStatus_PUBLISHED {
 		// 更改发布时间
 		publishedTime := timestamppb.Now()
-		err = db.PublishCreationInTransaction(creationId, publishedTime)
+		err = db.PublishCreationInTransaction(reqId, publishedTime)
 		if err != nil {
-			log.Printf("error: %v", err)
 			return err
 		}
 
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		defer cancel()
 		// 更改作品的缓存
-		err = messaging.SendMessage(UpdateCacheCreation, UpdateCacheCreation, &common.CreationId{
-			Id: creationId,
+		err = messaging.SendMessage(ctx, UpdateCacheCreation, UpdateCacheCreation, &common.CreationId{
+			Id: reqId,
 		})
 		if err != nil {
-			log.Printf("error: %v", err)
 			return err
 		}
 
 		// 获取作者id
-		authorId, err := db.GetAuthorIdInTransaction(context.Background(), creationId)
+		authorId, err := db.GetAuthorIdInTransaction(ctx, reqId)
 		if err != nil {
-			log.Printf("error: %v", err)
 			return err
 		}
 
 		// 将作品id加入空间
-		err = cache.AddSpaceCreations(context.Background(), authorId, creationId, publishedTime)
+		err = cache.AddSpaceCreations(ctx, authorId, reqId, publishedTime)
 		if err != nil {
-			log.Printf("error: %v", err)
 			return err
 		}
 	}
 
 	// 作者想发布
 	if status == generated.CreationStatus_PENDING {
-		err = messaging.SendMessage(PendingCreation, PendingCreation, &common.CreationId{
-			Id: creationId,
+		return messaging.SendMessage(context.Background(), PendingCreation, PendingCreation, &common.CreationId{
+			Id: reqId,
 		})
-		log.Printf("error: %v", err)
-		return err
 	}
 
 	return nil
 }
 
-func deleteCreationProcessor(msg amqp.Delivery) error {
-	deleteInfo := new(generated.CreationUpdateStatus)
+func deleteCreationProcessor(ctx context.Context, msg *anypb.Any) error {
+	req := new(generated.CreationUpdateStatus)
 	// 反序列化
-	err := proto.Unmarshal(msg.Body, deleteInfo)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
 		return fmt.Errorf("deleteCreationProcessor processor error: %w", err)
 	}
 
 	// 删除数据库中作品
-	err = db.UpdateCreationStatusInTransaction(deleteInfo)
+	err = db.UpdateCreationStatusInTransaction(req)
 	if err != nil {
-		return fmt.Errorf("error:deleteCreationProcessor UpdateCreationStatusInTransaction error %w", err)
+		return fmt.Errorf("error: deleteCreationProcessor UpdateCreationStatusInTransaction error %w", err)
 	}
 
 	// 删除缓存中作品
-	err = cache.UpdateCreationStatus(deleteInfo)
+	err = cache.UpdateCreationStatus(req)
 	if err != nil {
-		return fmt.Errorf("error:deleteCreationProcessor UpdateCreationStatus error %w", err)
+		return fmt.Errorf("error: deleteCreationProcessor UpdateCreationStatus error %w", err)
 	}
 
 	return nil
 }
 
 // 从aggrator interaction过来
-func addInteractionCount(msg amqp.Delivery) error {
+func addInteractionCount(ctx context.Context, msg *anypb.Any) error {
 	anyAction := new(common.AnyUserAction)
 	// 反序列化
-	err := proto.Unmarshal(msg.Body, anyAction)
+	err := msg.UnmarshalTo(anyAction)
 	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
 		return fmt.Errorf("addInteractionCount processor error: %w", err)
 	}
 

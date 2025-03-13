@@ -8,5 +8,5 @@ import (
 )
 
 func (s *Server) UploadCreation(ctx context.Context, req *generated.UploadCreationRequest) (*generated.UploadCreationResponse, error) {
-	return internal.UploadCreation(req)
+	return internal.UploadCreation(ctx, req)
 }

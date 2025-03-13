@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -51,7 +52,7 @@ func (chain *AddViewChain) ExecuteBatch() {
 				Actions: views,
 			}
 			// 插入数据库
-			err := messaging.SendMessage(AddView, AddView, anyViews)
+			err := messaging.SendMessage(context.Background(), AddView, AddView, anyViews)
 			if err != nil {
 				log.Printf("error: SendMessage AddView error")
 			}

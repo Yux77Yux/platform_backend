@@ -3,6 +3,7 @@ package dispatch
 import (
 	"sync"
 
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
@@ -32,8 +33,11 @@ func init() {
 }
 
 func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
+	// 用 msg 的类型创建一个新对象
+	copy := proto.Clone(msg)
+
 	switch typeName {
 	case AddView:
-		addViewChain.HandleRequest(msg)
+		addViewChain.HandleRequest(copy)
 	}
 }

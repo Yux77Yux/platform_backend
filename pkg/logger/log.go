@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -54,6 +55,7 @@ type LogMessage struct {
 	Level     Level                  `json:"level"`
 	TraceId   string                 `json:"traceId"`
 	Timestamp time.Time              `json:"timestamp"`
+	Position  string                 `json:"position"`
 	Message   string                 `json:"message"`
 	Extra     map[string]interface{} `json:"extra,omitempty"`
 }
@@ -86,6 +88,12 @@ func (lm *LoggerManager) listen() {
 			lm.flushAll()
 		}
 	}
+}
+
+func (lm *LoggerManager) SplitFullName(fullName string) (string, string) {
+	lastSlash := strings.LastIndex(fullName, "/")
+	lastDot := strings.LastIndex(fullName, ".")
+	return fullName[1:lastDot], fullName[lastSlash+1:]
 }
 
 func (lm *LoggerManager) writeLog(msg *LogFile) {

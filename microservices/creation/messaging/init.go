@@ -1,12 +1,5 @@
 package messaging
 
-import (
-	"fmt"
-	"log"
-
-	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue"
-)
-
 var (
 	connStr string
 )
@@ -29,13 +22,14 @@ const (
 	UPDATE_CREATION_ACTION_COUNT = "InteractionCount" // 终点
 )
 
-func GetRabbitMQ() MessageQueueInterface {
-	var messageQueue MessageQueueInterface = &pkgMQ.RabbitMQClass{}
-	if err := messageQueue.Open(connStr); err != nil {
-		wiredErr := fmt.Errorf("failed to connect the rabbit client: %w", err)
-		log.Printf("error: %v", wiredErr)
-		return nil
+var (
+	ExchangesConfig = map[string]string{
+		UpdateDbCreation:             "direct",
+		UpdateCacheCreation:          "direct",
+		StoreCreationInfo:            "direct",
+		UpdateCreationStatus:         "direct",
+		DeleteCreation:               "direct",
+		UPDATE_CREATION_ACTION_COUNT: "direct",
+		// Add more exchanges here
 	}
-
-	return messageQueue
-}
+)

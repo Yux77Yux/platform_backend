@@ -1,9 +1,6 @@
 package receiver
 
 import (
-	"fmt"
-	"log"
-
 	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
 )
 
@@ -23,40 +20,13 @@ const (
 )
 
 var (
-	ExchangesConfig = map[string]string{
-		ComputeSimilarCreation: "direct",
-		ComputeUser:            "direct",
-
-		UpdateDb:      "direct",
-		AddCollection: "direct",
-		AddLike:       "direct",
-		AddView:       "direct",
-		CancelLike:    "direct",
-		BatchUpdateDb: "direct",
-		// Add more exchanges here
-	}
-	ListenRPCs = []string{
-		"agg_user",
-	}
+	ExchangesConfig = messaging.ExchangesConfig
 )
 
 // 非RPC类型的消息队列的交换机声明
-func Init() {
-	rabbitMQ := messaging.GetRabbitMQ()
-	defer rabbitMQ.Close()
-
-	if rabbitMQ == nil {
-		log.Printf("error: message queue open failed")
-		return
-	}
-	for exchange, kind := range ExchangesConfig {
-		if err := rabbitMQ.ExchangeDeclare(exchange, kind, true, false, false, false, nil); err != nil {
-			wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
-			log.Printf("error: %v", wiredErr)
-		}
-
+func Init(addr string) {
+	for exchange := range ExchangesConfig {
 		switch exchange {
-
 		// 不同的exchange使用不同函数
 		case ComputeSimilarCreation:
 			go messaging.ListenToQueue(exchange, ComputeSimilarCreation, ComputeSimilarCreation, computeSimilarProcessor)

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
@@ -10,7 +11,7 @@ import (
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
-func UpdateCreation(req *generated.UpdateCreationRequest) (*generated.UpdateCreationResponse, error) {
+func UpdateCreation(ctx context.Context, req *generated.UpdateCreationRequest) (*generated.UpdateCreationResponse, error) {
 	response := new(generated.UpdateCreationResponse)
 
 	pass, user_id, err := auth.Auth("update", "creation", req.GetAccessToken().GetValue())
@@ -33,7 +34,7 @@ func UpdateCreation(req *generated.UpdateCreationRequest) (*generated.UpdateCrea
 	UpdateInfo := req.GetUpdateInfo()
 
 	src := UpdateInfo.GetSrc()
-	if tools.IsValidVideoURL(src) {
+	if !tools.IsValidVideoURL(src) {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
 			Code:    "400",
@@ -42,7 +43,7 @@ func UpdateCreation(req *generated.UpdateCreationRequest) (*generated.UpdateCrea
 		return response, err
 	}
 	thumbnail := UpdateInfo.GetThumbnail()
-	if tools.IsValidImageURL(thumbnail) {
+	if !tools.IsValidImageURL(thumbnail) {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
 			Code:    "400",
@@ -72,7 +73,7 @@ func UpdateCreation(req *generated.UpdateCreationRequest) (*generated.UpdateCrea
 	}
 
 	UpdateInfo.AuthorId = user_id
-	err = messaging.SendMessage(messaging.UpdateDbCreation, messaging.UpdateDbCreation, UpdateInfo)
+	err = messaging.SendMessage(ctx, messaging.UpdateDbCreation, messaging.UpdateDbCreation, UpdateInfo)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -90,7 +91,7 @@ func UpdateCreation(req *generated.UpdateCreationRequest) (*generated.UpdateCrea
 }
 
 // 将草稿发布
-func UpdateCreationStatus(req *generated.UpdateCreationStatusRequest) (*generated.UpdateCreationResponse, error) {
+func UpdateCreationStatus(ctx context.Context, req *generated.UpdateCreationStatusRequest) (*generated.UpdateCreationResponse, error) {
 	response := new(generated.UpdateCreationResponse)
 
 	pass, user_id, err := auth.Auth("update", "creation", req.GetAccessToken().GetValue())
@@ -127,7 +128,7 @@ func UpdateCreationStatus(req *generated.UpdateCreationStatusRequest) (*generate
 	}
 
 	updateInfo.AuthorId = user_id
-	err = messaging.SendMessage(messaging.UpdateCreationStatus, messaging.UpdateCreationStatus, updateInfo)
+	err = messaging.SendMessage(ctx, messaging.UpdateCreationStatus, messaging.UpdateCreationStatus, updateInfo)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,

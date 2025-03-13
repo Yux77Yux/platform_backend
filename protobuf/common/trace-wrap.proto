@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/common;";
+
+import "google/protobuf/any.proto";
+
+message Wrapper {
+  string trace_id = 1;
+  string full_name = 2;
+  google.protobuf.Any payload = 3;
+}

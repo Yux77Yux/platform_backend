@@ -39,7 +39,9 @@ func GetActionTag(ctx context.Context, req *generated.BaseInteraction) (*generat
 			userId,
 			creationId).Scan(&actionTag)
 		if err != nil {
-			return nil, err
+			if err != sql.ErrNoRows {
+				return nil, err
+			}
 		}
 	}
 

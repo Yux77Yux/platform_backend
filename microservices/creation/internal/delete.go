@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -9,7 +10,7 @@ import (
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
-func DeleteCreation(req *generated.DeleteCreationRequest) error {
+func DeleteCreation(ctx context.Context, req *generated.DeleteCreationRequest) error {
 	accessToken := req.GetAccessToken().GetValue()
 	if accessToken == "" {
 		// 无token直接返回
@@ -33,7 +34,7 @@ func DeleteCreation(req *generated.DeleteCreationRequest) error {
 		AuthorId:   user_id,
 	}
 
-	err = messaging.SendMessage(messaging.DeleteCreation, messaging.DeleteCreation, deleteInfo)
+	err = messaging.SendMessage(ctx, messaging.DeleteCreation, messaging.DeleteCreation, deleteInfo)
 	if err != nil {
 		log.Printf("error: publish failed because %v", err)
 		return err

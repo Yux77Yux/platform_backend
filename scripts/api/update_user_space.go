@@ -8,14 +8,19 @@ import (
 	client "github.com/Yux77Yux/platform_backend/scripts/client"
 )
 
-func UpdateUserSpace(ctx context.Context, avatar string, token *common.AccessToken) (*user.UpdateUserResponse, error) {
+func UpdateUserSpace(ctx context.Context, name, bio string, token *common.AccessToken) (*user.UpdateUserResponse, error) {
 	_client, err := client.GetUserClient()
 	if err != nil {
 		return nil, err
 	}
 	req := &user.UpdateUserSpaceRequest{
-		UserUpdateSpace: &user.UserUpdateSpace{},
-		AccessToken:     token,
+		UserUpdateSpace: &user.UserUpdateSpace{
+			UserDefault: &common.UserDefault{
+				UserName: name,
+			},
+			UserBio: bio,
+		},
+		AccessToken: token,
 	}
 	return _client.UpdateUserSpace(ctx, req)
 }

@@ -8,7 +8,7 @@ import (
 )
 
 func (s *Server) UpdateCreation(ctx context.Context, req *generated.UpdateCreationRequest) (*generated.UpdateCreationResponse, error) {
-	return internal.UpdateCreation(req)
+	return internal.UpdateCreation(ctx, req)
 }
 
 func (s *Server) PublishDraftCreation(ctx context.Context, req *generated.UpdateCreationStatusRequest) (*generated.UpdateCreationResponse, error) {
@@ -18,5 +18,5 @@ func (s *Server) PublishDraftCreation(ctx context.Context, req *generated.Update
 	}
 	info.Status = generated.CreationStatus_PENDING
 	req.UpdateInfo = info
-	return internal.UpdateCreationStatus(req)
+	return internal.UpdateCreationStatus(ctx, req)
 }

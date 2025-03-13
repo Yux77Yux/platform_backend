@@ -105,6 +105,7 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 	if ipv4 != "" {
 		go func(id int64, ipv4 string) {
 			err := messaging.SendMessage(
+				ctx,
 				event.Exchange_EXCHANGE_ADD_VIEW.String(),
 				event.RoutingKey_KEY_ADD_VIEW.String(),
 				&common.ViewCreation{

@@ -48,7 +48,7 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 		if status == generated.CreationStatus_PUBLISHED {
 			// 存作品至redis
 			go func(creation *generated.CreationInfo) {
-				err := messaging.SendMessage(messaging.StoreCreationInfo, messaging.StoreCreationInfo, creation)
+				err := messaging.SendMessage(ctx, messaging.StoreCreationInfo, messaging.StoreCreationInfo, creation)
 				if err != nil {
 					log.Printf("error: GetCreation SendMessage %v", err)
 				}

@@ -10,5 +10,5 @@ import (
 )
 
 func (s *Server) DeleteComment(ctx context.Context, req *generated.DeleteCommentRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, internal.DeleteComment(req)
+	return &emptypb.Empty{}, internal.DeleteComment(ctx, req)
 }

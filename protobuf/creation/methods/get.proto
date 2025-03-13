@@ -31,7 +31,7 @@ enum ByCount {
   COLLECTIONS = 3;
 }
 
-// 空间
+// 视频管理
 message GetUserCreationsRequest {
   creation.messages.CreationStatus status = 1;
   int64 user_id = 2;
@@ -39,6 +39,7 @@ message GetUserCreationsRequest {
   common.AccessToken access_token = 4;
 }
 
+// 空间
 message GetSpaceCreationsRequest {
   int64 user_id = 1;
   int32 page = 2;

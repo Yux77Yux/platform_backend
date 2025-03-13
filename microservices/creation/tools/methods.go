@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -15,9 +16,25 @@ func GetMetadataValue(ctx context.Context, key string) string {
 	return utils.GetMetadataValue(ctx, key)
 }
 
-func IsValidVideoURL(url string) bool {
-	const urlPattern = `^(https?|ftp)://[^\s]+\.(mp4|avi|mov|mkv|flv|wmv|webm)$`
-	return utils.CheckString(url, urlPattern)
+func IsValidVideoURL(videoURL string) bool {
+	parsedURL, err := url.Parse(videoURL)
+	if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
+		return false
+	}
+
+	// Supported video file extensions
+	allowedExtensions := []string{
+		".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv", ".webm",
+		".3gp", ".ogv", ".m4v", ".ts", ".vob", ".rmvb", ".asf", ".mpeg", ".mpg",
+	}
+
+	// Check if the URL path ends with one of the allowed extensions
+	for _, ext := range allowedExtensions {
+		if strings.HasSuffix(strings.ToLower(parsedURL.Path), ext) {
+			return true
+		}
+	}
+	return false
 }
 
 func IsValidImageURL(url string) bool {

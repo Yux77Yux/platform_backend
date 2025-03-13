@@ -10,5 +10,5 @@ import (
 )
 
 func (s *Server) DeleteCreation(ctx context.Context, req *generated.DeleteCreationRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, internal.DeleteCreation(req)
+	return &emptypb.Empty{}, internal.DeleteCreation(ctx, req)
 }

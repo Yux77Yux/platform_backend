@@ -139,7 +139,7 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 			Status:  common.ApiResponse_ERROR,
 			Code:    "409",
 			Message: "Username already exists",
-			Details: "The username you entered is already taken. Please choose a different one.",
+			Details: "Sorry, that username you've entered is unavailable. Please pick a different one.",
 		}
 		return response, err
 	}

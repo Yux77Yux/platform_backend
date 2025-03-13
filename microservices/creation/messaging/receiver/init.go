@@ -1,9 +1,6 @@
 package receiver
 
 import (
-	"fmt"
-	"log"
-
 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 )
 
@@ -22,28 +19,12 @@ const (
 )
 
 var (
-	ExchangesConfig = map[string]string{
-		UpdateDbCreation:             "direct",
-		UpdateCacheCreation:          "direct",
-		StoreCreationInfo:            "direct",
-		UpdateCreationStatus:         "direct",
-		DeleteCreation:               "direct",
-		UPDATE_CREATION_ACTION_COUNT: "direct",
-		// Add more exchanges here
-	}
+	ExchangesConfig = messaging.ExchangesConfig
 )
 
 // 非RPC类型的消息队列的交换机声明
 func Init() {
-	rabbitMQ := messaging.GetRabbitMQ()
-	defer rabbitMQ.Close()
-
-	for exchange, kind := range ExchangesConfig {
-		if err := rabbitMQ.ExchangeDeclare(exchange, kind, true, false, false, false, nil); err != nil {
-			wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
-			log.Printf("error: %v", wiredErr)
-		}
-
+	for exchange := range ExchangesConfig {
 		switch exchange {
 		// 不同的exchange使用不同函数
 		case UpdateDbCreation:

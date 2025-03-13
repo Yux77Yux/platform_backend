@@ -2,22 +2,29 @@ package snow
 
 import (
 	"log"
+	"sync"
 
 	"github.com/bwmarrin/snowflake"
 )
 
-func GetId() int64 {
-	// 生成id
-	node, err := snowflake.NewNode(1) // 传入机器ID，这里假设为1
-	if err != nil {
-		log.Printf("Failed to create snowflake node: %v", err)
-	}
+var (
+	node *snowflake.Node
+	once sync.Once
+)
 
+func initNode() {
+	var err error
+	node, err = snowflake.NewNode(1)
+	if err != nil {
+		log.Fatalf("Failed to create snowflake node: %v", err)
+	}
+}
+
+func GetId() int64 {
+	once.Do(initNode)
 	id := node.Generate().Int64()
-	// 生成唯一的ID,确保不为0
 	for id == 0 {
 		id = node.Generate().Int64()
 	}
-
 	return id
 }

@@ -191,7 +191,9 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 			&upload_time,
 		)
 		if err != nil {
-			return nil, err
+			if err != sql.ErrNoRows {
+				return nil, err
+			}
 		}
 
 		// 查 统计数
@@ -207,7 +209,9 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 			&publish_time,
 		)
 		if err != nil {
-			return nil, err
+			if err != sql.ErrNoRows {
+				return nil, err
+			}
 		}
 
 		// 查 分区
@@ -222,7 +226,9 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 			&description,
 		)
 		if err != nil {
-			return nil, err
+			if err != sql.ErrNoRows {
+				return nil, err
+			}
 		}
 	}
 
@@ -284,7 +290,9 @@ func GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, err
 			&author_id,
 		)
 		if err != nil {
-			return -1, err
+			if err != sql.ErrNoRows {
+				return -1, err
+			}
 		}
 	}
 	return author_id, nil
@@ -339,7 +347,9 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 				status,
 			).Scan(&num)
 			if err != nil {
-				return nil, -1, err
+				if err != sql.ErrNoRows {
+					return nil, -1, err
+				}
 			}
 			if num <= 0 {
 				return nil, 0, nil
@@ -727,7 +737,7 @@ func UpdateSavesInTransaction(creationId int64, changingNum int) error {
 	return nil
 }
 
-func UpdateCreationInTransaction(creation *generated.CreationUpdated) error {
+func UpdateCreationInTransaction(ctx context.Context, creation *generated.CreationUpdated) error {
 	var (
 		thumbnail = creation.GetThumbnail()
 		title     = creation.GetTitle()
@@ -786,7 +796,7 @@ func UpdateCreationInTransaction(creation *generated.CreationUpdated) error {
 		WHERE 
 			id = ? 
 		%s`, strings.Join(sqlStr, ","), AND)
-	affected, err := db.Exec(query, values...)
+	affected, err := db.ExecContext(ctx, query, values...)
 	if err != nil {
 		return err
 	}

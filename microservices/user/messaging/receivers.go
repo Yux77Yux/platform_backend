@@ -47,8 +47,6 @@ func storeCredentialsProcessor(msg amqp.Delivery) error {
 		return fmt.Errorf("storeCredentials processor error: %w", err)
 	}
 
-	log.Printf("cred %v", credentials)
-
 	go dispatch.HandleRequest(credentials, dispatch.RegisterCache)
 	return nil
 }
@@ -169,7 +167,6 @@ func getUserProcessor(msg amqp.Delivery) (proto.Message, error) {
 			}, fmt.Errorf("fail to get user info in redis: %w", err)
 		}
 
-		log.Printf("Map UserInfo %v", result)
 		// 调用函数，传递转换后的 map
 		user_info, err = tools.MapUserByString(result)
 		if err != nil {

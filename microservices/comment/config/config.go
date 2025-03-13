@@ -4,7 +4,7 @@ import (
 	"os"
 
 	cache "github.com/Yux77Yux/platform_backend/microservices/comment/cache"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/comment/messaging"
+	receiver "github.com/Yux77Yux/platform_backend/microservices/comment/messaging/receiver"
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
 	service "github.com/Yux77Yux/platform_backend/microservices/comment/service"
 )
@@ -24,11 +24,11 @@ var REDIS_PASSWORD string = os.Getenv("REDIS_PASSWORD")
 
 func init() {
 	service.InitStr(GRPC_SERVER_ADDRESS)
-	messaging.InitStr(RABBITMQ_STR)
 	cache.InitStr(REDIS_STR, REDIS_PASSWORD)
 	db.InitStr(MYSQL_READER_STR, MYSQL_WRITER_STR)
 
-	messaging.Init()
 	db.Init()
 	cache.Init()
+
+	receiver.Init(RABBITMQ_STR)
 }

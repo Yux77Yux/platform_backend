@@ -1,12 +1,13 @@
-CREATE DATABASE IF NOT EXISTS db_creation_1;
-CREATE DATABASE IF NOT EXISTS db_creation_engagment_1;
-CREATE DATABASE IF NOT EXISTS db_creation_category_1;
+CREATE DATABASE IF NOT EXISTS db_creation_1 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS db_creation_engagment_1 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS db_creation_category_1 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE USER 'yuxyuxx'@'%' IDENTIFIED WITH mysql_native_password BY 'yuxyuxx';
 
 GRANT ALL PRIVILEGES ON db_creation_1.* TO 'yuxyuxx'@'%';
 GRANT ALL PRIVILEGES ON db_creation_engagment_1.* TO 'yuxyuxx'@'%';
 GRANT ALL PRIVILEGES ON db_creation_category_1.* TO 'yuxyuxx'@'%';
+
 
 FLUSH PRIVILEGES;
 
@@ -23,8 +24,8 @@ CREATE TABLE IF NOT EXISTS Creation (
     author_id BIGINT NOT NULL,    -- 作者ID
     src TEXT,                   -- 用户头像，可以存储头像的 URL 或文件路径
     thumbnail TEXT NOT NULL,                   -- 封面
-    title NVARCHAR(50),                -- 作品标题，最大 100 个字符
-    bio TEXT,                          -- 作品简介
+    title VARCHAR(255) COLLATE utf8mb4_unicode_ci,              
+    bio TEXT COLLATE utf8mb4_unicode_ci,         -- 作品简介
     status ENUM('DRAFT', 'PENDING', 'PUBLISHED', 'REJECTED','DELETE') NOT NULL DEFAULT 'DRAFT', -- 作品状态，草稿、审核中、已发布、已拒绝
     duration INT DEFAULT 0,        -- 视频时长，单位秒
     category_id INT NOT NULL,    -- 作品ID

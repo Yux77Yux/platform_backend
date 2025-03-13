@@ -3,6 +3,7 @@ package dispatch
 import (
 	"sync"
 
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -29,8 +30,9 @@ func init() {
 }
 
 func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
+	copy := proto.Clone(msg)
 	switch typeName {
 	case UpdateCount:
-		updateCountChain.HandleRequest(msg)
+		updateCountChain.HandleRequest(copy)
 	}
 }

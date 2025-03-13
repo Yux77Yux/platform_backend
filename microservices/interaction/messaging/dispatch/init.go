@@ -5,6 +5,7 @@ import (
 	"math"
 	"sync"
 
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
@@ -61,19 +62,20 @@ func init() {
 }
 
 func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
+	copy := proto.Clone(msg)
 	switch typeName {
 	case DbInteraction:
-		dbInteractionsChain.HandleRequest(msg)
+		dbInteractionsChain.HandleRequest(copy)
 	case ViewCache:
-		viewCacheChain.HandleRequest(msg)
+		viewCacheChain.HandleRequest(copy)
 	case LikeCache:
-		likeCacheChain.HandleRequest(msg)
+		likeCacheChain.HandleRequest(copy)
 	case CollectionCache:
-		collectionCacheChain.HandleRequest(msg)
+		collectionCacheChain.HandleRequest(copy)
 	case CancelLikeCache:
-		cancelLikeCacheChain.HandleRequest(msg)
+		cancelLikeCacheChain.HandleRequest(copy)
 	case DbBatchInteraction:
-		req, ok := msg.(*generated.AnyOperateInteraction)
+		req, ok := copy.(*generated.AnyOperateInteraction)
 		if !ok {
 			log.Printf("error: req not *generated.AnyOperateInteraction")
 			return

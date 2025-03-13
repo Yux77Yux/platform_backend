@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS db_comment_area_1;
-CREATE DATABASE IF NOT EXISTS db_comment_1;
+CREATE DATABASE IF NOT EXISTS db_comment_area_1 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS db_comment_1 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE USER 'yuxyuxx'@'%' IDENTIFIED WITH mysql_native_password BY 'yuxyuxx';
 

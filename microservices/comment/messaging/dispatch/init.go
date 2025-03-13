@@ -3,6 +3,7 @@ package dispatch
 import (
 	"sync"
 
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
@@ -43,10 +44,12 @@ func init() {
 }
 
 func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
+	copy := proto.Clone(msg)
+
 	switch typeName {
 	case Insert:
-		insertChain.HandleRequest(msg)
+		insertChain.HandleRequest(copy)
 	case Delete:
-		deleteChain.HandleRequest(msg)
+		deleteChain.HandleRequest(copy)
 	}
 }

@@ -8,4 +8,7 @@ var (
 
 	LoginOkMap        = make(map[string]*Login_OK)
 	UpdateAvatarOkMap = make(map[string]*Id)
+	UpdateSpaceOkMap  = make(map[string]*Id)
+
+	UploadOkMap = make(map[string]*Creation_OK)
 )

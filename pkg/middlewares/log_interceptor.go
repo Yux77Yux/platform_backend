@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"reflect"
-	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -14,16 +12,16 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
-	logger "github.com/Yux77Yux/platform_backend/pkg/logger"
 	utils "github.com/Yux77Yux/platform_backend/pkg/utils"
 )
 
-var (
-	logManager *logger.LoggerManager
-)
-
-func init() {
-	logManager = logger.GetLoggerManager()
+type TestCoverageInfo struct {
+	TraceID        string
+	MethodName     string
+	BranchCoverage map[string]bool // 各个分支是否被执行（比如 "if_user_exists" -> true）
+	ExecutionPath  []string        // 执行路径的顺序（比如 ["start", "if_user_exists", "update_db", "end"]）
+	ExecutionCount map[string]int  // 每个分支、方法执行的次数
+	Errors         []string        // 如果失败，记录错误信息
 }
 
 // 日志拦截器
@@ -34,138 +32,48 @@ func LogInterceptor() grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (any, error) {
-		start := time.Now().Truncate(time.Second)
-
 		traceId := utils.GetMetadataValue(ctx, "trace-id")
 		if traceId == "" {
 			traceId = uuid.New().String()
-			ctx = metadata.AppendToOutgoingContext(ctx, "TraceId", traceId)
+			ctx = metadata.AppendToOutgoingContext(ctx, "trace-id", traceId)
 		}
-
 		fullName := info.FullMethod
-		lastSlash := strings.LastIndex(fullName, "/")
-		lastDot := strings.LastIndex(fullName, ".")
-		methodName := fullName[lastSlash+1:]
-		domainName := fullName[1:lastDot]
-		go logManager.SharedLog(&logger.LogMessage{
-			Level:     logger.INFO,
-			TraceId:   traceId,
-			Timestamp: start,
-			Message:   fmt.Sprintf("%s start", fullName),
-		})
-		go logManager.Log(&logger.LogFile{
-			Path: fmt.Sprintf("./log/%s.log", methodName),
-			LogMessage: &logger.LogMessage{
-				Level:     logger.INFO,
-				TraceId:   traceId,
-				Timestamp: start,
-			},
-		})
+		ctx = metadata.AppendToOutgoingContext(ctx, "full-name", fullName)
+
+		utils.LogInfo(traceId, fullName)
 
 		resp, err := handler(ctx, req)
-		end := time.Now().Truncate(time.Second)
-
+		// 返回之后的
 		isServerError, detail, c_err := GetMsg(resp, traceId)
 		if c_err != nil {
 			// 反射的错误,警告
-			Extra := make(map[string]interface{})
-			Extra["Detail"] = c_err.Error()
-			go logManager.SharedLog(&logger.LogMessage{
-				Level:     logger.SUPER,
-				TraceId:   traceId,
-				Timestamp: end,
-				Message:   fmt.Sprintf("%s start", fullName),
-				Extra:     Extra,
-			})
-			go logManager.Log(&logger.LogFile{
-				Path: fmt.Sprintf("./log/%s.super.log", domainName),
-				LogMessage: &logger.LogMessage{
-					Level:     logger.SUPER,
-					TraceId:   traceId,
-					Timestamp: end,
-					Message:   fmt.Sprintf("%s error", methodName),
-					Extra:     Extra,
-				},
-			})
+			utils.LogError(traceId, fullName, c_err.Error())
 		} else {
 			// 没有反射错误，但有业务上的错误
 			if isServerError {
-				Extra := make(map[string]interface{})
-				Extra["Detail"] = detail
-				go logManager.SharedLog(&logger.LogMessage{
-					Level:     logger.ERROR,
-					TraceId:   traceId,
-					Timestamp: end,
-					Message:   fmt.Sprintf("%s start", fullName),
-					Extra:     Extra,
-				})
-				go logManager.Log(&logger.LogFile{
-					Path: fmt.Sprintf("./log/%s.error.log", domainName),
-					LogMessage: &logger.LogMessage{
-						Level:     logger.ERROR,
-						TraceId:   traceId,
-						Timestamp: end,
-						Message:   fmt.Sprintf("%s error", methodName),
-						Extra:     Extra,
-					},
-				})
-
+				utils.LogError(traceId, fullName, detail)
 				return resp, fmt.Errorf(detail)
 			}
 		}
 
 		// 其他未知错误
 		if err != nil {
-			Extra := make(map[string]interface{})
-			Extra["Detail"] = err.Error()
-			go logManager.Log(&logger.LogFile{
-				Path: fmt.Sprintf("./log/%s.error.log", domainName),
-				LogMessage: &logger.LogMessage{
-					Level:     logger.ERROR,
-					TraceId:   traceId,
-					Timestamp: end,
-					Message:   fmt.Sprintf("%s error", methodName),
-					Extra:     Extra,
-				},
-			})
-
-			go logManager.SharedLog(&logger.LogMessage{
-				Level:     logger.ERROR,
-				TraceId:   traceId,
-				Timestamp: end,
-				Message:   fmt.Sprintf("%s error", fullName),
-				Extra:     Extra,
-			})
-
+			utils.LogError(traceId, fullName, err.Error())
 			return resp, nil
 		}
 
-		go logManager.SharedLog(&logger.LogMessage{
-			Level:     logger.INFO,
-			TraceId:   traceId,
-			Timestamp: end,
-			Message:   fmt.Sprintf("%s success", fullName),
-		})
-		go logManager.Log(&logger.LogFile{
-			Path: fmt.Sprintf("./log/%s.log", methodName),
-			LogMessage: &logger.LogMessage{
-				Level:     logger.INFO,
-				TraceId:   traceId,
-				Timestamp: end,
-				Message:   fmt.Sprintf("%s success", methodName),
-			},
-		})
+		utils.LogInfo(traceId, fullName)
 		return resp, nil
 	}
 }
 
 // (ServerError?,ErrorDetail,error)
-func GetMsg(req any, traceId string) (bool, string, error) {
-	if req == nil {
+func GetMsg(response any, traceId string) (bool, string, error) {
+	if response == nil {
 		return false, "", nil
 	}
 
-	v := reflect.ValueOf(req)
+	v := reflect.ValueOf(response)
 	if !v.IsValid() {
 		// 不可用
 		return false, "", nil
@@ -189,7 +97,7 @@ func GetMsg(req any, traceId string) (bool, string, error) {
 	msgField := v.FieldByName("Msg")
 	if !msgField.IsValid() {
 		// Msg 字段不存在（结构体里根本没这个字段）
-		log.Printf("msgField %v", req)
+		log.Printf("msgField %v", response)
 		return true, "", fmt.Errorf("error: 未找到 Msg 字段")
 	}
 

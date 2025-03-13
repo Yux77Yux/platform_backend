@@ -11,7 +11,7 @@ import (
 func GetMetadataValue(ctx context.Context, key string) string {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return fmt.Sprintf("warning: metadata not found in context")
+		return fmt.Sprintf("warning: metadata %s not found in context", key)
 	}
 
 	values := md.Get(key)

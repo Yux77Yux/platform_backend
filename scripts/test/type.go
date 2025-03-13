@@ -2,18 +2,14 @@ package test
 
 import (
 	"github.com/Yux77Yux/platform_backend/generated/auth"
+	"github.com/Yux77Yux/platform_backend/scripts/data"
 )
 
 type Id struct {
 	Id       string `json:"id"`
 	Duration float64
 }
-type User struct {
-	Id     string `json:"id"`
-	Name   string `json:"name"`
-	Bio    string `json:"bio"`
-	Avatar string `json:"avatar"`
-}
+type User = data.User
 type Register_OK struct {
 	*User
 	Duration float64
@@ -37,25 +33,13 @@ type User_ER struct {
 	Error string `json:"error"`
 }
 
-type Creation struct {
-	Id         string `json:"id"`
-	Title      string `json:"title"`
-	Bio        string `json:"bio"`
-	Uid        string `json:"uid"`
-	Src        string `json:"src"`
-	Thumbnail  string `json:"thumbnail"`
-	Duration   int32  `json:"duration"`
-	CategoryId int32  `json:"categoryId"`
-}
-type Upload_OK struct {
+type Creation = data.Creation
+type Creation_OK struct {
 	*Creation
-	Duration float64
+	IdInDb         int64   `json:"idInDb"`
+	UploadDuration float64 `json:"uploadDuration"`
 }
 type Creation_ER struct {
 	*Creation
 	Error string `json:"error"`
-}
-type User_After_Upload struct {
-	*User
-	IdInDb int64 `json:"idInDb"`
 }

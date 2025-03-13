@@ -1,8 +1,10 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -15,7 +17,7 @@ import (
 	snow "github.com/Yux77Yux/platform_backend/pkg/snow"
 )
 
-func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCreationResponse, error) {
+func UploadCreation(ctx context.Context, req *generated.UploadCreationRequest) (*generated.UploadCreationResponse, error) {
 	response := new(generated.UploadCreationResponse)
 	pass, author_id, err := auth.Auth("post", "creation", req.GetAccessToken().GetValue())
 	if err != nil {
@@ -37,7 +39,7 @@ func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCrea
 	baseInfo := req.GetBaseInfo()
 
 	src := baseInfo.GetSrc()
-	if tools.IsValidVideoURL(src) {
+	if !tools.IsValidVideoURL(src) {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
 			Code:    "400",
@@ -46,7 +48,7 @@ func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCrea
 		return response, err
 	}
 	thumbnail := baseInfo.GetThumbnail()
-	if tools.IsValidImageURL(thumbnail) {
+	if !tools.IsValidImageURL(thumbnail) {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
 			Code:    "400",
@@ -78,27 +80,34 @@ func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCrea
 	baseInfo.AuthorId = author_id
 	status := baseInfo.GetStatus()
 
-	creationId := snow.GetId()
 	creation := &generated.Creation{
-		CreationId: creationId,
+		CreationId: snow.GetId(),
 		BaseInfo:   baseInfo,
 		UploadTime: timestamppb.Now(),
 	}
-
-	err = db.CreationAddInTransaction(creation)
-	if err != nil {
-		log.Printf("db CreationAddInTransaction occur error: %v", err)
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+	for i := 0; i < 3; i++ {
+		err = db.CreationAddInTransaction(creation)
+		if err != nil {
+			log.Printf("db CreationAddInTransaction occur error: %v", err)
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    "500",
+				Details: err.Error(),
+			}
+			if i == 2 {
+				return response, err
+			}
+			time.Sleep(2 * time.Second)
+			creation.CreationId = snow.GetId()
+		} else {
+			break
 		}
-		return response, err
 	}
+	creationId := creation.GetCreationId()
 
 	// 异步处理
 	if status == generated.CreationStatus_PENDING {
-		err = messaging.SendMessage(messaging.PendingCreation, messaging.PendingCreation, &common.CreationId{
+		err = messaging.SendMessage(ctx, messaging.PendingCreation, messaging.PendingCreation, &common.CreationId{
 			Id: creationId,
 		})
 		if err != nil {
@@ -126,7 +135,7 @@ func UploadCreation(req *generated.UploadCreationRequest) (*generated.UploadCrea
 	}
 
 	response.Msg = &common.ApiResponse{
-		Status: common.ApiResponse_ERROR,
+		Status: common.ApiResponse_PENDING,
 		Code:   "201",
 	}
 	return response, nil

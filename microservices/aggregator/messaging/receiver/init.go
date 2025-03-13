@@ -1,14 +1,9 @@
 package receiver
 
 import (
-	"fmt"
-	"log"
-
 	event "github.com/Yux77Yux/platform_backend/generated/common/event"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/aggregator/messaging"
 )
-
-type MessagequeueInterface = messaging.MessagequeueInterface
 
 const (
 	UPDATE_CREATION_ACTION_COUNT = "InteractionCount"
@@ -17,25 +12,12 @@ const (
 )
 
 var (
-	ExchangesConfig = map[string]string{
-		event.Exchange_EXCHANGE_ADD_VIEW.String(): "direct",
-	}
+	ExchangesConfig = messaging.ExchangesConfig
 )
 
-func Init() {
-	rabbitMQ := messaging.GetRabbitMQ()
-	defer rabbitMQ.Close()
-
-	if rabbitMQ == nil {
-		log.Printf("error: message queue open failed")
-		return
-	}
-	for exchange, kind := range ExchangesConfig {
-		if err := rabbitMQ.ExchangeDeclare(exchange, kind, true, false, false, false, nil); err != nil {
-			wiredErr := fmt.Errorf("failed to declare exchange %s : %w", exchange, err)
-			log.Printf("error: %v", wiredErr)
-		}
-
+func Init(addr string) {
+	messaging.InitStr(addr)
+	for exchange := range ExchangesConfig {
 		switch exchange {
 		// 不同的exchange使用不同函数
 		case event.Exchange_EXCHANGE_ADD_VIEW.String():

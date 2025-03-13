@@ -56,7 +56,7 @@ func (chain *UserSpaceChain) ExecuteBatch() {
 			// 更新头像
 			err := db.UserUpdateSpaceInTransaction(users)
 			if err != nil {
-				log.Printf("error: UserUpdateSpaceInTransaction error")
+				log.Printf("error: UserUpdateSpaceInTransaction %s", err.Error())
 			}
 
 			*usersPtr = users[:0]

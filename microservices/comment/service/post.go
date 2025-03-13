@@ -8,5 +8,5 @@ import (
 )
 
 func (s *Server) PublishComment(ctx context.Context, req *generated.PublishCommentRequest) (*generated.PublishCommentResponse, error) {
-	return internal.PublishComment(req)
+	return internal.PublishComment(ctx, req)
 }

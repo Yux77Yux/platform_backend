@@ -5,7 +5,6 @@ import (
 
 	cache "github.com/Yux77Yux/platform_backend/microservices/aggregator/cache"
 	client "github.com/Yux77Yux/platform_backend/microservices/aggregator/client"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/aggregator/messaging"
 	receiver "github.com/Yux77Yux/platform_backend/microservices/aggregator/messaging/receiver"
 	service "github.com/Yux77Yux/platform_backend/microservices/aggregator/service"
 )
@@ -23,12 +22,11 @@ var REDIS_PASSWORD string = os.Getenv("REDIS_PASSWORD")
 
 func init() {
 	service.InitStr(INIT_SERVER_ADDRESS)
-	messaging.InitStr(RABBITMQ_STR)
 	cache.InitStr(REDIS_STR, REDIS_PASSWORD)
 
 	cache.Init()
 
 	client.InitStr(SERVER_ADDRESS)
 
-	receiver.Init()
+	receiver.Init(RABBITMQ_STR)
 }
