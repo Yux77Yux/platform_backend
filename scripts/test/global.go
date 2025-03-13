@@ -6,5 +6,6 @@ var (
 
 	RegisterOkMap = make(map[string]*User)
 
-	LoginOkMap = make(map[string]*Login_OK)
+	LoginOkMap        = make(map[string]*Login_OK)
+	UpdateAvatarOkMap = make(map[string]*Id)
 )

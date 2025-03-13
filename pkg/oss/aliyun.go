@@ -58,8 +58,8 @@ func (o *OssClient) CreateBucket() error {
 	// 创建存储空间。
 	err := o.client.CreateBucket(bucketName)
 	if err != nil {
-		log.Printf("error: create bucket failed : %v", err)
-		return err
+		log.Printf("warning: create bucket failed : %v", err)
+		return nil
 	}
 
 	// 设置存储空间的读写权限为公共读。

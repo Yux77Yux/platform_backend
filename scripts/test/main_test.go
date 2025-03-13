@@ -17,14 +17,14 @@ import (
 	api "github.com/Yux77Yux/platform_backend/scripts/api"
 )
 
-// 集体改头像
+// 改头像前初始化
 func UpdateAvatarInit() {
 	var wg sync.WaitGroup
-	wg.Add(1)
+	wg.Add(2)
 
 	go func() {
 		defer wg.Done()
-		filename := "E:/xuexi/platform/platform_backend/scripts/result/register_ok.jsonl"
+		filename := "E:/xuexi/platform/platform_backend/scripts/result/login_ok_by_db.jsonl"
 
 		f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
 		if err != nil {
@@ -33,11 +33,30 @@ func UpdateAvatarInit() {
 
 		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
-			var p User
+			var p Login_OK
 			if err := json.Unmarshal(scanner.Bytes(), &p); err != nil {
 				log.Fatalf("error: json %s", err.Error())
 			}
-			RegisterOkMap[p.Id] = &p
+			LoginOkMap[p.Id] = &p
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		filename := "E:/xuexi/platform/platform_backend/scripts/result/update_avatar_ok.jsonl"
+
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
+		if err != nil {
+			log.Fatalf("无法创建临时文件 %s: %v", filename, err)
+		}
+
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			var p Id
+			if err := json.Unmarshal(scanner.Bytes(), &p); err != nil {
+				log.Fatalf("error: json %s", err.Error())
+			}
+			UpdateAvatarOkMap[p.Id] = &p
 		}
 	}()
 
@@ -47,12 +66,12 @@ func UpdateAvatarInit() {
 func TestUpdateAvatar(t *testing.T) {
 	UpdateAvatarInit()
 	totalRequests := len(RegisterOkMap)
-	errCh := make(chan *Login_ER, totalRequests)
-	okCh := make(chan *Login_OK, totalRequests)
-	concurrencyLimit := int32(2)
+	errCh := make(chan *User_ER, totalRequests)
+	okCh := make(chan *Id, totalRequests)
+	concurrencyLimit := int32(3)
 
 	go func() {
-		path := "E:/xuexi/platform/platform_backend/scripts/result/login_err.jsonl"
+		path := "E:/xuexi/platform/platform_backend/scripts/result/update_avatar_err.jsonl"
 		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatalf("file err %s", err.Error())
@@ -76,7 +95,7 @@ func TestUpdateAvatar(t *testing.T) {
 	}()
 
 	go func() {
-		path := "E:/xuexi/platform/platform_backend/scripts/result/login_ok.jsonl"
+		path := "E:/xuexi/platform/platform_backend/scripts/result/update_avatar_ok.jsonl"
 		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatalf("file err %s", err.Error())
@@ -102,45 +121,65 @@ func TestUpdateAvatar(t *testing.T) {
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, concurrencyLimit) // 信号量控制并发数
 	startTime := time.Now()                      // 记录整个测试开始时间
-	for _, user := range RegisterOkMap {
+	for _, user := range LoginOkMap {
 		wg.Add(1)
 		sem <- struct{}{} // 信号量申请，超出则阻塞
-		go func(user *User) {
+		go func(user *Login_OK) {
+			User := user.User
 			defer func() {
 				wg.Done()
 				<-sem // 释放信号量
 			}()
-			ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
-			start := time.Now()
-			response, err := api.Login(ctx, user.Id)
+			// 拿accessToken
+			ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+			response, err := api.Refresh(ctx, user.RefreshToken)
 			cancel()
-			end := time.Now()
 			if err != nil {
-				errCh <- &Login_ER{
-					User:  user,
+				errCh <- &User_ER{
+					User:  User,
 					Error: err.Error(),
 				}
 				return
 			}
-
 			msg := response.GetMsg()
 			status := msg.GetStatus()
-			if status != common.ApiResponse_SUCCESS {
+			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
 				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
-				errCh <- &Login_ER{
-					User:  user,
+				errCh <- &User_ER{
+					User:  User,
 					Error: err.Error(),
 				}
 				return
 			}
 
-			lgUser := response.GetUserLogin()
-			tokens := response.GetTokens()
-			okCh <- &Login_OK{
-				User:         user,
-				IdInDb:       lgUser.UserDefault.GetUserId(),
-				RefreshToken: tokens.GetRefreshToken(),
-				Duration:     math.Round(float64(end.Sub(start).Milliseconds())*100) / 100,
+			accessToken := response.GetAccessToken()
+			// 更新头像
+			start := time.Now()
+			_ctx, _cancel := context.WithTimeout(context.Background(), 4*time.Second)
+			_response, err := api.UpdateUserAvatar(_ctx, User.Avatar, accessToken)
+			_cancel()
+			end := time.Now()
+			if err != nil {
+				errCh <- &User_ER{
+					User:  User,
+					Error: err.Error(),
+				}
+				return
+			}
+			msg = _response.GetMsg()
+			status = msg.GetStatus()
+			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errCh <- &User_ER{
+					User:  User,
+					Error: err.Error(),
+				}
+				return
+			}
+
+			okCh <- &Id{
+				Id:       user.Id,
+				Duration: math.Round(float64(end.Sub(start).Milliseconds())*100) / 100,
 			}
 		}(user)
 	}
@@ -347,7 +386,7 @@ func TestLogin(t *testing.T) {
 
 			msg := response.GetMsg()
 			status := msg.GetStatus()
-			if status != common.ApiResponse_SUCCESS {
+			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
 				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
 				errCh <- &Login_ER{
 					User:  user,

@@ -44,7 +44,9 @@ func LogInterceptor() grpc.UnaryServerInterceptor {
 
 		fullName := info.FullMethod
 		lastSlash := strings.LastIndex(fullName, "/")
+		lastDot := strings.LastIndex(fullName, ".")
 		methodName := fullName[lastSlash+1:]
+		domainName := fullName[1:lastDot]
 		go logManager.SharedLog(&logger.LogMessage{
 			Level:     logger.INFO,
 			TraceId:   traceId,
@@ -76,11 +78,12 @@ func LogInterceptor() grpc.UnaryServerInterceptor {
 				Extra:     Extra,
 			})
 			go logManager.Log(&logger.LogFile{
-				Path: fmt.Sprintf("./log/%s.super.log", methodName),
+				Path: fmt.Sprintf("./log/%s.super.log", domainName),
 				LogMessage: &logger.LogMessage{
 					Level:     logger.SUPER,
 					TraceId:   traceId,
 					Timestamp: end,
+					Message:   fmt.Sprintf("%s error", methodName),
 					Extra:     Extra,
 				},
 			})
@@ -97,11 +100,12 @@ func LogInterceptor() grpc.UnaryServerInterceptor {
 					Extra:     Extra,
 				})
 				go logManager.Log(&logger.LogFile{
-					Path: fmt.Sprintf("./log/%s.error.log", methodName),
+					Path: fmt.Sprintf("./log/%s.error.log", domainName),
 					LogMessage: &logger.LogMessage{
 						Level:     logger.ERROR,
 						TraceId:   traceId,
 						Timestamp: end,
+						Message:   fmt.Sprintf("%s error", methodName),
 						Extra:     Extra,
 					},
 				})
@@ -115,7 +119,7 @@ func LogInterceptor() grpc.UnaryServerInterceptor {
 			Extra := make(map[string]interface{})
 			Extra["Detail"] = err.Error()
 			go logManager.Log(&logger.LogFile{
-				Path: fmt.Sprintf("./log/%s.error.log", methodName),
+				Path: fmt.Sprintf("./log/%s.error.log", domainName),
 				LogMessage: &logger.LogMessage{
 					Level:     logger.ERROR,
 					TraceId:   traceId,

@@ -12,7 +12,7 @@ func GetMetadataValue(ctx context.Context, key string) string {
 }
 
 func IsValidImageURL(url string) bool {
-	const urlPattern = `^(https?|ftp)://[^\s]+\.(jpg|jpeg|png|gif|bmp|svg|webp)$`
+	const urlPattern = `^(https?|ftp)://[^\s]+\.(jpg|jpeg|png|gif|bmp|svg|webp|avif)$`
 	return utils.CheckString(url, urlPattern)
 }
 

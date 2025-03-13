@@ -4,6 +4,10 @@ import (
 	"github.com/Yux77Yux/platform_backend/generated/auth"
 )
 
+type Id struct {
+	Id       string `json:"id"`
+	Duration float64
+}
 type User struct {
 	Id     string `json:"id"`
 	Name   string `json:"name"`
@@ -28,6 +32,10 @@ type Login_OK struct {
 	RefreshToken *auth.RefreshToken `json:"token"`
 	Duration     float64
 }
+type User_ER struct {
+	*User
+	Error string `json:"error"`
+}
 
 type Creation struct {
 	Id         string `json:"id"`
@@ -43,7 +51,7 @@ type Upload_OK struct {
 	*Creation
 	Duration float64
 }
-type Upload_ER struct {
+type Creation_ER struct {
 	*Creation
 	Error string `json:"error"`
 }

@@ -2,14 +2,11 @@ package internal
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
-	"log"
-
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
+	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/user/messaging/dispatch"
 	oss "github.com/Yux77Yux/platform_backend/microservices/user/oss"
@@ -97,26 +94,46 @@ func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.Update
 		return response, nil
 	}
 
-	// 操作oss上传
 	fileBytesStr := req.GetUserUpdateAvatar().GetUserAvatar()
-	fileName := fmt.Sprintf("avatar/%v_%v.png", req.GetUserUpdateAvatar().GetUserId(), timestamppb.Now())
-	fileBytes, err := base64.StdEncoding.DecodeString(fileBytesStr)
-	if err != nil {
-		log.Fatal("Error decoding Base64 string: ", err)
+	if fileBytesStr == "" {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "400",
+			Details: "avatar not in body",
+		}
+		return response, nil
 	}
-	file := bytes.NewReader(fileBytes)
-	userAvatar, err := oss.Client.UploadFile(file, fileName)
-	if err != nil {
-		return &generated.UpdateUserAvatarResponse{
-			Msg: &common.ApiResponse{
+
+	var userAvatar string
+	if isUrl := tools.IsValidImageURL(fileBytesStr); !isUrl {
+		fileType, fileBytes, err := tools.ParseBase64Image(fileBytesStr)
+		if err != nil {
+			response.Msg = &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
-				Message: "Falied to upload to oss",
+				Code:    "400",
 				Details: err.Error(),
-			},
-		}, nil
+			}
+			return response, nil
+		}
+
+		// 操作oss上传
+		fileName := fmt.Sprintf("testAvatar/%d.%s", userId, fileType)
+
+		file := bytes.NewReader(fileBytes)
+		userAvatar, err = oss.Client.UploadFile(file, fileName)
+		if err != nil {
+			return &generated.UpdateUserAvatarResponse{
+				Msg: &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    "500",
+					Message: "Falied to upload to oss",
+					Details: err.Error(),
+				},
+			}, nil
+		}
+	} else {
+		userAvatar = fileBytesStr
 	}
-	log.Printf("avatar url: %s over", userAvatar)
 
 	updateAvatar := &generated.UserUpdateAvatar{
 		UserId:     userId,

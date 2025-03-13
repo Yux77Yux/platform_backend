@@ -14,8 +14,10 @@ func UpdateUserAvatar(ctx context.Context, avatar string, token *common.AccessTo
 		return nil, err
 	}
 	req := &user.UpdateUserAvatarRequest{
-		UserUpdateAvatar: &user.UserUpdateAvatar{},
-		AccessToken:      token,
+		UserUpdateAvatar: &user.UserUpdateAvatar{
+			UserAvatar: avatar,
+		},
+		AccessToken: token,
 	}
 	return _client.UpdateUserAvatar(ctx, req)
 }
