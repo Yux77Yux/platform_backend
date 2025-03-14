@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"log"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
@@ -23,31 +22,36 @@ func GetComments(ctx context.Context, req *generated.GetCommentsRequest) (*gener
 		}
 		return response, err
 	}
+	response.Comments = comments
 
-	return &generated.GetCommentsResponse{
-		Comments: comments,
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "200",
-		},
-	}, nil
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
 }
 
 // 第一次请求评论
 func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest) (*generated.InitialCommentsResponse, error) {
+	response := new(generated.InitialCommentsResponse)
 	creationId := req.GetCreationId()
 
 	area, comments, count, err := db.GetInitialTopCommentsInTransaction(ctx, creationId)
 	if err != nil {
-		log.Printf("error: creationId %d %v", creationId, err)
-		return &generated.InitialCommentsResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "404",
-				Message: err.Error(),
-				Details: err.Error(),
-			},
-		}, err
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "404",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
+	if area == nil {
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_ERROR,
+			Code:   "404",
+		}
+		return response, nil
 	}
 
 	return &generated.InitialCommentsResponse{
@@ -63,55 +67,53 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 
 // 一级评论
 func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (*generated.GetTopCommentsResponse, error) {
+	response := new(generated.GetTopCommentsResponse)
 	creationId := req.GetCreationId()
 	page := req.GetPage()
 
 	comments, err := db.GetTopCommentsInTransaction(ctx, creationId, page)
 	if err != nil {
-		return &generated.GetTopCommentsResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
-				Message: err.Error(),
-				Details: err.Error(),
-			},
-		}, nil
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Message: err.Error(),
+			Details: err.Error(),
+		}
+		return response, nil
 	}
+	response.Comments = comments
 
-	return &generated.GetTopCommentsResponse{
-		Comments: comments,
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "200",
-		},
-	}, nil
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
 }
 
 // 查看二级评论
 func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequest) (*generated.GetSecondCommentsResponse, error) {
+	response := new(generated.GetSecondCommentsResponse)
 	creationId := req.GetCreationId()
 	root := req.GetRoot()
 	page := req.GetPage()
 
 	comments, err := db.GetSecondCommentsInTransaction(ctx, creationId, root, page)
 	if err != nil {
-		return &generated.GetSecondCommentsResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
-				Message: err.Error(),
-				Details: err.Error(),
-			},
-		}, nil
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Message: err.Error(),
+			Details: err.Error(),
+		}
+		return response, nil
 	}
+	response.Comments = comments
 
-	return &generated.GetSecondCommentsResponse{
-		Comments: comments,
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "200",
-		},
-	}, nil
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
 }
 
 // 登录用户查看回复自己的评论
@@ -135,22 +137,20 @@ func GetReplyComments(ctx context.Context, req *generated.GetReplyCommentsReques
 
 	comments, err := db.GetReplyCommentsInTransaction(ctx, user_id, req.GetPage())
 	if err != nil {
-		return &generated.GetCommentsResponse{
-			Msg: &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
-				Message: err.Error(),
-				Details: err.Error(),
-			},
-		}, nil
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Message: err.Error(),
+			Details: err.Error(),
+		}
+		return response, nil
 	}
 
+	response.Comments = comments
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
 	// 以上为鉴权
-	return &generated.GetCommentsResponse{
-		Comments: comments,
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "200",
-		},
-	}, nil
+	return response, nil
 }

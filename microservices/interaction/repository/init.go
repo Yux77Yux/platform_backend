@@ -1,7 +1,8 @@
 package repository
 
 import (
-	"log"
+	"context"
+	"fmt"
 
 	pkgDb "github.com/Yux77Yux/platform_backend/pkg/db"
 )
@@ -17,23 +18,23 @@ func InitStr(or, wr string) {
 	readWriteStr = wr
 }
 
-func GetDB() SqlMethods {
-	dbs := &pkgDb.MysqlClass{}
-	err := dbs.InitDb(onlyReadStr, readWriteStr)
+func GetDB() (SqlMethods, error) {
+	_db, err := pkgDb.InitDb(onlyReadStr, readWriteStr)
 	if err != nil {
-		log.Printf("error: database init failed: %v", err)
-		return nil
+		return nil, err
 	}
-
-	return dbs
+	db = _db
+	return db, nil
 }
 
-func CloseClient() {
+func Run(ctx context.Context) error {
+	db, err := GetDB()
+	if err != nil {
+		return err
+	}
+	<-ctx.Done()
 	if err := db.Close(); err != nil {
-		log.Printf("error: database close failed: %v", err)
+		return fmt.Errorf("error: database close failed: %w", err)
 	}
-}
-
-func Init() {
-	db = GetDB()
+	return nil
 }

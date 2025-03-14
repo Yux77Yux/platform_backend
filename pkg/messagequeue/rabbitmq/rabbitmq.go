@@ -30,7 +30,9 @@ func GetClient(str string) MessageQueueInterface {
 
 	var err error
 	connStr := str
-	client := &RabbitMQClient{}
+	client := &RabbitMQClient{
+		listenCh: make(map[string]*amqp.Channel),
+	}
 	for i := 0; i < MAX_RETRY; i++ {
 		client.rabbitmqClient, err = amqp.Dial(connStr)
 		if err == nil {
@@ -274,6 +276,11 @@ func (r *RabbitMQClient) storeInMap(key string, ch *amqp.Channel) {
 func (r *RabbitMQClient) ListenToQueue(exchange, queueName, routeKey string, handler HandlerFunc) {
 	ch := r.getChannel()
 	r.storeInMap(fmt.Sprintf("%s_%s_%s", exchange, queueName, routeKey), ch)
+
+	if err := ch.ExchangeDeclare(exchange, "direct", true, false, false, false, nil); err != nil {
+		utils.LogSuperError(fmt.Errorf("failed to declare exchange %s : %w", exchange, err))
+		return
+	}
 
 	// 队列声明
 	queue, err := ch.QueueDeclare(queueName, true, false, false, false, nil)

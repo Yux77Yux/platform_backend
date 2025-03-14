@@ -20,17 +20,14 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 	creationId := req.GetCreationId()
 	creation, err := cache.GetCreationInfo(ctx, creationId)
 	if err != nil {
-		log.Printf("error: GetCreationInfo %v", err)
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
 			Code:    "500",
 			Message: "Internal Server Error",
 			Details: err.Error(),
 		}
-		return response, nil
+		return response, err
 	}
-
-	status := creation.GetCreation().GetBaseInfo().GetStatus()
 
 	if creation == nil {
 		creation, err = db.GetDetailInTransaction(ctx, creationId)
@@ -43,8 +40,15 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 			}
 			return response, err
 		}
+		if creation == nil {
+			response.Msg = &common.ApiResponse{
+				Status: common.ApiResponse_ERROR,
+				Code:   "404",
+			}
+			return response, nil
+		}
 
-		status = creation.GetCreation().GetBaseInfo().GetStatus()
+		status := creation.GetCreation().GetBaseInfo().GetStatus()
 		if status == generated.CreationStatus_PUBLISHED {
 			// 存作品至redis
 			go func(creation *generated.CreationInfo) {
@@ -56,6 +60,7 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 		}
 	}
 
+	status := creation.GetCreation().GetBaseInfo().GetStatus()
 	if status == generated.CreationStatus_DELETE {
 		response.Msg = &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,

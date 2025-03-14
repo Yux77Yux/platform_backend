@@ -45,4 +45,6 @@ func Run(ctx context.Context) {
 		}
 	}
 
+	<-ctx.Done()
+	messaging.Close(ctx)
 }

@@ -67,9 +67,10 @@ func GetReviews(
 			status.String(),
 		).Scan(&num)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				return nil, -1, err
+			if err == sql.ErrNoRows {
+				return nil, 0, nil
 			}
+			return nil, -1, err
 		}
 		if num <= 0 {
 			return nil, 0, nil
@@ -140,9 +141,10 @@ func GetTarget(id int64) (int64, *generated.TargetType, error) {
 
 	err := db.QueryRow(query, id).Scan(&targetId, &targetType)
 	if err != nil {
-		if err != sql.ErrNoRows {
-			return -1, nil, err
+		if err == sql.ErrNoRows {
+			return 0, nil, nil
 		}
+		return -1, nil, err
 	}
 	target_Type := generated.TargetType(generated.TargetType_value[targetType])
 	return targetId, &target_Type, nil

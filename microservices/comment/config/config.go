@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 
 	cache "github.com/Yux77Yux/platform_backend/microservices/comment/cache"
@@ -25,6 +26,7 @@ var REDIS_PASSWORD string = os.Getenv("REDIS_PASSWORD")
 func init() {
 	service.InitStr(GRPC_SERVER_ADDRESS)
 	cache.InitStr(REDIS_STR, REDIS_PASSWORD)
+	log.Printf("MYSQL_WRITER_STR  %s", MYSQL_WRITER_STR)
 	db.InitStr(MYSQL_READER_STR, MYSQL_WRITER_STR)
 	messaging.InitStr(RABBITMQ_STR)
 }

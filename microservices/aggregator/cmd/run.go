@@ -15,23 +15,27 @@ import (
 func Run(ctx context.Context) {
 	var wg sync.WaitGroup
 
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
-		cache.Run(ctx)
+		err := cache.Run(ctx)
+		if err != nil {
+			tools.LogSuperError(err)
+		}
 	}()
+
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		client.Run(ctx)
 	}()
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		receiver.Run(ctx)
 	}()
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		service.ServerRun(ctx)
 	}()

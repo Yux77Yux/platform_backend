@@ -290,9 +290,10 @@ func UserGetInfoInTransaction(ctx context.Context, id int64) (*generated.User, e
 			&followees,
 		)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				return nil, err
+			if err == sql.ErrNoRows {
+				return nil, nil
 			}
+			return nil, err
 		}
 
 		status, ok := generated.UserStatus_value[statusStr]
@@ -573,9 +574,10 @@ func UserVerifyInTranscation(ctx context.Context, user_credential *generated.Use
 	default:
 		err := db.QueryRow(query, value).Scan(&id, &passwordHash, &email, &role)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				return nil, err
+			if err == sql.ErrNoRows {
+				return nil, nil
 			}
+			return nil, err
 		}
 	}
 
@@ -1051,9 +1053,10 @@ func DelReviewer(reviewerId int64) (string, string, error) {
 	// 查询 username 并加行锁
 	err = tx.QueryRowContext(ctx, querySELECT, reviewerId).Scan(&username, &email)
 	if err != nil {
-		if err != sql.ErrNoRows {
-			return "", "", fmt.Errorf("failed to query username: %w", err)
+		if err == sql.ErrNoRows {
+			return "", "", nil
 		}
+		return "", "", fmt.Errorf("failed to query username: %w", err)
 	}
 
 	// 更新角色

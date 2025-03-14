@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"log"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
@@ -42,6 +43,7 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 				},
 			}, fmt.Errorf("fail to get user info in redis: %w", err)
 		}
+		log.Printf("cache result  %v", result)
 
 		// 调用函数，传递转换后的 map
 		user_info, err = tools.MapUserByString(result)
@@ -67,6 +69,7 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 				},
 			}, fmt.Errorf("fail to get user info in db: %w", err)
 		}
+		log.Printf("db result  %v", result)
 
 		if result == nil {
 			return &generated.GetUserResponse{
@@ -82,6 +85,8 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 		go messaging.SendMessage(ctx, messaging.StoreUser, messaging.StoreUser, result)
 	}
 
+	log.Printf("exist  %v", exist)
+	log.Printf("user_info  %v", user_info)
 	user_info.UserDefault.UserId = user_id
 
 	return &generated.GetUserResponse{

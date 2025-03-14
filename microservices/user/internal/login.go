@@ -20,7 +20,6 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 	// 检查空值
 	if (user_credentials.GetUsername() == "" && user_credentials.GetUserEmail() == "") || user_credentials.GetPassword() == "" {
 		err := status.Errorf(codes.InvalidArgument, "username and password cannot be empty")
-		log.Printf("warning: %v", err)
 		return &generated.LoginResponse{
 			Msg: &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,

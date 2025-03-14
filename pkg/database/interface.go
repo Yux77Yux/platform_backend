@@ -1,4 +1,4 @@
-package db
+package database
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 )
 
 type SqlMethods interface {
-	InitDb(or, wr string) error
 	Close() error
 
 	QueryRow(query string, args ...interface{}) *sql.Row

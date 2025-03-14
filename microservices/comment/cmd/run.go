@@ -7,6 +7,7 @@ import (
 
 	cache "github.com/Yux77Yux/platform_backend/microservices/comment/cache"
 	receiver "github.com/Yux77Yux/platform_backend/microservices/comment/messaging/receiver"
+	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
 	service "github.com/Yux77Yux/platform_backend/microservices/comment/service"
 	tools "github.com/Yux77Yux/platform_backend/microservices/comment/tools"
 )
@@ -14,18 +15,31 @@ import (
 func Run(ctx context.Context) {
 	var wg sync.WaitGroup
 
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
-		cache.Run(ctx)
+		err := cache.Run(ctx)
+		if err != nil {
+			tools.LogSuperError(err)
+		}
 	}()
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
+		defer wg.Done()
+		err := db.Run(ctx)
+		if err != nil {
+			tools.LogSuperError(err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
 		defer wg.Done()
 		receiver.Run(ctx)
 	}()
+
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		service.ServerRun(ctx)
 	}()

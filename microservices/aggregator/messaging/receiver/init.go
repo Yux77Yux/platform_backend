@@ -26,6 +26,7 @@ func Run(ctx context.Context) {
 			go messaging.ListenToQueue(exchange, ADD_VIEW, event.RoutingKey_KEY_ADD_VIEW.String(), addViewProcessor)
 		}
 	}
+
 	<-ctx.Done()
 	messaging.Close(ctx)
 }

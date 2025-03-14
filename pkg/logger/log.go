@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
+	"regexp"
 	"sync"
 	"time"
 
@@ -90,10 +90,17 @@ func (lm *LoggerManager) listen() {
 	}
 }
 
+func (lm *LoggerManager) GetMatches(str, pattern string) []string {
+	re := regexp.MustCompile(pattern)
+	return re.FindStringSubmatch(str)
+}
+
 func (lm *LoggerManager) SplitFullName(fullName string) (string, string) {
-	lastSlash := strings.LastIndex(fullName, "/")
-	lastDot := strings.LastIndex(fullName, ".")
-	return fullName[1:lastDot], fullName[lastSlash+1:]
+	matches := lm.GetMatches(fullName, `^/([^/.]+)\.([^/]+)Service/([^/]+)$`)
+	if len(matches) != 4 {
+		return "server", fullName
+	}
+	return matches[1], matches[3]
 }
 
 func (lm *LoggerManager) writeLog(msg *LogFile) {

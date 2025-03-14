@@ -17,6 +17,9 @@ func init() {
 }
 
 func LogSuperError(err error) {
+	if err == nil {
+		return
+	}
 	now := time.Now()
 	logManager.SharedLog(&logger.LogMessage{
 		Level:     logger.SUPER,
@@ -56,6 +59,9 @@ func LogInfo(traceId, fullName string) {
 }
 
 func LogError(traceId, fullName string, err error) {
+	if err == nil {
+		return
+	}
 	domainName, methodName := logManager.SplitFullName(fullName)
 	now := time.Now()
 	go logManager.SharedLog(&logger.LogMessage{

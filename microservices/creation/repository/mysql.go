@@ -4,16 +4,19 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"time"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	generated "github.com/Yux77Yux/platform_backend/generated/creation"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
 // POST
-func CreationAddInTransaction(creation *generated.Creation) error {
+func CreationAddInTransaction(ctx context.Context, creation *generated.Creation) error {
 	queryCreation := `insert into db_creation_1.Creation 
 	(id,
 	author_id,
@@ -32,8 +35,6 @@ func CreationAddInTransaction(creation *generated.Creation) error {
 	(creation_id
 	)
 	values(?)`
-
-	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -72,7 +73,8 @@ func CreationAddInTransaction(creation *generated.Creation) error {
 
 		return err
 	default:
-		_, err := tx.Exec(
+		_, err := tx.ExecContext(
+			ctx,
 			queryCreation,
 			id,
 			author_id,
@@ -86,12 +88,10 @@ func CreationAddInTransaction(creation *generated.Creation) error {
 			upload_time,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+			if errRollback := db.RollbackTransaction(tx); errRollback != nil {
+				log.Printf("Transaction rollback failed: %v\n", errRollback)
 			}
-
-			return err
+			return errMap.MapMySQLErrorToStatus(err)
 		}
 
 		_, err = tx.Exec(
@@ -99,16 +99,14 @@ func CreationAddInTransaction(creation *generated.Creation) error {
 			id,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreationEngagement transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+			if errRollback := db.RollbackTransaction(tx); errRollback != nil {
+				log.Printf("Transaction rollback failed: %v\n", errRollback)
 			}
-
-			return err
+			return errMap.MapMySQLErrorToStatus(err)
 		}
 
 		if err = db.CommitTransaction(tx); err != nil {
-			return err
+			return errMap.MapMySQLErrorToStatus(err)
 		}
 	}
 
@@ -191,9 +189,10 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 			&upload_time,
 		)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				return nil, err
+			if err == sql.ErrNoRows {
+				return nil, nil
 			}
+			return nil, err
 		}
 
 		// 查 统计数
@@ -209,9 +208,10 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 			&publish_time,
 		)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				return nil, err
+			if err == sql.ErrNoRows {
+				return nil, nil
 			}
+			return nil, err
 		}
 
 		// 查 分区
@@ -226,9 +226,10 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 			&description,
 		)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				return nil, err
+			if err == sql.ErrNoRows {
+				return nil, nil
 			}
+			return nil, err
 		}
 	}
 
@@ -290,9 +291,10 @@ func GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, err
 			&author_id,
 		)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				return -1, err
+			if err == sql.ErrNoRows {
+				return 0, nil
 			}
+			return -1, err
 		}
 	}
 	return author_id, nil
@@ -347,9 +349,10 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 				status,
 			).Scan(&num)
 			if err != nil {
-				if err != sql.ErrNoRows {
-					return nil, -1, err
+				if err == sql.ErrNoRows {
+					return nil, 0, nil
 				}
+				return nil, -1, err
 			}
 			if num <= 0 {
 				return nil, 0, nil

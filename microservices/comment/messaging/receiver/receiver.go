@@ -39,8 +39,11 @@ func DeleteCommentProcessor(ctx context.Context, msg *anypb.Any) error {
 	if err != nil {
 		return err
 	}
-
+	if creationId <= 0 {
+		return fmt.Errorf("creationId <= 0")
+	}
 	req.CreationId = creationId
+
 	if req.GetUserId() != -403 && req.GetUserId() != userId {
 		return nil
 	}

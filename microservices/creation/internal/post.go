@@ -14,6 +14,7 @@ import (
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
 func UploadCreation(ctx context.Context, req *generated.UploadCreationRequest) (*generated.UploadCreationResponse, error) {
@@ -85,16 +86,24 @@ func UploadCreation(ctx context.Context, req *generated.UploadCreationRequest) (
 		UploadTime: timestamppb.Now(),
 	}
 	for i := 0; i < 3; i++ {
-		err = db.CreationAddInTransaction(creation)
+		err = db.CreationAddInTransaction(ctx, creation)
 		if err != nil {
-			log.Printf("db CreationAddInTransaction occur error: %v", err)
+			if isServerError := errMap.IsServerError(err); isServerError {
+				response.Msg = &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    "500",
+					Details: err.Error(),
+				}
+				return response, err
+			}
+
 			response.Msg = &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
 				Details: err.Error(),
 			}
 			if i == 2 {
-				return response, err
+				return response, nil
 			}
 			time.Sleep(2 * time.Second)
 			creation.CreationId = tools.GetSnowId()

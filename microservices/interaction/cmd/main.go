@@ -7,8 +7,8 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/Yux77Yux/platform_backend/microservices/auth/config" // 保证配置初始化
-	tools "github.com/Yux77Yux/platform_backend/microservices/auth/tools"
+	_ "github.com/Yux77Yux/platform_backend/microservices/interaction/config" // 保证配置初始化
+	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
 
 func main() {

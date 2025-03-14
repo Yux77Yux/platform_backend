@@ -203,9 +203,10 @@ func GetCreationIdInTransaction(ctx context.Context, comment_id int32) (int64, i
 		).Scan(&creationId, &userId)
 
 		if err != nil {
-			if err != sql.ErrNoRows {
-				return -1, -1, err
+			if err == sql.ErrNoRows {
+				return 0, 0, nil
 			}
+			return -1, -1, err
 		}
 	}
 	return creationId, userId, nil
@@ -281,9 +282,10 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 			creation_id,
 		).Scan(&total, &status)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				return nil, nil, -1, err
+			if err == sql.ErrNoRows {
+				return nil, nil, 0, nil
 			}
+			return nil, nil, -1, err
 		}
 
 		err = db.QueryRowContext(ctx,
@@ -291,9 +293,10 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 			creation_id,
 		).Scan(&count)
 		if err != nil {
-			if err != sql.ErrNoRows {
-				return nil, nil, -1, err
+			if err == sql.ErrNoRows {
+				return nil, nil, 0, nil
 			}
+			return nil, nil, -1, err
 		}
 
 		// 非公开则直接返回

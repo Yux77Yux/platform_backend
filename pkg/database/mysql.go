@@ -1,9 +1,10 @@
-package db
+package database
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -15,15 +16,18 @@ type MysqlClass struct {
 	// replicaDB *sql.DB
 }
 
-func (dbs *MysqlClass) InitDb(readStr string, writeStr string) error {
-	var err error
-
-	if dbs.mainDB, err = sql.Open("mysql", writeStr); err != nil {
-		return err
+func InitDb(readStr string, writeStr string) (SqlMethods, error) {
+	db := &MysqlClass{}
+	mainDB, err := sql.Open("mysql", writeStr)
+	if err != nil {
+		log.Printf("open error %s", err.Error())
+		return nil, err
 	}
+	db.mainDB = mainDB
 
-	if err = dbs.mainDB.Ping(); err != nil {
-		return err
+	if err = db.mainDB.Ping(); err != nil {
+		log.Printf("Ping error %s", err.Error())
+		return nil, err
 	}
 
 	// if dbs.replicaDB, err = sql.Open("mysql", readStr); err != nil {
@@ -37,11 +41,11 @@ func (dbs *MysqlClass) InitDb(readStr string, writeStr string) error {
 	// dbs.replicaDB.SetMaxOpenConns(20)    // 最大打开连接数
 	// dbs.replicaDB.SetMaxIdleConns(10)    // 最大空闲连接数
 	// dbs.replicaDB.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
-	dbs.mainDB.SetMaxOpenConns(40)    // 最大打开连接数
-	dbs.mainDB.SetMaxIdleConns(10)    // 最大空闲连接数
-	dbs.mainDB.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
+	db.mainDB.SetMaxOpenConns(40)    // 最大打开连接数
+	db.mainDB.SetMaxIdleConns(10)    // 最大空闲连接数
+	db.mainDB.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
 
-	return nil
+	return db, nil
 }
 
 func (dbs *MysqlClass) Close() error {
