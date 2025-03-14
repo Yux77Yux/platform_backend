@@ -34,7 +34,7 @@ func GetReviews(ctx context.Context, req *generated.GetReviewsRequest) (*generat
 
 func GetNewReviews(ctx context.Context, req *generated.GetNewReviewsRequest) (*generated.GetReviewsResponse, error) {
 	reviewerId := req.GetReviewerId()
-	reviews, err := messaging.GetPendingReviews(reviewerId, req.GetType())
+	reviews, err := messaging.GetPendingReviews(ctx, reviewerId, req.GetType())
 	if err != nil {
 		return &generated.GetReviewsResponse{
 			Msg: &common.ApiResponse{

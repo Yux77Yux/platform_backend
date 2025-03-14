@@ -1,39 +1,43 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
 	"time"
 
-	generated "github.com/Yux77Yux/platform_backend/generated/comment"
-	middlewares "github.com/Yux77Yux/platform_backend/pkg/middlewares"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+
+	generated "github.com/Yux77Yux/platform_backend/generated/comment"
+	tools "github.com/Yux77Yux/platform_backend/microservices/comment/tools"
+	middlewares "github.com/Yux77Yux/platform_backend/pkg/middlewares"
 )
 
-func ServerRun(done chan struct{}) func() {
+func ServerRun(ctx context.Context) {
 	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(middlewares.LogInterceptor()))
 	reflection.Register(grpcServer) // 启用 gRPC Reflection
 
 	go InitServer(grpcServer)
 
-	return func() {
-		go func() {
-			grpcServer.GracefulStop()
-			log.Printf("info: server shutting down")
-			close(done)
-		}()
+	<-ctx.Done()
+	done := make(chan any, 1)
+	go func() {
+		grpcServer.GracefulStop()
+		log.Printf("info: server shutting down")
+		close(done)
+	}()
 
-		// 等待关闭完成或超时
-		select {
-		case <-done:
-			log.Println("info: server stopped gracefully.")
-		case <-time.After(160 * time.Second):
-			log.Println("warning: timeout reached. Forcing shutdown.")
-			grpcServer.Stop() // 强制关闭服务器
-			close(done)
-		}
+	traceId := tools.GetMainValue(ctx)
+
+	// 等待关闭完成或超时
+	select {
+	case <-done:
+		tools.LogInfo(traceId, "ServerRun stopped gracefully")
+	case <-time.After(time.Minute):
+		grpcServer.Stop()
+		tools.LogWarning(traceId, "ServerRun", "timeout reached. Forcing shutdown")
 	}
 }
 

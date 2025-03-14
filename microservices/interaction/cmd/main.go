@@ -2,55 +2,33 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
-	_ "github.com/Yux77Yux/platform_backend/microservices/interaction/config"
-	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
-	service "github.com/Yux77Yux/platform_backend/microservices/interaction/service"
+	_ "github.com/Yux77Yux/platform_backend/microservices/auth/config" // 保证配置初始化
+	tools "github.com/Yux77Yux/platform_backend/microservices/auth/tools"
 )
 
 func main() {
-	var closeServer func()
-	done := make(chan struct{})
-	// 初始化服务器
-	go func() {
-		closeServer = service.ServerRun(done)
-	}()
-	// 初始化cache
-	cacheMaster := cache.InitDispatch()
-	cacheMaster.Start()
-	cache.InitWorker(cacheMaster)
+	traceID := tools.GetUuid()
+	_parent := context.WithValue(context.Background(), "main", traceID)
+	_ctx, _cancel := context.WithCancel(_parent)
 
-	// 创建一个信道来接收终止信号
+	// 接收终止信号
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM) // 捕获中断和终止信号
 
-	// 等待信号
-	sig := <-signalChan
-	log.Printf("info: received signal: %s. Initiating graceful shutdown...", sig)
+	// 运行
+	go Run(_ctx)
 
-	// 创建取消上下文
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	// 取消上下文，通知服务停止
-	defer cancel()
-	// 关闭服务器
-	go closeServer()
+	<-signalChan
+	_cancel()
 
-	// 等待关闭完成或超时
 	select {
-	case <-done:
-		cacheMaster.Shutdown()
-		cache.CloseClient()
-		db.CloseClient()
-
-		os.Exit(0)
-	case <-ctx.Done():
-		log.Println("warning: timeout reached. Forcing shutdown.")
+	case <-time.After(3 * time.Minute):
+		tools.LogWarning(traceID.String(), "main exit", "timeout reached. Forcing shutdown")
 		os.Exit(1)
 	}
 }

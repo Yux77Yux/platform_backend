@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"context"
+
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/review/messaging"
@@ -8,7 +10,7 @@ import (
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
-func UpdateReview(req *generated.UpdateReviewRequest) (*generated.UpdateReviewResponse, error) {
+func UpdateReview(ctx context.Context, req *generated.UpdateReviewRequest) (*generated.UpdateReviewResponse, error) {
 	response := new(generated.UpdateReviewResponse)
 	token := req.GetAccessToken().GetValue()
 	pass, reviewerId, err := auth.Auth("update", "review", token)
@@ -44,7 +46,7 @@ func UpdateReview(req *generated.UpdateReviewRequest) (*generated.UpdateReviewRe
 	review.New.TargetId = targetId
 	review.New.TargetType = *targetType
 
-	err = messaging.SendMessage(messaging.Update, messaging.Update, review)
+	err = messaging.SendMessage(ctx, messaging.Update, messaging.Update, review)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Code:    "500",

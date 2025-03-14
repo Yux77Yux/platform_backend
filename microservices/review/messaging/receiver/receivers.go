@@ -3,30 +3,26 @@ package messaging
 // 由于不同的exchange，需要不同的接收者，事实上需要被调度，统一开关
 
 import (
+	"context"
 	"fmt"
-	"log"
 
-	amqp "github.com/rabbitmq/amqp091-go"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	creation "github.com/Yux77Yux/platform_backend/generated/creation"
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
 	user "github.com/Yux77Yux/platform_backend/generated/user"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/review/messaging"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/review/messaging/dispatch"
 	db "github.com/Yux77Yux/platform_backend/microservices/review/repository"
-	snow "github.com/Yux77Yux/platform_backend/pkg/snow"
+	tools "github.com/Yux77Yux/platform_backend/microservices/review/tools"
 )
 
-func NewReviewProcessor(msg amqp.Delivery) error {
+func NewReviewProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(generated.NewReview)
-
-	body := msg.Body
-	// 反序列化
-	err := proto.Unmarshal(body, req)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
 		return fmt.Errorf("NewReviewProcessor error: %w", err)
 	}
 
@@ -34,29 +30,27 @@ func NewReviewProcessor(msg amqp.Delivery) error {
 
 	switch req.GetTargetType() {
 	case generated.TargetType_COMMENT:
-		err = PreSendProtoMessage(Comment_review, Comment_review, Comment_review, body)
+		err = messaging.PreSendProtoMessage(ctx, Comment_review, Comment_review, Comment_review, msg.GetValue())
 	case generated.TargetType_USER:
-		err = PreSendProtoMessage(User_review, User_review, User_review, body)
+		err = messaging.PreSendProtoMessage(ctx, User_review, User_review, User_review, msg.GetValue())
 	case generated.TargetType_CREATION:
-		err = PreSendProtoMessage(Creation_review, Creation_review, Creation_review, body)
+		err = messaging.PreSendProtoMessage(ctx, Creation_review, Creation_review, Creation_review, msg.GetValue())
 	}
 
 	return err
 }
 
-func PendingCreationProcessor(msg amqp.Delivery) error {
+func PendingCreationProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(common.CreationId)
 
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, req)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("NewReviewProcessor error: %w", err)
+		return fmt.Errorf("PendingCreationProcessor error: %w", err)
 	}
 
 	creationId := req.GetId()
 
-	id := snow.GetId()
+	id := tools.GetSnowId()
 	newReview := &generated.NewReview{
 		Id:         id,
 		TargetId:   creationId,
@@ -65,48 +59,43 @@ func PendingCreationProcessor(msg amqp.Delivery) error {
 		Msg:        "状态变更",
 	}
 
-	err = SendMessage(New_review, New_review, newReview)
+	err = messaging.SendMessage(ctx, New_review, New_review, newReview)
 	return err
 }
 
-func BatchUpdateProcessor(msg amqp.Delivery) error {
+func BatchUpdateProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(generated.AnyReview)
 
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, req)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("NewReviewProcessor error: %w", err)
+		return fmt.Errorf("BatchUpdateProcessor error: %w", err)
 	}
 
 	go dispatch.HandleRequest(req, dispatch.BatchUpdate)
 	return nil
 }
 
-func UpdateProcessor(msg amqp.Delivery) error {
+func UpdateProcessor(ctx context.Context, msg *anypb.Any) error {
 	review := new(generated.Review)
 
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, review)
+	err := msg.UnmarshalTo(review)
 	if err != nil {
-		log.Printf("Error unmarshaling message: %v", err)
-		return fmt.Errorf("NewReviewProcessor error: %w", err)
+		return fmt.Errorf("UpdateProcessor error: %w", err)
 	}
 
 	err = db.UpdateReview(review)
 	if err != nil {
-		log.Printf("error: db UpdateReview %v", err)
-		return err
+		return fmt.Errorf("error: db UpdateReview %w", err)
 	}
 
 	var reviewErr error
 	switch review.New.GetTargetType() {
 	case generated.TargetType_COMMENT:
-		reviewErr = UpdateCommentReview(review)
+		reviewErr = UpdateCommentReview(ctx, review)
 	case generated.TargetType_CREATION:
-		reviewErr = UpdateCreationReview(review)
+		reviewErr = UpdateCreationReview(ctx, review)
 	case generated.TargetType_USER:
-		reviewErr = UpdateUserReview(review)
+		reviewErr = UpdateUserReview(ctx, review)
 	}
 
 	if reviewErr != nil {
@@ -116,7 +105,7 @@ func UpdateProcessor(msg amqp.Delivery) error {
 	return nil
 }
 
-func UpdateCommentReview(review *generated.Review) error {
+func UpdateCommentReview(ctx context.Context, review *generated.Review) error {
 	status := review.GetStatus()
 	commentId := review.GetNew().GetTargetId()
 	if commentId <= 0 {
@@ -131,13 +120,13 @@ func UpdateCommentReview(review *generated.Review) error {
 	var err error
 	switch status {
 	case generated.ReviewStatus_REJECTED, generated.ReviewStatus_DELETED:
-		err = SendMessage(COMMENT_REJECTED, COMMENT_REJECTED, commentObj)
+		err = messaging.SendMessage(ctx, COMMENT_REJECTED, COMMENT_REJECTED, commentObj)
 	}
 
 	return err
 }
 
-func UpdateCreationReview(review *generated.Review) error {
+func UpdateCreationReview(ctx context.Context, review *generated.Review) error {
 	status := review.GetStatus()
 	creationId := review.GetNew().GetTargetId()
 	if creationId <= 0 {
@@ -153,19 +142,19 @@ func UpdateCreationReview(review *generated.Review) error {
 	switch status {
 	case generated.ReviewStatus_REJECTED:
 		creationObj.Status = creation.CreationStatus_REJECTED
-		err = SendMessage(CREATION_REJECTED, CREATION_REJECTED, creationObj)
+		err = messaging.SendMessage(ctx, CREATION_REJECTED, CREATION_REJECTED, creationObj)
 	case generated.ReviewStatus_APPROVED:
 		creationObj.Status = creation.CreationStatus_PUBLISHED
-		err = SendMessage(CREATION_APPROVE, CREATION_APPROVE, creationObj)
+		err = messaging.SendMessage(ctx, CREATION_APPROVE, CREATION_APPROVE, creationObj)
 	case generated.ReviewStatus_DELETED:
 		creationObj.Status = creation.CreationStatus_DELETE
-		err = SendMessage(CREATION_DELETED, CREATION_DELETED, creationObj)
+		err = messaging.SendMessage(ctx, CREATION_DELETED, CREATION_DELETED, creationObj)
 	}
 
 	return err
 }
 
-func UpdateUserReview(review *generated.Review) error {
+func UpdateUserReview(ctx context.Context, review *generated.Review) error {
 	status := review.GetStatus()
 	userId := review.GetNew().GetTargetId()
 	if userId <= 0 {
@@ -180,10 +169,10 @@ func UpdateUserReview(review *generated.Review) error {
 	switch status {
 	case generated.ReviewStatus_REJECTED:
 		updateUser.UserStatus = user.UserStatus_LIMITED
-		err = SendMessage(USER_REJECTED, USER_REJECTED, updateUser)
+		err = messaging.SendMessage(ctx, USER_REJECTED, USER_REJECTED, updateUser)
 	case generated.ReviewStatus_APPROVED:
 		updateUser.UserStatus = user.UserStatus_INACTIVE
-		err = SendMessage(USER_APPROVE, USER_APPROVE, updateUser)
+		err = messaging.SendMessage(ctx, USER_APPROVE, USER_APPROVE, updateUser)
 	}
 
 	return err

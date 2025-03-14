@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -54,7 +55,9 @@ func (chain *UserAvatarCacheChain) ExecuteBatch() {
 		go func(userAvatarsPtr *[]*generated.UserUpdateAvatar) {
 			userAvatars := *userAvatarsPtr
 			// 更新头像
-			err := cache.UpdateUserAvatar(userAvatars)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := cache.UpdateUserAvatar(ctx, userAvatars)
+			cancel()
 			if err != nil {
 				log.Printf("error: UserUserAvatarCacheInTransaction error")
 			}

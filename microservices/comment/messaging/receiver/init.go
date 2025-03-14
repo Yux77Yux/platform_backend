@@ -1,6 +1,8 @@
 package receiver
 
 import (
+	"context"
+
 	messaging "github.com/Yux77Yux/platform_backend/microservices/comment/messaging"
 )
 
@@ -13,8 +15,8 @@ var (
 	ExchangesConfig = messaging.ExchangesConfig
 )
 
-func Init(addr string) {
-	messaging.InitStr(addr)
+func Run(ctx context.Context) {
+	messaging.Init()
 	for exchange := range ExchangesConfig {
 		switch exchange {
 		// 不同的exchange使用不同函数
@@ -24,4 +26,6 @@ func Init(addr string) {
 			go messaging.ListenToQueue(exchange, DeleteComment, DeleteComment, DeleteCommentProcessor)
 		}
 	}
+	<-ctx.Done()
+	messaging.Close(ctx)
 }

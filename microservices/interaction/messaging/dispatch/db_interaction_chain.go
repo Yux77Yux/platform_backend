@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -75,7 +76,7 @@ func (chain *DbInteractionChain) ExecuteBatch() {
 				if len(actions) <= 0 {
 					return
 				}
-				messagingErr := messaging.SendMessage(messaging.UPDATE_CREATION_ACTION_COUNT, messaging.UPDATE_CREATION_ACTION_COUNT, &common.AnyUserAction{
+				messagingErr := messaging.SendMessage(context.Background(), messaging.UPDATE_CREATION_ACTION_COUNT, messaging.UPDATE_CREATION_ACTION_COUNT, &common.AnyUserAction{
 					Actions: actions,
 				})
 				if messagingErr != nil {

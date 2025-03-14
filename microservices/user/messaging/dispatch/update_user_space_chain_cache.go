@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -54,7 +55,9 @@ func (chain *UserSpaceCacheChain) ExecuteBatch() {
 		go func(usersPtr *[]*generated.UserUpdateSpace) {
 			users := *usersPtr
 			// 更新头像
-			err := cache.UpdateUserSpace(users)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := cache.UpdateUserSpace(ctx, users)
+			cancel()
 			if err != nil {
 				log.Printf("error: UserUserSpaceCacheInTransaction error")
 			}

@@ -7,7 +7,7 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
-	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
@@ -79,7 +79,7 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 			}, nil
 		}
 
-		go userMQ.SendMessage(userMQ.StoreUser, userMQ.StoreUser, result)
+		go messaging.SendMessage(ctx, messaging.StoreUser, messaging.StoreUser, result)
 	}
 
 	user_info.UserDefault.UserId = user_id

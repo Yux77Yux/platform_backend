@@ -6,7 +6,6 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -34,7 +33,7 @@ func LogInterceptor() grpc.UnaryServerInterceptor {
 	) (any, error) {
 		traceId := utils.GetMetadataValue(ctx, "trace-id")
 		if traceId == "" {
-			traceId = uuid.New().String()
+			traceId = utils.GetUuidString()
 			ctx = metadata.AppendToOutgoingContext(ctx, "trace-id", traceId)
 		}
 		fullName := info.FullMethod
@@ -47,18 +46,18 @@ func LogInterceptor() grpc.UnaryServerInterceptor {
 		isServerError, detail, c_err := GetMsg(resp, traceId)
 		if c_err != nil {
 			// 反射的错误,警告
-			utils.LogError(traceId, fullName, c_err.Error())
+			utils.LogError(traceId, fullName, c_err)
 		} else {
 			// 没有反射错误，但有业务上的错误
 			if isServerError {
-				utils.LogError(traceId, fullName, detail)
+				utils.LogError(traceId, fullName, fmt.Errorf(detail))
 				return resp, fmt.Errorf(detail)
 			}
 		}
 
 		// 其他未知错误
 		if err != nil {
-			utils.LogError(traceId, fullName, err.Error())
+			utils.LogError(traceId, fullName, err)
 			return resp, nil
 		}
 

@@ -3,10 +3,9 @@ package config
 import (
 	"os"
 
-	userCache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
-	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
-	oss "github.com/Yux77Yux/platform_backend/microservices/user/oss"
-	userDB "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
+	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	service "github.com/Yux77Yux/platform_backend/microservices/user/service"
 )
 
@@ -25,12 +24,7 @@ var REDIS_PASSWORD string = os.Getenv("REDIS_PASSWORD")
 
 func init() {
 	service.InitStr(GRPC_SERVER_ADDRESS)
-	userMQ.InitStr(RABBITMQ_STR)
-	userCache.InitStr(REDIS_STR, REDIS_PASSWORD)
-	userDB.InitStr(MYSQL_READER_STR, MYSQL_WRITER_STR)
-
-	userMQ.Init()
-	userDB.Init()
-	userCache.Init()
-	oss.Init()
+	cache.InitStr(REDIS_STR, REDIS_PASSWORD)
+	db.InitStr(MYSQL_READER_STR, MYSQL_WRITER_STR)
+	messaging.InitStr(RABBITMQ_STR)
 }

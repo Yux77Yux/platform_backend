@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"log"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -11,7 +12,7 @@ import (
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
-func PostInteraction(req *generated.PostInteractionRequest) (*generated.PostInteractionResponse, error) {
+func PostInteraction(ctx context.Context, req *generated.PostInteractionRequest) (*generated.PostInteractionResponse, error) {
 	var response = new(generated.PostInteractionResponse)
 	token := req.GetAccessToken().GetValue()
 	pass, userId, err := auth.Auth("post", "interaction", token)
@@ -41,7 +42,7 @@ func PostInteraction(req *generated.PostInteractionRequest) (*generated.PostInte
 		UpdatedAt: timestamppb.Now(),
 	}
 
-	err = messaging.SendMessage(messaging.AddView, messaging.AddView, operateInteraction)
+	err = messaging.SendMessage(ctx, messaging.AddView, messaging.AddView, operateInteraction)
 	if err != nil {
 		log.Printf("error: SendMessage %v", err)
 		response.Msg = &common.ApiResponse{

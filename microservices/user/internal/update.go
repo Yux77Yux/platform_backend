@@ -2,20 +2,21 @@ package internal
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
-	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/user/messaging/dispatch"
 	oss "github.com/Yux77Yux/platform_backend/microservices/user/oss"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
-func DelReviewer(req *generated.DelReviewerRequest) (*generated.DelReviewerResponse, error) {
+func DelReviewer(ctx context.Context, req *generated.DelReviewerRequest) (*generated.DelReviewerResponse, error) {
 	response := new(generated.DelReviewerResponse)
-	err := userMQ.SendMessage(userMQ.DelReviewer, userMQ.DelReviewer, req)
+	err := messaging.SendMessage(ctx, messaging.DelReviewer, messaging.DelReviewer, req)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -33,7 +34,7 @@ func DelReviewer(req *generated.DelReviewerRequest) (*generated.DelReviewerRespo
 	return response, err
 }
 
-func UpdateUserSpace(req *generated.UpdateUserSpaceRequest) (*generated.UpdateUserResponse, error) {
+func UpdateUserSpace(ctx context.Context, req *generated.UpdateUserSpaceRequest) (*generated.UpdateUserResponse, error) {
 	response := new(generated.UpdateUserResponse)
 	accessToken := req.GetAccessToken().GetValue()
 	pass, userId, err := auth.Auth("update", "user", accessToken)
@@ -56,7 +57,7 @@ func UpdateUserSpace(req *generated.UpdateUserSpaceRequest) (*generated.UpdateUs
 	space := req.GetUserUpdateSpace()
 	space.UserDefault.UserId = userId
 
-	err = userMQ.SendMessage(userMQ.UpdateUserSpace, userMQ.UpdateUserSpace, space)
+	err = messaging.SendMessage(ctx, messaging.UpdateUserSpace, messaging.UpdateUserSpace, space)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -74,7 +75,7 @@ func UpdateUserSpace(req *generated.UpdateUserSpaceRequest) (*generated.UpdateUs
 	return response, err
 }
 
-func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.UpdateUserAvatarResponse, error) {
+func UpdateUserAvatar(ctx context.Context, req *generated.UpdateUserAvatarRequest) (*generated.UpdateUserAvatarResponse, error) {
 	response := new(generated.UpdateUserAvatarResponse)
 	accessToken := req.GetAccessToken().GetValue()
 	pass, userId, err := auth.Auth("update", "user", accessToken)
@@ -153,7 +154,7 @@ func UpdateUserAvatar(req *generated.UpdateUserAvatarRequest) (*generated.Update
 	return response, nil
 }
 
-func UpdateUserStatus(req *generated.UpdateUserStatusRequest) (*generated.UpdateUserResponse, error) {
+func UpdateUserStatus(ctx context.Context, req *generated.UpdateUserStatusRequest) (*generated.UpdateUserResponse, error) {
 	response := new(generated.UpdateUserResponse)
 	accessToken := req.GetAccessToken().GetValue()
 	pass, userId, err := auth.Auth("update", "user", accessToken)
@@ -176,7 +177,7 @@ func UpdateUserStatus(req *generated.UpdateUserStatusRequest) (*generated.Update
 	updateStatus := req.GetUserUpdateStatus()
 	updateStatus.UserId = userId
 
-	err = userMQ.SendMessage(userMQ.UpdateUserStatus, userMQ.UpdateUserStatus, updateStatus)
+	err = messaging.SendMessage(ctx, messaging.UpdateUserStatus, messaging.UpdateUserStatus, updateStatus)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -195,7 +196,7 @@ func UpdateUserStatus(req *generated.UpdateUserStatusRequest) (*generated.Update
 	return response, nil
 }
 
-func UpdateUserBio(req *generated.UpdateUserBioRequest) (*generated.UpdateUserResponse, error) {
+func UpdateUserBio(ctx context.Context, req *generated.UpdateUserBioRequest) (*generated.UpdateUserResponse, error) {
 	response := new(generated.UpdateUserResponse)
 	accessToken := req.GetAccessToken().GetValue()
 	pass, userId, err := auth.Auth("update", "user", accessToken)

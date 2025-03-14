@@ -10,7 +10,8 @@ import (
 
 type HandlerFunc = pkgMQ.HandlerFunc
 
-type MessagequeueInterface interface {
+type MessageQueueInterface interface {
+	Close(ctx context.Context)
 	SendMessage(ctx context.Context, exchange string, routeKey string, req proto.Message) error
 	ListenToQueue(exchange, queueName, routeKey string, handler HandlerFunc)
 }

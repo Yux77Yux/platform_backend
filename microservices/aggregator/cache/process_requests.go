@@ -38,7 +38,6 @@ func (r *RequestProcessor) Start() {
 func (r *RequestProcessor) Shutdown() {
 	close(r.requestChan)
 	r.wg.Wait() // 等待所有任务完成
-	log.Println("info: RequestProcessor shutdown gracefully.")
 }
 
 func (r *RequestProcessor) GetChannel() chan RequestHandlerFunc {

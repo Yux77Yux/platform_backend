@@ -18,14 +18,17 @@ func InitStr(or, wr string) {
 }
 
 func GetDB() SqlMethods {
-	dbs := &pkgDb.MysqlClass{}
-	err := dbs.InitDb(onlyReadStr, readWriteStr)
+	if db != nil {
+		return db
+	}
+	db := &pkgDb.MysqlClass{}
+	err := db.InitDb(onlyReadStr, readWriteStr)
 	if err != nil {
 		log.Printf("error: database init failed: %v", err)
 		return nil
 	}
 
-	return dbs
+	return db
 }
 
 func CloseClient() {
@@ -34,6 +37,6 @@ func CloseClient() {
 	}
 }
 
-func Init() {
+func Run() {
 	db = GetDB()
 }

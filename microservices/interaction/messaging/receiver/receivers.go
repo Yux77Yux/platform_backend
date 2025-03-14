@@ -3,10 +3,10 @@ package receiver
 // 由于不同的exchange，需要不同的接收者，事实上需要被调度，统一开关
 
 import (
+	"context"
 	"log"
 
-	amqp "github.com/rabbitmq/amqp091-go"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
@@ -16,12 +16,11 @@ import (
 	recommend "github.com/Yux77Yux/platform_backend/microservices/interaction/recommend"
 )
 
-func computeSimilarProcessor(msg amqp.Delivery) error {
+func computeSimilarProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(common.CreationId)
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, req)
+
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("error: Unmarshal %v", err)
 		return err
 	}
 
@@ -40,12 +39,10 @@ func computeSimilarProcessor(msg amqp.Delivery) error {
 	return nil
 }
 
-func computeUserProcessor(msg amqp.Delivery) error {
+func computeUserProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(common.UserDefault)
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, req)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("error: Unmarshal %v", err)
 		return err
 	}
 
@@ -64,12 +61,10 @@ func computeUserProcessor(msg amqp.Delivery) error {
 	return nil
 }
 
-func updateDbInteraction(msg amqp.Delivery) error {
+func updateDbInteraction(ctx context.Context, msg *anypb.Any) error {
 	req := new(generated.OperateInteraction)
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, req)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("error: Unmarshal %v", err)
 		return err
 	}
 
@@ -77,17 +72,15 @@ func updateDbInteraction(msg amqp.Delivery) error {
 	return nil
 }
 
-func addViewProcessor(msg amqp.Delivery) error {
+func addViewProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(generated.OperateInteraction)
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, req)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("error: Unmarshal %v", err)
 		return err
 	}
 
 	go dispatch.HandleRequest(req, dispatch.ViewCache)
-	err = messaging.SendMessage(messaging.UpdateDb, messaging.UpdateDb, req)
+	err = messaging.SendMessage(context.Background(), messaging.UpdateDb, messaging.UpdateDb, req)
 	if err != nil {
 		log.Printf("error: SendMessage %v", err)
 		return err
@@ -95,17 +88,15 @@ func addViewProcessor(msg amqp.Delivery) error {
 	return nil
 }
 
-func addCollectionProcessor(msg amqp.Delivery) error {
+func addCollectionProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(generated.OperateInteraction)
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, req)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("error: Unmarshal %v", err)
 		return err
 	}
 
 	go dispatch.HandleRequest(req, dispatch.CollectionCache)
-	err = messaging.SendMessage(messaging.UpdateDb, messaging.UpdateDb, req)
+	err = messaging.SendMessage(context.Background(), messaging.UpdateDb, messaging.UpdateDb, req)
 	if err != nil {
 		log.Printf("error: SendMessage %v", err)
 		return err
@@ -113,17 +104,15 @@ func addCollectionProcessor(msg amqp.Delivery) error {
 	return nil
 }
 
-func addLikeProcessor(msg amqp.Delivery) error {
+func addLikeProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(generated.OperateInteraction)
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, req)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("error: Unmarshal %v", err)
 		return err
 	}
 
 	go dispatch.HandleRequest(req, dispatch.LikeCache)
-	err = messaging.SendMessage(messaging.UpdateDb, messaging.UpdateDb, req)
+	err = messaging.SendMessage(context.Background(), messaging.UpdateDb, messaging.UpdateDb, req)
 	if err != nil {
 		log.Printf("error: SendMessage %v", err)
 		return err
@@ -131,17 +120,15 @@ func addLikeProcessor(msg amqp.Delivery) error {
 	return nil
 }
 
-func cancelLikeProcessor(msg amqp.Delivery) error {
+func cancelLikeProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(generated.OperateInteraction)
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, req)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("error: Unmarshal %v", err)
 		return err
 	}
 
 	go dispatch.HandleRequest(req.GetBase(), dispatch.CancelLikeCache)
-	err = messaging.SendMessage(messaging.UpdateDb, messaging.UpdateDb, req)
+	err = messaging.SendMessage(context.Background(), messaging.UpdateDb, messaging.UpdateDb, req)
 	if err != nil {
 		log.Printf("error: SendMessage %v", err)
 		return err
@@ -149,12 +136,10 @@ func cancelLikeProcessor(msg amqp.Delivery) error {
 	return nil
 }
 
-func batchUpdateDbProcessor(msg amqp.Delivery) error {
+func batchUpdateDbProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(generated.AnyOperateInteraction)
-	// 反序列化
-	err := proto.Unmarshal(msg.Body, req)
+	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("error: Unmarshal %v", err)
 		return err
 	}
 	go dispatch.HandleRequest(req, dispatch.DbBatchInteraction)

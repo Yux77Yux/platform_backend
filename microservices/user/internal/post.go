@@ -1,17 +1,18 @@
 package internal
 
 import (
+	"context"
 	"log"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
-	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
-func AddReviewer(req *generated.AddReviewerRequest) (*generated.AddReviewerResponse, error) {
+func AddReviewer(ctx context.Context, req *generated.AddReviewerRequest) (*generated.AddReviewerResponse, error) {
 	response := new(generated.AddReviewerResponse)
 	token := req.GetAccessToken().GetValue()
 	pass, _, err := auth.Auth("post", "user_credentials", token)
@@ -53,7 +54,7 @@ func AddReviewer(req *generated.AddReviewerRequest) (*generated.AddReviewerRespo
 	}
 
 	// redis查询账号是否唯一
-	exist, err := cache.ExistsUsername(user_credentials.GetUsername())
+	exist, err := cache.ExistsUsername(ctx, user_credentials.GetUsername())
 	if err != nil {
 		log.Printf("error: failed to use redis client: %v", err)
 	}
@@ -69,7 +70,7 @@ func AddReviewer(req *generated.AddReviewerRequest) (*generated.AddReviewerRespo
 
 	// redis查询邮箱是否存在，是否唯一
 	if user_credentials.GetUserEmail() != "" {
-		exist, err = cache.ExistsEmail(user_credentials.GetUserEmail())
+		exist, err = cache.ExistsEmail(ctx, user_credentials.GetUserEmail())
 		if err != nil {
 			log.Printf("error: failed to use redis client: %v", err)
 		}
@@ -85,7 +86,7 @@ func AddReviewer(req *generated.AddReviewerRequest) (*generated.AddReviewerRespo
 	}
 
 	user_credentials.UserRole = generated.UserRole_ADMIN
-	err = userMQ.SendMessage(userMQ.Register, userMQ.Register, user_credentials)
+	err = messaging.SendMessage(ctx, messaging.Register, messaging.Register, user_credentials)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -105,7 +106,7 @@ func AddReviewer(req *generated.AddReviewerRequest) (*generated.AddReviewerRespo
 	}, nil
 }
 
-func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, error) {
+func Register(ctx context.Context, req *generated.RegisterRequest) (*generated.RegisterResponse, error) {
 	response := new(generated.RegisterResponse)
 	user_credentials := req.GetUserCredentials()
 	// 检查
@@ -129,7 +130,7 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 	}
 
 	// redis查询账号是否唯一
-	exist, err := cache.ExistsUsername(user_credentials.GetUsername())
+	exist, err := cache.ExistsUsername(ctx, user_credentials.GetUsername())
 	if err != nil {
 		log.Printf("error: failed to use redis client: %v", err)
 	}
@@ -146,7 +147,7 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 
 	// redis查询邮箱是否存在，是否唯一
 	if user_credentials.GetUserEmail() != "" {
-		exist, err = cache.ExistsEmail(user_credentials.GetUserEmail())
+		exist, err = cache.ExistsEmail(ctx, user_credentials.GetUserEmail())
 		if err != nil {
 			log.Printf("error: failed to use redis client: %v", err)
 		}
@@ -162,7 +163,7 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 		}
 	}
 
-	err = userMQ.SendMessage(userMQ.Register, userMQ.Register, user_credentials)
+	err = messaging.SendMessage(ctx, messaging.Register, messaging.Register, user_credentials)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -179,7 +180,7 @@ func Register(req *generated.RegisterRequest) (*generated.RegisterResponse, erro
 	return response, err
 }
 
-func Follow(req *generated.FollowRequest) (*generated.FollowResponse, error) {
+func Follow(ctx context.Context, req *generated.FollowRequest) (*generated.FollowResponse, error) {
 	response := new(generated.FollowResponse)
 	follow := req.GetFollow()
 	token := req.GetAccessToken().GetValue()
@@ -201,7 +202,7 @@ func Follow(req *generated.FollowRequest) (*generated.FollowResponse, error) {
 	}
 	follow.FollowerId = userId
 
-	err = userMQ.SendMessage(userMQ.Follow, userMQ.Follow, follow)
+	err = messaging.SendMessage(ctx, messaging.Follow, messaging.Follow, follow)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,

@@ -8,13 +8,13 @@ import (
 )
 
 func (s *Server) AddReviewer(ctx context.Context, req *generated.AddReviewerRequest) (*generated.AddReviewerResponse, error) {
-	return internal.AddReviewer(req)
+	return internal.AddReviewer(ctx, req)
 }
 
 func (s *Server) Follow(ctx context.Context, req *generated.FollowRequest) (*generated.FollowResponse, error) {
-	return internal.Follow(req)
+	return internal.Follow(ctx, req)
 }
 
 func (s *Server) Register(ctx context.Context, req *generated.RegisterRequest) (*generated.RegisterResponse, error) {
-	return internal.Register(req)
+	return internal.Register(ctx, req)
 }

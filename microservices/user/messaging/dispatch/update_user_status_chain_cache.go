@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -54,7 +55,9 @@ func (chain *UserStatusCacheChain) ExecuteBatch() {
 		go func(usersPtr *[]*generated.UserUpdateStatus) {
 			users := *usersPtr
 			// 更新头像
-			err := cache.UpdateUserStatus(users)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := cache.UpdateUserStatus(ctx, users)
+			cancel()
 			if err != nil {
 				log.Printf("error: UserUserStatusCacheInTransaction error %v", err)
 			}

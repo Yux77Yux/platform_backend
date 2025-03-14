@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -50,7 +51,9 @@ func (chain *InsertCacheChain) ExecuteBatch() {
 			insertUsers := *insertUsersPtr
 
 			// 插入Redis
-			err := cache.StoreUserInfo(insertUsers)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := cache.StoreUserInfo(ctx, insertUsers)
+			cancel()
 			if err != nil {
 				log.Printf("error: StoreUserInfo error %v", err)
 			}

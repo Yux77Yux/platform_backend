@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"log"
 	"sync"
 )
@@ -14,8 +15,6 @@ var (
 	interaction_client *InteractionClient
 	comment_client     *CommentClient
 	review_client      *ReviewClient
-
-	initOnce sync.Once
 )
 
 func Close() {
@@ -95,68 +94,72 @@ func GetAuthClient() (*AuthClient, error) {
 	return auth_client, nil
 }
 
-// 使用了envoy，所以使用envoy地址即可
 func InitStr(SERVER_ADDRESS string) {
-	initOnce.Do(func() {
-		service_address = SERVER_ADDRESS
-		var wg sync.WaitGroup
+	service_address = SERVER_ADDRESS
+}
 
-		wg.Add(6)
+// 使用了envoy，所以使用envoy地址即可
+func Run(ctx context.Context) {
+	var wg sync.WaitGroup
 
-		go func() {
-			defer wg.Done()
-			var err error
-			user_client, err = NewUserClient()
-			if err != nil {
-				log.Printf("error: user client %v", err)
-			}
-		}()
+	wg.Add(6)
 
-		go func() {
-			defer wg.Done()
-			var err error
-			auth_client, err = NewAuthClient()
-			if err != nil {
-				log.Printf("error: auth client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		user_client, err = NewUserClient()
+		if err != nil {
+			log.Printf("error: user client %v", err)
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			var err error
-			creation_client, err = NewCreationClient()
-			if err != nil {
-				log.Printf("error: creation client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		auth_client, err = NewAuthClient()
+		if err != nil {
+			log.Printf("error: auth client %v", err)
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			var err error
-			interaction_client, err = NewInteractionClient()
-			if err != nil {
-				log.Printf("error: interaction client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		creation_client, err = NewCreationClient()
+		if err != nil {
+			log.Printf("error: creation client %v", err)
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			var err error
-			comment_client, err = NewCommentClient()
-			if err != nil {
-				log.Printf("error: comment client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		interaction_client, err = NewInteractionClient()
+		if err != nil {
+			log.Printf("error: interaction client %v", err)
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			var err error
-			review_client, err = NewReviewClient()
-			if err != nil {
-				log.Printf("error: review client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		comment_client, err = NewCommentClient()
+		if err != nil {
+			log.Printf("error: comment client %v", err)
+		}
+	}()
 
-		wg.Wait() // 等待所有 gRPC 客户端初始化完成
-	})
+	go func() {
+		defer wg.Done()
+		var err error
+		review_client, err = NewReviewClient()
+		if err != nil {
+			log.Printf("error: review client %v", err)
+		}
+	}()
+
+	wg.Wait() // 等待所有 gRPC 客户端初始化完成
+
+	<-ctx.Done()
+	Close()
 }

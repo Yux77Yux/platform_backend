@@ -1,6 +1,8 @@
 package receiver
 
 import (
+	"context"
+
 	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
 )
 
@@ -24,7 +26,8 @@ var (
 )
 
 // 非RPC类型的消息队列的交换机声明
-func Init(addr string) {
+func Run(ctx context.Context) {
+	messaging.Init()
 	for exchange := range ExchangesConfig {
 		switch exchange {
 		// 不同的exchange使用不同函数
@@ -47,4 +50,7 @@ func Init(addr string) {
 			go messaging.ListenToQueue(exchange, BatchUpdateDb, BatchUpdateDb, batchUpdateDbProcessor)
 		}
 	}
+
+	<-ctx.Done()
+	messaging.Close(ctx)
 }

@@ -22,45 +22,27 @@ func CreationAddInCache(creationInfo *generated.CreationInfo) error {
 
 	id := strconv.FormatInt(creation.GetCreationId(), 10)
 
-	resultCh := make(chan error, 1)
-
 	categoryId := creation.GetBaseInfo().GetCategoryId()
 
-	reqFunc := func(CacheClient CacheInterface) {
-		err := CacheClient.SetFieldsHash(ctx, "CreationInfo", id,
-			"author_id", creation.GetBaseInfo().GetAuthorId(),
-			"src", creation.GetBaseInfo().GetSrc(),
-			"thumbnail", creation.GetBaseInfo().GetThumbnail(),
-			"title", creation.GetBaseInfo().GetTitle(),
-			"bio", creation.GetBaseInfo().GetBio(),
-			"status", creation.GetBaseInfo().GetStatus().String(),
-			"duration", creation.GetBaseInfo().GetDuration(),
-			"category_id", categoryId,
-			"upload_time", creation.GetUploadTime().AsTime(),
+	return CacheClient.SetFieldsHash(ctx, "CreationInfo", id,
+		"author_id", creation.GetBaseInfo().GetAuthorId(),
+		"src", creation.GetBaseInfo().GetSrc(),
+		"thumbnail", creation.GetBaseInfo().GetThumbnail(),
+		"title", creation.GetBaseInfo().GetTitle(),
+		"bio", creation.GetBaseInfo().GetBio(),
+		"status", creation.GetBaseInfo().GetStatus().String(),
+		"duration", creation.GetBaseInfo().GetDuration(),
+		"category_id", categoryId,
+		"upload_time", creation.GetUploadTime().AsTime(),
 
-			"views", 0,
-			"saves", 0,
-			"likes", 0,
-			"publish_time", "none",
+		"views", 0,
+		"saves", 0,
+		"likes", 0,
+		"publish_time", "none",
 
-			"category_name", tools.Categories[categoryId].Name,
-			"category_parent", tools.Categories[categoryId].Parent,
-		)
-		resultCh <- err
-	}
-
-	cacheRequestChannel <- reqFunc
-
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result != nil {
-			return result
-		}
-		return nil
-	}
+		"category_name", tools.Categories[categoryId].Name,
+		"category_parent", tools.Categories[categoryId].Parent,
+	)
 }
 
 func AddSpaceCreations(ctx context.Context, authorId, creationId int64, publishTime *timestamppb.Timestamp) error {
@@ -101,65 +83,40 @@ func AddSpaceCreations(ctx context.Context, authorId, creationId int64, publishT
 
 // GET
 func GetCreationInfoFields(ctx context.Context, creation_id int64, fields []string) (map[string]string, error) {
-	resultCh := make(chan struct {
+	var (
 		creationInfo map[string]string
 		err          error
-	}, 1)
+	)
+	if len(fields) == 0 || fields == nil {
+		creationInfo, err = CacheClient.GetAllHash(ctx, "CreationInfo", strconv.FormatInt(creation_id, 10))
+	} else {
+		var values []interface{}
+		values, err = CacheClient.GetAnyHash(ctx, "CreationInfo", strconv.FormatInt(creation_id, 10), fields...)
+		// 构造结果 map
+		creationInfo = make(map[string]string, len(fields))
 
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		if len(fields) == 0 || fields == nil {
-			result, err := CacheClient.GetAllHash(ctx, "CreationInfo", strconv.FormatInt(creation_id, 10))
-			resultCh <- struct {
-				creationInfo map[string]string
-				err          error
-			}{
-				creationInfo: result,
-				err:          err,
-			}
-		} else {
-			values, err := CacheClient.GetAnyHash(ctx, "CreationInfo", strconv.FormatInt(creation_id, 10), fields...)
-			// 构造结果 map
-			result := make(map[string]string, len(fields))
-
-			for i, field := range fields {
-				// 类型断言并检查 nil 值
-				if values[i] != nil {
-					strValue, ok := values[i].(string)
-					if !ok {
-						err = fmt.Errorf("unexpected value type for field %s", field)
-						break
-					}
-					result[field] = strValue
+		for i, field := range fields {
+			// 类型断言并检查 nil 值
+			if values[i] != nil {
+				strValue, ok := values[i].(string)
+				if !ok {
+					err = fmt.Errorf("unexpected value type for field %s", field)
+					break
 				}
-			}
-
-			resultCh <- struct {
-				creationInfo map[string]string
-				err          error
-			}{
-				creationInfo: result,
-				err:          err,
+				creationInfo[field] = strValue
 			}
 		}
 	}
 
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result.err != nil {
-			return nil, result.err
-		}
-
-		creationInfo := result.creationInfo
-		for _, key := range fields {
-			if val, ok := creationInfo[key]; !ok || val == "" {
-				return nil, fmt.Errorf("error: missing or empty field %s", key)
-			}
-		}
-		return creationInfo, nil
+	if err != nil {
+		return nil, err
 	}
+	for _, key := range fields {
+		if val, ok := creationInfo[key]; !ok || val == "" {
+			return nil, fmt.Errorf("error: missing or empty field %s", key)
+		}
+	}
+	return creationInfo, nil
 }
 
 // 视频展示页的Redis缓存

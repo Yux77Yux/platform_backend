@@ -8,5 +8,5 @@ import (
 )
 
 func (s *Server) PostInteraction(ctx context.Context, req *generated.PostInteractionRequest) (*generated.PostInteractionResponse, error) {
-	return internal.PostInteraction(req)
+	return internal.PostInteraction(ctx, req)
 }

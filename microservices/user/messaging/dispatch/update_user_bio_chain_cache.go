@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -54,7 +55,9 @@ func (chain *UserBioCacheChain) ExecuteBatch() {
 		go func(usersPtr *[]*generated.UserUpdateBio) {
 			users := *usersPtr
 			// 更新头像
-			err := cache.UpdateUserBio(users)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := cache.UpdateUserBio(ctx, users)
+			cancel()
 			if err != nil {
 				log.Printf("error: UserUserBioCacheInTransaction error")
 			}

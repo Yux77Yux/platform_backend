@@ -14,7 +14,6 @@ import (
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
-	snow "github.com/Yux77Yux/platform_backend/pkg/snow"
 )
 
 func UploadCreation(ctx context.Context, req *generated.UploadCreationRequest) (*generated.UploadCreationResponse, error) {
@@ -81,7 +80,7 @@ func UploadCreation(ctx context.Context, req *generated.UploadCreationRequest) (
 	status := baseInfo.GetStatus()
 
 	creation := &generated.Creation{
-		CreationId: snow.GetId(),
+		CreationId: tools.GetSnowId(),
 		BaseInfo:   baseInfo,
 		UploadTime: timestamppb.Now(),
 	}
@@ -98,7 +97,7 @@ func UploadCreation(ctx context.Context, req *generated.UploadCreationRequest) (
 				return response, err
 			}
 			time.Sleep(2 * time.Second)
-			creation.CreationId = snow.GetId()
+			creation.CreationId = tools.GetSnowId()
 		} else {
 			break
 		}

@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -19,7 +18,7 @@ func NewCreationClient() (*CreationClient, error) {
 	// 建立与服务器的连接
 	conn, err := grpc.NewClient(service_address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return nil, fmt.Errorf("did not connect: %v", err)
+		return nil, fmt.Errorf("did not connect CreationClient: %v", err)
 	}
 
 	client := &CreationClient{
@@ -29,11 +28,13 @@ func NewCreationClient() (*CreationClient, error) {
 	return client, nil
 }
 
-func (c *CreationClient) Close() {
+func (c *CreationClient) Close() error {
 	err := c.connection.Close()
 	if err != nil {
-		log.Printf("error: grpc client close %v", err)
+		err = fmt.Errorf("error: CreationClient close %w", err)
+		return err
 	}
+	return nil
 }
 
 func (c *CreationClient) GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*generated.GetCreationResponse, error) {

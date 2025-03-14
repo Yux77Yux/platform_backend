@@ -4,18 +4,19 @@ import (
 	"context"
 	"strconv"
 
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/review/messaging"
-	snow "github.com/Yux77Yux/platform_backend/pkg/snow"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	tools "github.com/Yux77Yux/platform_backend/microservices/review/tools"
 )
 
 func NewReview(ctx context.Context, req *generated.NewReviewRequest) (*generated.NewReviewResponse, error) {
 	review := req.GetNew()
 
 	// 将id发到
-	id := snow.GetId()
+	id := tools.GetSnowId()
 	if id <= 0 {
 		return &generated.NewReviewResponse{
 			Msg: &common.ApiResponse{
@@ -28,7 +29,7 @@ func NewReview(ctx context.Context, req *generated.NewReviewRequest) (*generated
 	review.Id = id
 	review.CreatedAt = timestamppb.Now()
 
-	err := messaging.SendMessage(messaging.New_review, messaging.New_review, review)
+	err := messaging.SendMessage(ctx, messaging.New_review, messaging.New_review, review)
 	if err != nil {
 		return &generated.NewReviewResponse{
 			Msg: &common.ApiResponse{

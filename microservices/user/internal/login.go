@@ -11,7 +11,7 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
-	userMQ "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
+	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 )
 
@@ -58,7 +58,7 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 		}
 
 		go func() {
-			err = userMQ.SendMessage(userMQ.StoreCredentials, userMQ.StoreCredentials, user_part_info)
+			err = messaging.SendMessage(ctx, messaging.StoreCredentials, messaging.StoreCredentials, user_part_info)
 			if err != nil {
 				log.Printf("error: SendMessage StoreCredentials %v", err)
 			}
@@ -147,7 +147,7 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 			UserRole:   user_part_info.GetUserRole(),
 		}
 
-		go userMQ.SendMessage(userMQ.StoreUser, userMQ.StoreUser, user_info)
+		go messaging.SendMessage(ctx, messaging.StoreUser, messaging.StoreUser, user_info)
 	}
 
 	return &generated.LoginResponse{

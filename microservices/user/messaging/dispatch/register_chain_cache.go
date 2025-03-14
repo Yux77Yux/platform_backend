@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -55,13 +56,17 @@ func (chain *RegisterCacheChain) ExecuteBatch() {
 			userCredentials := *userCredentialsPtr
 
 			// 插入Redis
-			err := cache.StoreUsername(userCredentials)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := cache.StoreUsername(ctx, userCredentials)
+			cancel()
 			if err != nil {
 				log.Printf("error: StoreUsername error %v", err)
 			}
 
 			// 插入Redis
-			err = cache.StoreEmail(userCredentials)
+			ctx, cancel = context.WithTimeout(context.Background(), time.Second*30)
+			err = cache.StoreEmail(ctx, userCredentials)
+			cancel()
 			if err != nil {
 				log.Printf("error: StoreEmail error %v", err)
 			}

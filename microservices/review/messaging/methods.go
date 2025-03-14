@@ -1,6 +1,7 @@
 package messaging
 
 import (
+	"context"
 	"log"
 
 	"google.golang.org/protobuf/proto"
@@ -9,7 +10,7 @@ import (
 )
 
 // 这里拿取新的审核请求
-func GetPendingReviews(reviewerId int64, reviewType generated.TargetType) ([]*generated.Review, error) {
+func GetPendingReviews(ctx context.Context, reviewerId int64, reviewType generated.TargetType) ([]*generated.Review, error) {
 	const LIMIT = 8
 	typeName := ""
 	switch reviewType {
@@ -45,7 +46,7 @@ func GetPendingReviews(reviewerId int64, reviewType generated.TargetType) ([]*ge
 		anyReview := &generated.AnyReview{
 			Reviews: reviews,
 		}
-		err := SendMessage(BatchUpdate, BatchUpdate, anyReview)
+		err := SendMessage(ctx, BatchUpdate, BatchUpdate, anyReview)
 		if err != nil {
 			log.Printf("error: BatchUpdate SendMessage %v", err)
 		}

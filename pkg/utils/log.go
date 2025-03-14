@@ -55,7 +55,7 @@ func LogInfo(traceId, fullName string) {
 	})
 }
 
-func LogError(traceId, fullName, message string) {
+func LogError(traceId, fullName string, err error) {
 	domainName, methodName := logManager.SplitFullName(fullName)
 	now := time.Now()
 	go logManager.SharedLog(&logger.LogMessage{
@@ -63,7 +63,7 @@ func LogError(traceId, fullName, message string) {
 		TraceId:   traceId,
 		Timestamp: now,
 		Position:  fullName,
-		Message:   message,
+		Message:   err.Error(),
 	})
 	go logManager.Log(&logger.LogFile{
 		Path: fmt.Sprintf("./log/%s.error.log", domainName),
@@ -72,7 +72,29 @@ func LogError(traceId, fullName, message string) {
 			TraceId:   traceId,
 			Timestamp: now,
 			Position:  methodName,
-			Message:   message,
+			Message:   err.Error(),
+		},
+	})
+}
+
+func LogWarning(traceId, fullName, warning string) {
+	domainName, methodName := logManager.SplitFullName(fullName)
+	now := time.Now()
+	go logManager.SharedLog(&logger.LogMessage{
+		Level:     logger.WARNING,
+		TraceId:   traceId,
+		Timestamp: now,
+		Position:  fullName,
+		Message:   warning,
+	})
+	go logManager.Log(&logger.LogFile{
+		Path: fmt.Sprintf("./log/%s.warning.log", domainName),
+		LogMessage: &logger.LogMessage{
+			Level:     logger.WARNING,
+			TraceId:   traceId,
+			Timestamp: now,
+			Position:  methodName,
+			Message:   warning,
 		},
 	})
 }

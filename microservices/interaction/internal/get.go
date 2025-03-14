@@ -45,7 +45,7 @@ func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequ
 			Action:    common.Operate_VIEW,
 		}
 
-		err = messaging.SendMessage(messaging.AddView, messaging.AddView, newInteraction)
+		err = messaging.SendMessage(ctx, messaging.AddView, messaging.AddView, newInteraction)
 		if err != nil {
 			log.Printf("error: SendMessage %v", err)
 		}
@@ -147,7 +147,7 @@ func GetRecommendBaseUser(ctx context.Context, req *generated.GetRecommendReques
 
 	go func() {
 		if count <= 17 {
-			err = messaging.SendMessage(messaging.ComputeUser, messaging.ComputeUser, &common.UserDefault{
+			err = messaging.SendMessage(ctx, messaging.ComputeUser, messaging.ComputeUser, &common.UserDefault{
 				UserId: userId,
 			})
 			if err != nil {
@@ -179,7 +179,7 @@ func GetRecommendBaseCreation(ctx context.Context, req *generated.GetRecommendRe
 
 	go func() {
 		if reset {
-			err = messaging.SendMessage(messaging.ComputeSimilarCreation, messaging.ComputeSimilarCreation, &common.CreationId{
+			err = messaging.SendMessage(ctx, messaging.ComputeSimilarCreation, messaging.ComputeSimilarCreation, &common.CreationId{
 				Id: id,
 			})
 			if err != nil {

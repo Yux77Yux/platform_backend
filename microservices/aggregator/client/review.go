@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -19,7 +18,7 @@ func NewReviewClient() (*ReviewClient, error) {
 	// 建立与服务器的连接
 	conn, err := grpc.NewClient(service_address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return nil, fmt.Errorf("did not connect: %v", err)
+		return nil, fmt.Errorf("did not connect ReviewClient: %v", err)
 	}
 
 	client := &ReviewClient{
@@ -29,11 +28,13 @@ func NewReviewClient() (*ReviewClient, error) {
 	return client, nil
 }
 
-func (c *ReviewClient) Close() {
+func (c *ReviewClient) Close() error {
 	err := c.connection.Close()
 	if err != nil {
-		log.Printf("error: grpc client close %v", err)
+		err = fmt.Errorf("error: ReviewClient close %w", err)
+		return err
 	}
+	return nil
 }
 
 func (c *ReviewClient) GetReviews(ctx context.Context, req *generated.GetReviewsRequest) (*generated.GetReviewsResponse, error) {

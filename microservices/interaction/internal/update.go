@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"log"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -13,7 +14,7 @@ import (
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
-func ClickCollection(req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
+func ClickCollection(ctx context.Context, req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
 	token := req.GetAccessToken().GetValue()
 	response := new(generated.UpdateInteractionResponse)
 	pass, userId, err := auth.Auth("update", "interaction", token)
@@ -46,7 +47,7 @@ func ClickCollection(req *generated.UpdateInteractionRequest) (*generated.Update
 		SaveAt:    timest,
 	}
 
-	err = messaging.SendMessage(messaging.AddCollection, messaging.AddCollection, operateInteraction)
+	err = messaging.SendMessage(ctx, messaging.AddCollection, messaging.AddCollection, operateInteraction)
 	if err != nil {
 		log.Printf("error: SendMessage %v", err)
 		response.Msg = &common.ApiResponse{
@@ -65,7 +66,7 @@ func ClickCollection(req *generated.UpdateInteractionRequest) (*generated.Update
 	return response, nil
 }
 
-func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
+func ClickLike(ctx context.Context, req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
 	log.Printf("req %v", req)
 	token := req.GetAccessToken().GetValue()
 	response := new(generated.UpdateInteractionResponse)
@@ -98,7 +99,7 @@ func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateIntera
 		UpdatedAt: timest,
 	}
 
-	err = messaging.SendMessage(messaging.AddLike, messaging.AddLike, operateInteraction)
+	err = messaging.SendMessage(ctx, messaging.AddLike, messaging.AddLike, operateInteraction)
 	if err != nil {
 		log.Printf("error: SendMessage %v", err)
 		response.Msg = &common.ApiResponse{
@@ -117,7 +118,7 @@ func ClickLike(req *generated.UpdateInteractionRequest) (*generated.UpdateIntera
 	return response, nil
 }
 
-func CancelCollections(req *generated.UpdateInteractionsRequest) (*generated.UpdateInteractionResponse, error) {
+func CancelCollections(ctx context.Context, req *generated.UpdateInteractionsRequest) (*generated.UpdateInteractionResponse, error) {
 	token := req.GetAccessToken().GetValue()
 	response := new(generated.UpdateInteractionResponse)
 	pass, userId, err := auth.Auth("update", "interaction", token)
@@ -166,7 +167,7 @@ func CancelCollections(req *generated.UpdateInteractionsRequest) (*generated.Upd
 	anyOperateInteraction := &generated.AnyOperateInteraction{
 		OperateInteractions: operateInteractions,
 	}
-	err = messaging.SendMessage(messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
+	err = messaging.SendMessage(ctx, messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -183,7 +184,7 @@ func CancelCollections(req *generated.UpdateInteractionsRequest) (*generated.Upd
 	return response, nil
 }
 
-func DelHistories(req *generated.UpdateInteractionsRequest) (*generated.UpdateInteractionResponse, error) {
+func DelHistories(ctx context.Context, req *generated.UpdateInteractionsRequest) (*generated.UpdateInteractionResponse, error) {
 	token := req.GetAccessToken().GetValue()
 	response := new(generated.UpdateInteractionResponse)
 	pass, userId, err := auth.Auth("update", "interaction", token)
@@ -225,7 +226,7 @@ func DelHistories(req *generated.UpdateInteractionsRequest) (*generated.UpdateIn
 	anyOperateInteraction := &generated.AnyOperateInteraction{
 		OperateInteractions: operateInteractions,
 	}
-	err = messaging.SendMessage(messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
+	err = messaging.SendMessage(ctx, messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
@@ -243,7 +244,7 @@ func DelHistories(req *generated.UpdateInteractionsRequest) (*generated.UpdateIn
 	return response, nil
 }
 
-func CancelLike(req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
+func CancelLike(ctx context.Context, req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
 	token := req.GetAccessToken().GetValue()
 	response := new(generated.UpdateInteractionResponse)
 	pass, userId, err := auth.Auth("update", "interaction", token)
@@ -270,7 +271,7 @@ func CancelLike(req *generated.UpdateInteractionRequest) (*generated.UpdateInter
 		Action:    common.Operate_CANCEL_LIKE,
 		UpdatedAt: timestamppb.Now(),
 	}
-	err = messaging.SendMessage(messaging.CancelLike, messaging.CancelLike, interaction)
+	err = messaging.SendMessage(ctx, messaging.CancelLike, messaging.CancelLike, interaction)
 	if err != nil {
 		log.Printf("error: SendMessage CancelLike %v", err)
 	}

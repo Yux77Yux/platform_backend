@@ -17,16 +17,6 @@ import (
 
 // GET
 
-type Result struct {
-	result []redis.Z
-	err    error
-}
-
-type ResultStr struct {
-	result []string
-	err    error
-}
-
 func ToBaseInteraction(results []redis.Z) ([]*generated.Interaction, error) {
 	count := len(results)
 	res := make([]*generated.Interaction, count)
@@ -53,40 +43,20 @@ func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.I
 	stop := start + scope
 
 	userIdStr := strconv.FormatInt(userId, 10)
-	resultCh := make(chan *Result, 1)
-
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		results, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Histories", userIdStr, start, stop)
-		if err != nil {
-			resultCh <- &Result{
-				err: err,
-			}
-			return
-		}
-		resultCh <- &Result{
-			result: results,
-			err:    nil,
-		}
+	results, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Histories", userIdStr, start, stop)
+	if err != nil {
+		return nil, err
 	}
 
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result.err != nil {
-			return nil, fmt.Errorf("error: %w", result.err)
-		}
-		res, err := ToBaseInteraction(result.result)
-		if err != nil {
-			return nil, fmt.Errorf("error: %w", err)
-		}
-
-		for i := range res {
-			res[i].Base.UserId = userId
-		}
-		return res, nil
+	res, err := ToBaseInteraction(results)
+	if err != nil {
+		return nil, err
 	}
+
+	for i := range res {
+		res[i].Base.UserId = userId
+	}
+	return res, nil
 }
 
 // 收藏夹
@@ -95,40 +65,20 @@ func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated
 	start := int64((page - 1) * scope)
 	stop := start + scope
 	userIdStr := strconv.FormatInt(userId, 10)
-	resultCh := make(chan *Result, 1)
 
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		results, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Collections", userIdStr, start, stop)
-		if err != nil {
-			resultCh <- &Result{
-				err: err,
-			}
-			return
-		}
-		resultCh <- &Result{
-			result: results,
-			err:    nil,
-		}
+	results, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Collections", userIdStr, start, stop)
+	if err != nil {
+		return nil, err
+	}
+	res, err := ToBaseInteraction(results)
+	if err != nil {
+		return nil, err
 	}
 
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result.err != nil {
-			return nil, fmt.Errorf("error: %w", result.err)
-		}
-		res, err := ToBaseInteraction(result.result)
-		if err != nil {
-			return nil, fmt.Errorf("error: %w", err)
-		}
-
-		for i := range res {
-			res[i].Base.UserId = userId
-		}
-		return res, nil
+	for i := range res {
+		res[i].Base.UserId = userId
 	}
+	return res, nil
 }
 
 // Like
@@ -137,40 +87,21 @@ func GetLikes(ctx context.Context, userId int64, page int32) ([]*generated.Inter
 	start := int64((page - 1) * scope)
 	stop := start + scope
 	userIdStr := strconv.FormatInt(userId, 10)
-	resultCh := make(chan *Result, 1)
 
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		results, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Likes", userIdStr, start, stop)
-		if err != nil {
-			resultCh <- &Result{
-				err: err,
-			}
-			return
-		}
-		resultCh <- &Result{
-			result: results,
-			err:    nil,
-		}
+	result, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Likes", userIdStr, start, stop)
+	if err != nil {
+		return nil, fmt.Errorf("error: %w", err)
 	}
 
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result.err != nil {
-			return nil, fmt.Errorf("error: %w", result.err)
-		}
-		res, err := ToBaseInteraction(result.result)
-		if err != nil {
-			return nil, fmt.Errorf("error: %w", err)
-		}
-
-		for i := range res {
-			res[i].Base.UserId = userId
-		}
-		return res, nil
+	res, err := ToBaseInteraction(result)
+	if err != nil {
+		return nil, fmt.Errorf("error: %w", err)
 	}
+
+	for i := range res {
+		res[i].Base.UserId = userId
+	}
+	return res, nil
 }
 
 // 观看作品的用户
@@ -178,41 +109,21 @@ func GetUsers(creationId int64) ([]int64, error) {
 	ctx := context.Background()
 
 	creationIdStr := strconv.FormatInt(creationId, 10)
-	resultCh := make(chan *ResultStr, 1)
+	results, err := CacheClient.RevRangeZSet(ctx, "Item_Histories", creationIdStr, 0, 199)
 
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		results, err := CacheClient.RevRangeZSet(ctx, "Item_Histories", creationIdStr, 0, 199)
+	if err != nil {
+		return nil, err
+	}
+	strs := results
+	res := make([]int64, len(strs))
+	for i, str := range strs {
+		id, err := strconv.ParseInt(str, 10, 64)
 		if err != nil {
-			resultCh <- &ResultStr{
-				err: err,
-			}
-			return
+			return nil, err
 		}
-		resultCh <- &ResultStr{
-			result: results,
-			err:    nil,
-		}
+		res[i] = id
 	}
-
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result.err != nil {
-			return nil, fmt.Errorf("error: %w", result.err)
-		}
-		strs := result.result
-		res := make([]int64, len(strs))
-		for i, str := range strs {
-			id, err := strconv.ParseInt(str, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			res[i] = id
-		}
-		return res, nil
-	}
+	return res, nil
 }
 
 type ActionResult struct {
@@ -225,76 +136,49 @@ func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction)
 	userId := interaction.GetUserId()
 	creationId := interaction.GetCreationId()
 
-	resultCh := make(chan *ActionResult, 1)
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		pipe := CacheClient.Pipeline()
-		isLike := fmt.Sprintf("ZSet_User_Likes_%d", userId)             // 自己是否点赞
-		isCollection := fmt.Sprintf("ZSet_User_Collections_%d", userId) // 自己是否收藏
+	pipe := CacheClient.Pipeline()
+	isLike := fmt.Sprintf("ZSet_User_Likes_%d", userId)             // 自己是否点赞
+	isCollection := fmt.Sprintf("ZSet_User_Collections_%d", userId) // 自己是否收藏
 
-		creationIdStr := strconv.FormatInt(creationId, 10)
+	creationIdStr := strconv.FormatInt(creationId, 10)
 
-		// 使用 pipeline 执行多个查询
-		setLikeCmd := pipe.ZScore(ctx, isLike, creationIdStr)
-		zScoreCollectionCmd := pipe.ZScore(ctx, isCollection, creationIdStr)
+	// 使用 pipeline 执行多个查询
+	setLikeCmd := pipe.ZScore(ctx, isLike, creationIdStr)
+	zScoreCollectionCmd := pipe.ZScore(ctx, isCollection, creationIdStr)
 
-		// 执行 pipeline
-		_, err := pipe.Exec(ctx)
-		if err != nil && err != redis.Nil {
-			// 只有在非 redis.Nil 时，才是真的错误
-			fmt.Printf("error: pipe.Exec %v\n", err)
-			resultCh <- &ActionResult{
-				err: fmt.Errorf("redis pipeline execution failed: %w", err),
-			}
-			return
-		}
-
-		// 解析返回结果
-		likeScore, err := setLikeCmd.Result()
-		if err == redis.Nil {
-			likeScore = -1 // 代表用户没有点赞
-		} else if err != nil {
-			fmt.Printf("error: likeScore %v", err)
-			resultCh <- &ActionResult{
-				err: fmt.Errorf("failed to get like score: %w", err),
-			}
-			return
-		}
-
-		collectionScore, err := zScoreCollectionCmd.Result()
-		if err == redis.Nil {
-			collectionScore = -1 // 代表用户没有收藏
-		} else if err != nil {
-			fmt.Printf("error: collectionScore %v", err)
-			resultCh <- &ActionResult{
-				err: fmt.Errorf("failed to get collection score: %w", err),
-			}
-			return
-		}
-
-		action_tag := int32(1)
-		if likeScore != -1 {
-			action_tag |= 2
-		}
-		if collectionScore != -1 {
-			action_tag |= 4
-		}
-		resultCh <- &ActionResult{
-			action_tag: action_tag,
-		}
+	// 执行 pipeline
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		return nil, fmt.Errorf("redis pipeline execution failed: %w", err)
 	}
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return nil, fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result.err != nil {
-			return nil, result.err
-		}
-		return &generated.Interaction{
-			Base:      interaction,
-			ActionTag: result.action_tag,
-		}, nil
+
+	// 解析返回结果
+	likeScore, err := setLikeCmd.Result()
+	if err == redis.Nil {
+		likeScore = -1 // 代表用户没有点赞
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to get like score: %w", err)
 	}
+
+	collectionScore, err := zScoreCollectionCmd.Result()
+	if err == redis.Nil {
+		collectionScore = -1 // 代表用户没有收藏
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to get collection score: %w", err)
+	}
+
+	action_tag := int32(1)
+	if likeScore != -1 {
+		action_tag |= 2
+	}
+	if collectionScore != -1 {
+		action_tag |= 4
+	}
+
+	return &generated.Interaction{
+		Base:      interaction,
+		ActionTag: action_tag,
+	}, nil
 }
 
 // RemSet
@@ -309,7 +193,7 @@ func GetRecommendBaseUser(ctx context.Context, id int64) ([]int64, int64, error)
 	intCmd := pipe.SCard(ctx, fmt.Sprintf("Set_RecommendBaseUser_%d", id))
 
 	_, err := pipe.Exec(ctx)
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		return nil, -1, err
 	}
 
@@ -342,7 +226,7 @@ func GetRecommendBaseItem(ctx context.Context, id int64) ([]int64, bool, error) 
 	floatCmd := pipe.ZScore(ctx, "ZSet_RecommendBaseItem_Creation", strconv.FormatInt(id, 10))
 
 	_, err := pipe.Exec(ctx)
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		return nil, false, err
 	}
 
@@ -408,7 +292,7 @@ func SetRecommendBaseItem(id int64, ids []int64) error {
 	})
 
 	_, err := pipe.Exec(ctx)
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		return err
 	}
 
@@ -419,236 +303,156 @@ func SetRecommendBaseItem(id int64, ids []int64) error {
 // 历史记录 更新时间戳
 func UpdateHistories(data []*generated.OperateInteraction) error {
 	ctx := context.Background()
-	resultCh := make(chan error, 1)
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		pipe := CacheClient.Pipeline()
-		for _, option := range data {
-			base := option.GetBase()
+	pipe := CacheClient.Pipeline()
+	for _, option := range data {
+		base := option.GetBase()
 
-			userId := base.GetUserId()
-			creationId := base.GetCreationId()
-			timestampScore := option.GetUpdatedAt().GetSeconds()
+		userId := base.GetUserId()
+		creationId := base.GetCreationId()
+		timestampScore := option.GetUpdatedAt().GetSeconds()
 
-			// 用户的历史记录 基于用户协同过滤
-			keyUser := fmt.Sprintf("ZSet_User_Histories_%d", userId)
-			pipe.ZAdd(ctx, keyUser, &redis.Z{
-				Score:  float64(timestampScore),
-				Member: creationId,
-			})
+		// 用户的历史记录 基于用户协同过滤
+		keyUser := fmt.Sprintf("ZSet_User_Histories_%d", userId)
+		pipe.ZAdd(ctx, keyUser, &redis.Z{
+			Score:  float64(timestampScore),
+			Member: creationId,
+		})
 
-			// 记录观看作品的用户 基于物品协同过滤
-			keyItem := fmt.Sprintf("ZSet_Item_Histories_%d", creationId)
-			pipe.ZAdd(ctx, keyItem, &redis.Z{
-				Score:  float64(timestampScore),
-				Member: userId,
-			})
+		// 记录观看作品的用户 基于物品协同过滤
+		keyItem := fmt.Sprintf("ZSet_Item_Histories_%d", creationId)
+		pipe.ZAdd(ctx, keyItem, &redis.Z{
+			Score:  float64(timestampScore),
+			Member: userId,
+		})
 
-		}
-		_, err := pipe.Exec(ctx)
-		if err != nil {
-			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
-		}
-		resultCh <- nil
 	}
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result != nil {
-			return result
-		}
-		return nil
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		return fmt.Errorf("pipeline execution failed: %w", err)
 	}
+	return nil
 }
 
 // 收藏夹
 func ModifyCollections(data []*generated.OperateInteraction) error {
 	ctx := context.Background()
-	resultCh := make(chan error, 1)
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		ctx := context.Background()
-		pipe := CacheClient.Pipeline()
-		for _, option := range data {
-			base := option.GetBase()
+	pipe := CacheClient.Pipeline()
+	for _, option := range data {
+		base := option.GetBase()
 
-			userId := base.GetUserId()
-			creationId := base.GetCreationId()
-			timestampScore := option.GetUpdatedAt().GetSeconds()
+		userId := base.GetUserId()
+		creationId := base.GetCreationId()
+		timestampScore := option.GetUpdatedAt().GetSeconds()
 
-			// 用户的收藏记录 基于用户协同过滤
-			keyUser := fmt.Sprintf("ZSet_User_Collections_%d", userId)
-			pipe.ZAdd(ctx, keyUser, &redis.Z{
-				Score:  float64(timestampScore),
-				Member: creationId,
-			})
+		// 用户的收藏记录 基于用户协同过滤
+		keyUser := fmt.Sprintf("ZSet_User_Collections_%d", userId)
+		pipe.ZAdd(ctx, keyUser, &redis.Z{
+			Score:  float64(timestampScore),
+			Member: creationId,
+		})
 
-			// 记录收藏作品的用户 基于物品协同过滤
-			keyItem := fmt.Sprintf("ZSet_Item_Collections_%d", creationId)
-			pipe.ZAdd(ctx, keyItem, &redis.Z{
-				Score:  float64(timestampScore),
-				Member: userId,
-			})
-		}
-		_, err := pipe.Exec(ctx)
-		if err != nil {
-			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
-		}
-		resultCh <- nil
+		// 记录收藏作品的用户 基于物品协同过滤
+		keyItem := fmt.Sprintf("ZSet_Item_Collections_%d", creationId)
+		pipe.ZAdd(ctx, keyItem, &redis.Z{
+			Score:  float64(timestampScore),
+			Member: userId,
+		})
 	}
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result != nil {
-			return result
-		}
-		return nil
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		return fmt.Errorf("pipeline execution failed: %w", err)
 	}
+
+	return nil
 }
 
 // 点赞
 func ModifyLike(data []*generated.OperateInteraction) error {
 	ctx := context.Background()
-	resultCh := make(chan error, 1)
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		ctx := context.Background()
-		pipe := CacheClient.Pipeline()
-		for _, option := range data {
-			base := option.GetBase()
+	pipe := CacheClient.Pipeline()
+	for _, option := range data {
+		base := option.GetBase()
 
-			userId := base.GetUserId()
-			creationId := base.GetCreationId()
-			timestampScore := option.GetUpdatedAt().GetSeconds()
+		userId := base.GetUserId()
+		creationId := base.GetCreationId()
+		timestampScore := option.GetUpdatedAt().GetSeconds()
 
-			// 用户的点赞记录 基于用户协同过滤
-			keyUser := fmt.Sprintf("ZSet_User_Likes_%d", userId)
-			pipe.ZAdd(ctx, keyUser, &redis.Z{
-				Score:  float64(timestampScore),
-				Member: creationId,
-			})
+		// 用户的点赞记录 基于用户协同过滤
+		keyUser := fmt.Sprintf("ZSet_User_Likes_%d", userId)
+		pipe.ZAdd(ctx, keyUser, &redis.Z{
+			Score:  float64(timestampScore),
+			Member: creationId,
+		})
 
-			// 记录点赞作品的用户 基于物品协同过滤
-			keyItem := fmt.Sprintf("ZSet_Item_Likes_%d", creationId)
-			pipe.ZAdd(ctx, keyItem, &redis.Z{
-				Score:  float64(timestampScore),
-				Member: userId,
-			})
-		}
-		_, err := pipe.Exec(ctx)
-		if err != nil {
-			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
-		}
-		resultCh <- nil
+		// 记录点赞作品的用户 基于物品协同过滤
+		keyItem := fmt.Sprintf("ZSet_Item_Likes_%d", creationId)
+		pipe.ZAdd(ctx, keyItem, &redis.Z{
+			Score:  float64(timestampScore),
+			Member: userId,
+		})
 	}
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result != nil {
-			return result
-		}
-		return nil
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		return fmt.Errorf("pipeline execution failed: %w", err)
 	}
+
+	return nil
 }
 
 // DELETE
 
 func DelHistories(data []*generated.BaseInteraction) error {
 	ctx := context.Background()
-	resultCh := make(chan error, 1)
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		ctx := context.Background()
-		pipe := CacheClient.Pipeline()
-		for _, base := range data {
-			userId := base.GetUserId()
-			creationId := base.GetCreationId()
+	pipe := CacheClient.Pipeline()
+	for _, base := range data {
+		userId := base.GetUserId()
+		creationId := base.GetCreationId()
 
-			key := fmt.Sprintf("ZSet_User_Histories_%d", userId)
-			pipe.ZRem(ctx, key, creationId)
-		}
+		key := fmt.Sprintf("ZSet_User_Histories_%d", userId)
+		pipe.ZRem(ctx, key, creationId)
+	}
 
-		_, err := pipe.Exec(ctx)
-		if err != nil {
-			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
-		}
-		resultCh <- nil
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		return err
 	}
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result != nil {
-			return result
-		}
-		return nil
-	}
+	return nil
 }
 
 func DelCollections(data []*generated.BaseInteraction) error {
 	ctx := context.Background()
-	resultCh := make(chan error, 1)
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		ctx := context.Background()
-		pipe := CacheClient.Pipeline()
-		for _, base := range data {
-			userId := base.GetUserId()
-			creationId := base.GetCreationId()
+	pipe := CacheClient.Pipeline()
+	for _, base := range data {
+		userId := base.GetUserId()
+		creationId := base.GetCreationId()
 
-			key := fmt.Sprintf("ZSet_User_Collections_%d", userId)
-			pipe.ZRem(ctx, key, creationId)
-		}
+		key := fmt.Sprintf("ZSet_User_Collections_%d", userId)
+		pipe.ZRem(ctx, key, creationId)
+	}
 
-		_, err := pipe.Exec(ctx)
-		if err != nil {
-			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
-		}
-		resultCh <- nil
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		return err
 	}
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result != nil {
-			return result
-		}
-		return nil
-	}
+	return nil
 }
 
 func DelLike(data []*generated.BaseInteraction) error {
 	ctx := context.Background()
-	resultCh := make(chan error, 1)
-	cacheRequestChannel <- func(CacheClient CacheInterface) {
-		ctx := context.Background()
-		pipe := CacheClient.Pipeline()
-		for _, base := range data {
-			userId := base.GetUserId()
-			creationId := base.GetCreationId()
+	pipe := CacheClient.Pipeline()
+	for _, base := range data {
+		userId := base.GetUserId()
+		creationId := base.GetCreationId()
 
-			key := fmt.Sprintf("ZSet_User_Likes_%d", userId)
-			pipe.ZRem(ctx, key, creationId)
-		}
+		key := fmt.Sprintf("ZSet_User_Likes_%d", userId)
+		pipe.ZRem(ctx, key, creationId)
+	}
 
-		_, err := pipe.Exec(ctx)
-		if err != nil {
-			resultCh <- fmt.Errorf("pipeline execution failed: %w", err)
-		}
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		return err
 	}
-	// 使用 select 来监听超时和结果
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("timeout: %w", ctx.Err())
-	case result := <-resultCh:
-		if result != nil {
-			return result
-		}
-		return nil
-	}
+	return nil
 }
 
 // Scan
@@ -763,7 +567,7 @@ func GetAllItemUsers(idStrs []string) (map[int64]map[int64]float64, error) {
 
 	// 统一执行 Pipeline
 	_, err := pipe.Exec(ctx)
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		log.Printf("error: pipeline Exec %v", err)
 		return nil, err
 	}

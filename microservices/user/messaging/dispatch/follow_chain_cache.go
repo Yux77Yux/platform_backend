@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -50,7 +51,9 @@ func (chain *FollowCacheChain) ExecuteBatch() {
 			FollowUsers := *FollowUsersPtr
 
 			// 插入Redis
-			err := cache.Follow(FollowUsers)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := cache.Follow(ctx, FollowUsers)
+			cancel()
 			if err != nil {
 				log.Printf("error: Follow error %v", err)
 			}
