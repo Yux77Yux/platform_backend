@@ -30,11 +30,11 @@ func NewReviewProcessor(ctx context.Context, msg *anypb.Any) error {
 
 	switch req.GetTargetType() {
 	case generated.TargetType_COMMENT:
-		err = messaging.PreSendProtoMessage(ctx, Comment_review, Comment_review, Comment_review, msg.GetValue())
+		err = messaging.PreSendMessage(ctx, Comment_review, Comment_review, Comment_review, req)
 	case generated.TargetType_USER:
-		err = messaging.PreSendProtoMessage(ctx, User_review, User_review, User_review, msg.GetValue())
+		err = messaging.PreSendMessage(ctx, User_review, User_review, User_review, req)
 	case generated.TargetType_CREATION:
-		err = messaging.PreSendProtoMessage(ctx, Creation_review, Creation_review, Creation_review, msg.GetValue())
+		err = messaging.PreSendMessage(ctx, Creation_review, Creation_review, Creation_review, req)
 	}
 
 	return err

@@ -1,10 +1,11 @@
 package messaging
 
 const (
+	Comment_review  = "Comment_review"  //非普通消费者
+	User_review     = "User_review"     //非普通消费者
+	Creation_review = "Creation_review" //非普通消费者
+
 	New_review      = "New_review"
-	Comment_review  = "Comment_review"
-	User_review     = "User_review"
-	Creation_review = "Creation_review"
 	PendingCreation = "PendingCreation"
 
 	Update      = "Update"

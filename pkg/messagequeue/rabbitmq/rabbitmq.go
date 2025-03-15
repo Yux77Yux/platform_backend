@@ -30,9 +30,7 @@ func GetClient(str string) MessageQueueInterface {
 
 	var err error
 	connStr := str
-	client := &RabbitMQClient{
-		listenCh: make(map[string]*amqp.Channel),
-	}
+	client := &RabbitMQClient{}
 	for i := 0; i < MAX_RETRY; i++ {
 		client.rabbitmqClient, err = amqp.Dial(connStr)
 		if err == nil {
@@ -56,16 +54,21 @@ func GetClient(str string) MessageQueueInterface {
 type RabbitMQClient struct {
 	rabbitmqClient *amqp.Connection
 	chPool         sync.Pool
-	listenCh       map[string]*amqp.Channel
+	listenCh       sync.Map
 }
 
 func (r *RabbitMQClient) Close(ctx context.Context) {
 	traceID := utils.GetMainValue(ctx)
-	for _, ch := range r.listenCh {
-		if err := ch.Close(); err != nil {
-			utils.LogError(traceID, "RabbitMQChannel.Close", err)
+	// 关闭所有监听的 RabbitMQ 频道
+	r.listenCh.Range(func(key, value interface{}) bool {
+		if ch, ok := value.(*amqp.Channel); ok {
+			if err := ch.Close(); err != nil {
+				utils.LogError(traceID, "RabbitMQChannel.Close", err)
+			}
 		}
-	}
+		// 继续遍历
+		return true
+	})
 	if err := r.rabbitmqClient.Close(); err != nil {
 		utils.LogError(traceID, "RabbitMQClient.Close", err)
 	}
@@ -155,8 +158,29 @@ func (r *RabbitMQClient) SendMessage(ctx context.Context, exchange string, route
 }
 
 func (r *RabbitMQClient) PreSendProtoMessage(ctx context.Context, exchange, queueName, routeKey string, body []byte) error {
-	ch := r.getChannel()
-	defer r.putChannel(ch)
+	key := fmt.Sprintf("%s_%s_%s", exchange, queueName, routeKey)
+	amqpCh, exist := r.listenCh.Load(key)
+
+	var (
+		ch *amqp.Channel
+		ok bool
+	)
+
+	if exist {
+		// 类型断言
+		ch, ok = amqpCh.(*amqp.Channel)
+		if !ok {
+			return nil
+		}
+	} else {
+		ch = r.getChannel()
+		r.listenCh.Store(key, ch)
+	}
+
+	if err := ch.ExchangeDeclare(exchange, "direct", true, false, false, false, nil); err != nil {
+		utils.LogSuperError(fmt.Errorf("failed to declare exchange %s : %w", exchange, err))
+		return err
+	}
 
 	// 队列声明
 	queue, err := ch.QueueDeclare(queueName, true, false, false, false, nil)
@@ -216,18 +240,31 @@ func (r *RabbitMQClient) PreSendMessage(ctx context.Context, exchange, queueName
 }
 
 func (r *RabbitMQClient) GetMsgs(exchange, queueName, routeKey string, count int) []amqp.Delivery {
-	ch := r.getChannel()
-	defer r.putChannel(ch)
+	key := fmt.Sprintf("%s_%s_%s", exchange, queueName, routeKey)
+	amqpCh, exist := r.listenCh.Load(key)
 
-	// 队列声明
+	var (
+		ch *amqp.Channel
+		ok bool
+	)
+
+	if exist {
+		// 类型断言
+		ch, ok = amqpCh.(*amqp.Channel)
+		if !ok {
+			return nil
+		}
+	} else {
+		ch = r.getChannel()
+		r.listenCh.Store(key, ch)
+	}
+
 	queue, err := ch.QueueDeclare(queueName, true, false, false, false, nil)
 	if err != nil {
 		utils.LogSuperError(fmt.Errorf("rabbitMQ QueueDeclare error: %w", err))
 		return nil
 	}
 
-	// 在init中已经声明好交换机了
-	// 队列绑定交换机
 	err = ch.QueueBind(queue.Name, routeKey, exchange, false, nil)
 	if err != nil {
 		err = fmt.Errorf("rabbitMQ QueueBind error: %w", err)
@@ -270,7 +307,7 @@ func (r *RabbitMQClient) GetMsgs(exchange, queueName, routeKey string, count int
 }
 
 func (r *RabbitMQClient) storeInMap(key string, ch *amqp.Channel) {
-	r.listenCh[key] = ch
+	r.listenCh.Store(key, ch)
 }
 
 func (r *RabbitMQClient) ListenToQueue(exchange, queueName, routeKey string, handler HandlerFunc) {

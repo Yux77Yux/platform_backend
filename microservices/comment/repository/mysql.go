@@ -251,7 +251,7 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 				c.root = 0
 			AND 
 				c.status = 'PUBLISHED'
-			ORDER BY c.created_at DESC
+			ORDER BY c.created_at,c.id DESC
 			LIMIT %d`, LIMIT)
 
 		total  int32  = -1
@@ -369,7 +369,7 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 				c.root = 0
 			AND 
 				c.status = 'PUBLISHED'
-			ORDER BY c.created_at DESC
+			ORDER BY c.created_at.c.id DESC
 			LIMIT %d 
 			OFFSET ?`, LIMIT)
 
@@ -537,7 +537,7 @@ func GetReplyCommentsInTransaction(ctx context.Context, user_id int64, page int3
 				c.id = cc.comment_id
 			WHERE 
 				c.user_id = ?
-			ORDER BY c.created_at DESC
+			ORDER BY c.created_at,c.id DESC
 			LIMIT %d 
 			OFFSET ?`, LIMIT)
 	)

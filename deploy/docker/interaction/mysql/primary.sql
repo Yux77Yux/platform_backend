@@ -21,6 +21,6 @@ CREATE TABLE IF NOT EXISTS Interaction (
     save_at TIMESTAMP DEFAULT NULL,                           -- 收藏的时间
 
     PRIMARY KEY (user_id,creation_id),                 
-    INDEX idx_user_action_updated (user_id,action_tag,updated_at),       -- 历史记录
-    INDEX idx_user_action_save (user_id,action_tag,save_at)       -- 收藏夹
+    INDEX idx_user_action_updated (user_id,action_tag,updated_at DESC,creation_id DESC),       -- 历史记录
+    INDEX idx_user_action_save (user_id,action_tag,save_at DESC,creation_id DESC)       -- 收藏夹
 );

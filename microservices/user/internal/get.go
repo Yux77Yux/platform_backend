@@ -31,6 +31,7 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 			}
 			return response, err
 		}
+		user_info.UserDefault.UserId = user_id
 		response.User = user_info
 		response.Msg = &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,

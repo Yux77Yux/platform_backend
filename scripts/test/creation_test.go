@@ -13,16 +13,437 @@ import (
 	"time"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
+	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	api "github.com/Yux77Yux/platform_backend/scripts/api"
 )
 
-// 测试用户查看自己的作品
+// 测试用户发布自己的作品
 // 初始化
-func GetUserVideoInit() {
+func GetPublishVideoInit() {
+	var wg sync.WaitGroup
 
+	// 登录用户，用于获取accessToken
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		filename := "E:/xuexi/platform/platform_backend/scripts/result/login_ok.jsonl"
+
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
+		if err != nil {
+			log.Fatalf("无法创建临时文件 %s: %v", filename, err)
+		}
+
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			var p Login_OK
+			if err := json.Unmarshal(scanner.Bytes(), &p); err != nil {
+				log.Fatalf("error: json %s", err.Error())
+			}
+			LoginOKMapIdInDb[p.IdInDb] = &p
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		filename := "E:/xuexi/platform/platform_backend/scripts/result/get_video_ok.jsonl"
+
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
+		if err != nil {
+			log.Fatalf("无法创建临时文件 %s: %v", filename, err)
+		}
+
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			var p CreationInfo_OK
+			if err := json.Unmarshal(scanner.Bytes(), &p); err != nil {
+				log.Fatalf("error: json %s", err.Error())
+			}
+			GetVideosOkMapIdInDb[p.CreationId] = &p
+		}
+	}()
+
+	// 已经发布的
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		filename := "E:/xuexi/platform/platform_backend/scripts/result/pending_video_ok.jsonl"
+
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
+		if err != nil {
+			log.Fatalf("无法创建临时文件 %s: %v", filename, err)
+		}
+
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			var p CreationInfo_OK
+			if err := json.Unmarshal(scanner.Bytes(), &p); err != nil {
+				log.Fatalf("error: json %s", err.Error())
+			}
+			PendingVideoStatusOkMap[p.CreationId] = &p
+		}
+	}()
+
+	wg.Wait()
 }
-func TestGetUserVideos(t *testing.T) {
-	GetUserVideoInit()
+func TestPublishVideo(t *testing.T) {
+	GetPublishVideoInit()
+	log.Printf("init OKOK")
+	totalRequests := len(GetVideosOkMapIdInDb)
+	errCh := make(chan *CreationInfo_ER, totalRequests)
+	okCh := make(chan *CreationInfo_OK, totalRequests)
+	concurrencyLimit := int32(5)
+
+	// 初始化错误通道
+	go func() {
+		path := "E:/xuexi/platform/platform_backend/scripts/result/pending_video_err.jsonl"
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("file err %s", err.Error())
+		}
+		defer file.Close()
+
+		writer := bufio.NewWriter(file)
+		defer writer.Flush() // 最后统一刷新缓冲区
+
+		for e := range errCh {
+			b, err := json.Marshal(e)
+			if err != nil {
+				log.Fatalf("error Marshal %s", err.Error())
+			}
+
+			// 确保每条 JSON 都是独立一行
+			if _, err := writer.Write(append(b, '\n')); err != nil {
+				log.Fatalf("error writing to file: %s", err.Error())
+			}
+		}
+	}()
+
+	// 初始化成功通道
+	go func() {
+		path := "E:/xuexi/platform/platform_backend/scripts/result/pending_video_ok.jsonl"
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("file err %s", err.Error())
+		}
+		defer file.Close()
+
+		writer := bufio.NewWriter(file)
+		defer writer.Flush() // 最后统一刷新缓冲区
+
+		for e := range okCh {
+			b, err := json.Marshal(e)
+			if err != nil {
+				log.Fatalf("error Marshal %s", err.Error())
+			}
+
+			// 确保每条 JSON 都是独立一行
+			if _, err := writer.Write(append(b, '\n')); err != nil {
+				log.Fatalf("error writing to file: %s", err.Error())
+			}
+		}
+	}()
+
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, concurrencyLimit) // 信号量控制并发数
+	startTime := time.Now()                      // 记录整个测试开始时间
+	for _, video := range GetVideosOkMapIdInDb {
+		creationId := video.CreationId
+		if _, exist := PendingVideoStatusOkMap[creationId]; exist {
+			continue
+		}
+
+		wg.Add(1)
+		sem <- struct{}{} // 信号量申请，超出则阻塞
+		go func(video *CreationInfo_OK) {
+			defer func() {
+				wg.Done()
+				<-sem // 释放信号量
+			}()
+			// 拿accessToken
+			ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+			authorId := video.AuthorId
+			response, err := api.Refresh(ctx, LoginOKMapIdInDb[authorId].RefreshToken)
+			cancel()
+			if err != nil {
+				errCh <- &CreationInfo_ER{
+					CreationId: creationId,
+					AuthorId:   authorId,
+					Error:      err.Error(),
+				}
+				return
+			}
+			msg := response.GetMsg()
+			status := msg.GetStatus()
+			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errCh <- &CreationInfo_ER{
+					CreationId: creationId,
+					AuthorId:   authorId,
+					Error:      err.Error(),
+				}
+				return
+			}
+
+			accessToken := response.GetAccessToken()
+			start := time.Now()
+			_ctx, _cancel := context.WithTimeout(context.Background(), 4*time.Second)
+
+			_response, err := api.PublishDraftCreation(_ctx, accessToken, creationId)
+			_cancel()
+			end := time.Now()
+			if err != nil {
+				errCh <- &CreationInfo_ER{
+					CreationId: creationId,
+					AuthorId:   authorId,
+					Error:      err.Error(),
+				}
+				return
+			}
+			msg = _response.GetMsg()
+			status = msg.GetStatus()
+			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errCh <- &CreationInfo_ER{
+					CreationId: creationId,
+					AuthorId:   authorId,
+					Error:      err.Error(),
+				}
+				return
+			}
+
+			okCh <- &CreationInfo_OK{
+				CreationId: creationId,
+				AuthorId:   authorId,
+				Title:      video.Title,
+				Duration:   math.Round(float64(end.Sub(start).Milliseconds())*100) / 100,
+			}
+		}(video)
+
+		time.Sleep(time.Millisecond * 5)
+	}
+	wg.Wait()
+	endTime := time.Now() // 记录整个测试结束时间
+	totalDuration := endTime.Sub(startTime).Seconds()
+	// 计算吞吐量
+	throughput := float64(totalRequests) / totalDuration
+
+	log.Printf("ConcurrencyLimit: %d\n", concurrencyLimit)
+	log.Printf("Total Requests: %d\n", totalRequests)
+	log.Printf("Total Duration: %.2f seconds\n", totalDuration)
+	log.Printf("Throughput: %.2f requests/second\n", throughput)
+
+	close(errCh)
+	close(okCh)
+}
+
+// 测试用户发布自己的作品
+// 初始化
+func GetDbVideoInit() {
+	var wg sync.WaitGroup
+
+	// 登录用户，用于获取accessToken
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		filename := "E:/xuexi/platform/platform_backend/scripts/result/login_ok.jsonl"
+
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
+		if err != nil {
+			log.Fatalf("无法创建临时文件 %s: %v", filename, err)
+		}
+
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			var p Login_OK
+			if err := json.Unmarshal(scanner.Bytes(), &p); err != nil {
+				log.Fatalf("error: json %s", err.Error())
+			}
+			LoginOkMap[p.Id] = &p
+		}
+	}()
+
+	wg.Wait()
+}
+func TestGetDbVideo(t *testing.T) {
+	GetDbVideoInit()
+	log.Printf("init OKOK")
+	totalRequests := len(LoginOkMap)
+	errCh := make(chan *CreationInfo_ER, totalRequests)
+	okCh := make(chan *CreationInfo_OK, totalRequests)
+	concurrencyLimit := int32(3)
+
+	// 初始化错误通道
+	go func() {
+		path := "E:/xuexi/platform/platform_backend/scripts/result/get_video_err.jsonl"
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("file err %s", err.Error())
+		}
+		defer file.Close()
+
+		writer := bufio.NewWriter(file)
+		defer writer.Flush() // 最后统一刷新缓冲区
+
+		for e := range errCh {
+			b, err := json.Marshal(e)
+			if err != nil {
+				log.Fatalf("error Marshal %s", err.Error())
+			}
+
+			// 确保每条 JSON 都是独立一行
+			if _, err := writer.Write(append(b, '\n')); err != nil {
+				log.Fatalf("error writing to file: %s", err.Error())
+			}
+		}
+	}()
+
+	// 初始化成功通道
+	go func() {
+		path := "E:/xuexi/platform/platform_backend/scripts/result/get_video_ok.jsonl"
+		file, err := os.OpenFile(path, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("file err %s", err.Error())
+		}
+		defer file.Close()
+
+		writer := bufio.NewWriter(file)
+		defer writer.Flush() // 最后统一刷新缓冲区
+
+		for e := range okCh {
+			b, err := json.Marshal(e)
+			if err != nil {
+				log.Fatalf("error Marshal %s", err.Error())
+			}
+
+			// 确保每条 JSON 都是独立一行
+			if _, err := writer.Write(append(b, '\n')); err != nil {
+				log.Fatalf("error writing to file: %s", err.Error())
+			}
+		}
+	}()
+
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, concurrencyLimit) // 信号量控制并发数
+	startTime := time.Now()                      // 记录整个测试开始时间
+	for _, user := range LoginOkMap {
+		wg.Add(1)
+		sem <- struct{}{} // 信号量申请，超出则阻塞
+		go func(user *Login_OK) {
+			defer func() {
+				wg.Done()
+				<-sem // 释放信号量
+			}()
+			// 拿accessToken
+			ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+			response, err := api.Refresh(ctx, user.RefreshToken)
+			cancel()
+			if err != nil {
+				errCh <- &CreationInfo_ER{
+					AuthorId: user.IdInDb,
+					Error:    err.Error(),
+				}
+				return
+			}
+			msg := response.GetMsg()
+			status := msg.GetStatus()
+			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errCh <- &CreationInfo_ER{
+					AuthorId: user.IdInDb,
+					Error:    err.Error(),
+				}
+				return
+			}
+
+			accessToken := response.GetAccessToken()
+			start := time.Now()
+
+			_ctx, _cancel := context.WithTimeout(context.Background(), 4*time.Second)
+			_response, err := api.GetUserCreations(_ctx, accessToken, generated.CreationStatus_DRAFT, 1)
+			_cancel()
+			end := time.Now()
+			if err != nil {
+				errCh <- &CreationInfo_ER{
+					AuthorId: user.IdInDb,
+					Error:    err.Error(),
+				}
+				return
+			}
+			msg = _response.GetMsg()
+			status = msg.GetStatus()
+			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errCh <- &CreationInfo_ER{
+					AuthorId: user.IdInDb,
+					Error:    err.Error(),
+				}
+				return
+			}
+
+			CreationInfos := _response.GetCreationInfoGroup()
+			for _, info := range CreationInfos {
+				okCh <- &CreationInfo_OK{
+					CreationId: info.Creation.CreationId,
+					AuthorId:   user.IdInDb,
+					Title:      info.Creation.BaseInfo.Title,
+					Duration:   math.Round(float64(end.Sub(start).Milliseconds())*100) / 100,
+				}
+			}
+
+			count := _response.GetCount()
+
+			for i := int32(2); i < count; i++ {
+				_ctx, _cancel := context.WithTimeout(context.Background(), 4*time.Second)
+				start := time.Now()
+				i_response, err := api.GetUserCreations(_ctx, accessToken, generated.CreationStatus_DRAFT, i)
+				_cancel()
+				end := time.Now()
+				if err != nil {
+					errCh <- &CreationInfo_ER{
+						AuthorId: user.IdInDb,
+						Error:    err.Error(),
+					}
+					return
+				}
+				msg = i_response.GetMsg()
+				status = msg.GetStatus()
+				if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
+					err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+					errCh <- &CreationInfo_ER{
+						AuthorId: user.IdInDb,
+						Error:    err.Error(),
+					}
+					continue
+				}
+
+				CreationInfos := i_response.GetCreationInfoGroup()
+				for _, info := range CreationInfos {
+					okCh <- &CreationInfo_OK{
+						CreationId: info.Creation.CreationId,
+						AuthorId:   user.IdInDb,
+						Title:      info.Creation.BaseInfo.Title,
+						Duration:   math.Round(float64(end.Sub(start).Milliseconds())*100) / 100,
+					}
+				}
+			}
+		}(user)
+
+		time.Sleep(time.Millisecond * 5)
+	}
+	wg.Wait()
+	endTime := time.Now() // 记录整个测试结束时间
+	totalDuration := endTime.Sub(startTime).Seconds()
+	// 计算吞吐量
+	throughput := float64(totalRequests) / totalDuration
+
+	log.Printf("ConcurrencyLimit: %d\n", concurrencyLimit)
+	log.Printf("Total Requests: %d\n", totalRequests)
+	log.Printf("Total Duration: %.2f seconds\n", totalDuration)
+	log.Printf("Throughput: %.2f requests/second\n", throughput)
+
+	close(errCh)
+	close(okCh)
 }
 
 // 上传视频前初始化
@@ -70,7 +491,7 @@ func UplodaVideoInit() {
 		}
 	}()
 
-	// 获取视频集
+	// 获取要上传的视频集
 	go func() {
 		defer wg.Done()
 		filename := "E:/xuexi/platform/platform_backend/scripts/videos.jsonl"

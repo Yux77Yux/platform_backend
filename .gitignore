@@ -1,1 +1,6 @@
 *.log
+*.lock
+
+scripts/result/*
+scripts/*.jsonl
+scripts/*.json

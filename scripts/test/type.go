@@ -43,3 +43,17 @@ type Creation_ER struct {
 	*Creation
 	Error string `json:"error"`
 }
+
+type CreationInfo_OK struct {
+	CreationId int64   `json:"vid"`
+	AuthorId   int64   `json:"uid"`
+	Title      string  `json:"title"`
+	Duration   float64 `json:"duration"`
+}
+
+type CreationInfo_ER struct {
+	CreationId int64  `json:"vid"`
+	AuthorId   int64  `json:"uid"`
+	Title      string `json:"title"`
+	Error      string `json:"error"`
+}

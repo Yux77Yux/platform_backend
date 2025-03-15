@@ -57,7 +57,7 @@ func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated
 		FROM db_interaction_1.Interaction
 		WHERE user_id = ?
 		AND action_tag & 4 = 4
-		ORDER BY save_at DESC
+		ORDER BY updated_at,creation_id DESC
 		LIMIT 30 OFFSET ?`
 
 	var interactions []*generated.Interaction
@@ -100,7 +100,7 @@ func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.I
 		FROM db_interaction_1.Interaction
 		WHERE user_id = ?
 		AND action_tag & 1 = 1
-		ORDER BY updated_at DESC
+		ORDER BY updated_at,creation_id DESC
 		LIMIT 30 OFFSET ?`
 
 	var interactions []*generated.Interaction
@@ -146,7 +146,7 @@ func GetOtherUserHistories(ctx context.Context, userId int64, page int32) ([]*ge
 		FROM db_interaction_1.Interaction
 		WHERE user_id < ? 
 		OR user_id > ?
-		ORDER BY updated_at DESC
+		ORDER BY updated_at,creation_id DESC
 		LIMIT 5000 offset ?`
 
 	var interactions []*generated.Interaction

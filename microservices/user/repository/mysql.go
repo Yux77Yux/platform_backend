@@ -403,7 +403,7 @@ func GetFolloweers(ctx context.Context, userId int64, page int32) ([]*common.Use
 			SELECT follower_id
 			FROM db_user_1.Follow
 			WHERE followee_id = ?
-			ORDER BY created_at DESC
+			ORDER BY created_at,views DESC
 			LIMIT ? 
 			OFFSET ?
 		) f
@@ -457,7 +457,7 @@ func GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]*commo
 			SELECT followee_id
 			FROM db_user_1.Follow
 			WHERE follower_id = ?
-			ORDER BY created_at DESC
+			ORDER BY created_at,views DESC
 			LIMIT ? 
 			OFFSET ?
 		) f
@@ -512,7 +512,7 @@ func GetFolloweesByViews(ctx context.Context, userId int64, page int32) ([]*comm
 			SELECT followee_id
 			FROM db_user_1.Follow
 			WHERE follower_id = ?
-			ORDER BY views DESC
+			ORDER BY views,followee_id DESC
 			LIMIT ? 
 			OFFSET ?
 		) f

@@ -24,7 +24,7 @@ func GetReviews(
 	const Limit = 10
 	var (
 		count   int32 = 0
-		orderBy       = " ORDER BY created_at, id "
+		orderBy       = " ORDER BY created_at , id "
 	)
 	if status != generated.ReviewStatus_PENDING {
 		orderBy = " ORDER BY updated_at DESC, id  "

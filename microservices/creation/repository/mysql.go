@@ -313,7 +313,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 		FROM db_creation_1.Creation 
 		WHERE author_id = ?
 		AND status = ?
-		ORDER BY upload_time DESC
+		ORDER BY upload_time,id DESC
 		LIMIT ?
 		OFFSET ?`
 
@@ -788,14 +788,15 @@ func UpdateCreationInTransaction(ctx context.Context, creation *generated.Creati
 
 func UpdateCreationStatusInTransaction(ctx context.Context, creation *generated.CreationUpdateStatus) error {
 	var (
-		status = creation.GetStatus()
-		userId = creation.GetAuthorId()
-		AND    = " "
+		creationId = creation.GetCreationId()
+		status     = creation.GetStatus()
+		userId     = creation.GetAuthorId()
+		AND        = " "
 	)
 
 	values := make([]any, 0, 8)
 
-	values = append(values, status.String(), creation.GetCreationId())
+	values = append(values, status.String(), creationId)
 	if userId != -403 {
 		AND = " AND author_id = ? "
 		values = append(values, userId)
@@ -817,7 +818,7 @@ func UpdateCreationStatusInTransaction(ctx context.Context, creation *generated.
 		return errMap.MapMySQLErrorToStatus(err)
 	}
 	if num <= 0 {
-		return grpcStatus.Errorf(codes.NotFound, "not match the author")
+		return grpcStatus.Errorf(codes.NotFound, fmt.Sprintf("%d not match the %d author", userId, creationId))
 	}
 	return nil
 }

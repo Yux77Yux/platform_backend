@@ -89,7 +89,7 @@ func UpdateCreation(ctx context.Context, req *generated.UpdateCreationRequest) (
 	return response, nil
 }
 
-// 将草稿发布
+// 将草稿发布也用这个
 func UpdateCreationStatus(ctx context.Context, req *generated.UpdateCreationStatusRequest) (*generated.UpdateCreationResponse, error) {
 	response := new(generated.UpdateCreationResponse)
 

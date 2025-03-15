@@ -11,4 +11,8 @@ var (
 	UpdateSpaceOkMap  = make(map[string]*Id)
 
 	UploadOkMap = make(map[string]*Creation_OK)
+
+	LoginOKMapIdInDb        = make(map[int64]*Login_OK)
+	GetVideosOkMapIdInDb    = make(map[int64]*CreationInfo_OK)
+	PendingVideoStatusOkMap = make(map[int64]*CreationInfo_OK)
 )
