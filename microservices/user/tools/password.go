@@ -4,28 +4,29 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
+	"fmt"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
-
-	"fmt"
+	"google.golang.org/grpc/codes"
+	grpcStatus "google.golang.org/grpc/status"
 )
 
 // 验证
 func VerifyPassword(passwordInStore, password string) (bool, error) {
 	saltHex, hashHex, err := SplitHash(passwordInStore)
 	if err != nil {
-		return false, err
+		return false, grpcStatus.Errorf(codes.Internal, "Failed to decode stored salt: %v", err)
 	}
 
 	salt, err := hex.DecodeString(saltHex)
 	if err != nil {
-		return false, fmt.Errorf("failed to decode salt: %w", err)
+		return false, grpcStatus.Errorf(codes.Internal, "Failed to decode stored salt: %v", err)
 	}
 
 	storedHash, err := hex.DecodeString(hashHex)
 	if err != nil {
-		return false, fmt.Errorf("failed to decode hash: %w", err)
+		return false, grpcStatus.Errorf(codes.Internal, "Failed to decode stored salt: %v", err)
 	}
 
 	// 使用提取的盐值重新计算密码的哈希

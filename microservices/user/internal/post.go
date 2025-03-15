@@ -12,14 +12,12 @@ import (
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
-	"google.golang.org/grpc/codes"
-	grpcStatus "google.golang.org/grpc/status"
 )
 
 func addCredential(ctx context.Context, user_credentials *generated.UserCredentials) error {
 	email := user_credentials.GetUserEmail()
 	username := user_credentials.GetUsername()
-	_err := fmt.Errorf("Please fill in the required fields and ensure they meet the requirements")
+	_err := fmt.Errorf("error: Please fill in the required fields and ensure they meet the requirements")
 
 	err := tools.CheckStringLength(username, USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH)
 	usernameExist := err == nil
@@ -36,7 +34,7 @@ func addCredential(ctx context.Context, user_credentials *generated.UserCredenti
 
 	// 用户名通过
 	if usernameExist {
-		existErr := fmt.Errorf("Sorry, that username you've entered is unavailable. Please pick a different one.")
+		existErr := fmt.Errorf("error: Sorry, that username you've entered is unavailable. Please pick a different one")
 		exist, err := cache.ExistsUsername(ctx, username)
 		if err != nil {
 			traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
@@ -60,8 +58,8 @@ func addCredential(ctx context.Context, user_credentials *generated.UserCredenti
 
 	// 邮箱通过
 	if emailExist {
-		existErr := fmt.Errorf("Sorry, that email you've entered is unavailable. Please pick a different one.")
-		exist, err := cache.ExistsEmail(ctx, email)
+		existErr := fmt.Errorf("error: Sorry, that email you've entered is unavailable. Please pick a different one")
+		exist, err := cache.ExistsUsername(ctx, username)
 		if err != nil {
 			traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 			go tools.LogError(traceId, fullName, err)
@@ -74,7 +72,7 @@ func addCredential(ctx context.Context, user_credentials *generated.UserCredenti
 				if errMap.IsServerError(err) {
 					return err
 				}
-				return
+				return _err
 			}
 			if exist {
 				return existErr
@@ -82,6 +80,7 @@ func addCredential(ctx context.Context, user_credentials *generated.UserCredenti
 		}
 	}
 
+	// 通过则异步发送
 	go func(user_credentials *generated.UserCredentials, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 		err = messaging.SendMessage(ctx, messaging.Register, messaging.Register, user_credentials)
@@ -89,6 +88,8 @@ func addCredential(ctx context.Context, user_credentials *generated.UserCredenti
 			tools.LogError(traceId, fullName, err)
 		}
 	}(user_credentials, ctx)
+
+	return nil
 }
 
 func AddReviewer(ctx context.Context, req *generated.AddReviewerRequest) (*generated.AddReviewerResponse, error) {
@@ -114,7 +115,20 @@ func AddReviewer(ctx context.Context, req *generated.AddReviewerRequest) (*gener
 	user_credentials := req.GetUserCredentials()
 	err = addCredential(ctx, user_credentials)
 	if err != nil {
-
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
+			Details: err.Error(),
+		}
+		return response, nil
 	}
 
 	response.Msg = &common.ApiResponse{
@@ -127,9 +141,22 @@ func AddReviewer(ctx context.Context, req *generated.AddReviewerRequest) (*gener
 func Register(ctx context.Context, req *generated.RegisterRequest) (*generated.RegisterResponse, error) {
 	response := new(generated.RegisterResponse)
 	user_credentials := req.GetUserCredentials()
-	err = addCredential(ctx, user_credentials)
+	err := addCredential(ctx, user_credentials)
 	if err != nil {
-
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
+			Details: err.Error(),
+		}
+		return response, nil
 	}
 
 	response.Msg = &common.ApiResponse{
@@ -161,15 +188,13 @@ func Follow(ctx context.Context, req *generated.FollowRequest) (*generated.Follo
 	}
 	follow.FollowerId = userId
 
-	err = messaging.SendMessage(ctx, messaging.Follow, messaging.Follow, follow)
-	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+	go func(follow *generated.Follow, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.Follow, messaging.Follow, follow)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
 		}
-		return response, err
-	}
+	}(follow, ctx)
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,

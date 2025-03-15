@@ -9,29 +9,27 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
-	dispatch "github.com/Yux77Yux/platform_backend/microservices/user/messaging/dispatch"
 	oss "github.com/Yux77Yux/platform_backend/microservices/user/oss"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
 func DelReviewer(ctx context.Context, req *generated.DelReviewerRequest) (*generated.DelReviewerResponse, error) {
 	response := new(generated.DelReviewerResponse)
-	err := messaging.SendMessage(ctx, messaging.DelReviewer, messaging.DelReviewer, req)
-	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+
+	go func(req *generated.DelReviewerRequest, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err := messaging.SendMessage(ctx, messaging.DelReviewer, messaging.DelReviewer, req)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
 		}
-		return response, err
-	}
+	}(req, ctx)
 
 	response.Msg = &common.ApiResponse{
 		Status:  common.ApiResponse_SUCCESS,
 		Code:    "202",
 		Details: "DelReviewer processing",
 	}
-	return response, err
+	return response, nil
 }
 
 func UpdateUserSpace(ctx context.Context, req *generated.UpdateUserSpaceRequest) (*generated.UpdateUserResponse, error) {
@@ -57,15 +55,13 @@ func UpdateUserSpace(ctx context.Context, req *generated.UpdateUserSpaceRequest)
 	space := req.GetUserUpdateSpace()
 	space.UserDefault.UserId = userId
 
-	err = messaging.SendMessage(ctx, messaging.UpdateUserSpace, messaging.UpdateUserSpace, space)
-	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+	go func(space *generated.UserUpdateSpace, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.UpdateUserSpace, messaging.UpdateUserSpace, space)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
 		}
-		return response, err
-	}
+	}(space, ctx)
 
 	response.Msg = &common.ApiResponse{
 		Status:  common.ApiResponse_SUCCESS,
@@ -141,14 +137,17 @@ func UpdateUserAvatar(ctx context.Context, req *generated.UpdateUserAvatarReques
 		UserAvatar: userAvatar,
 	}
 
-	go dispatch.HandleRequest(updateAvatar, dispatch.UpdateUserAvatar)
-	go dispatch.HandleRequest(updateAvatar, dispatch.UpdateUserAvatarCache)
+	go func(updateAvatar *generated.UserUpdateAvatar, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.UpdateUserAvatar, messaging.UpdateUserAvatar, updateAvatar)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
+		}
+	}(updateAvatar, ctx)
 
 	response.Msg = &common.ApiResponse{
-		Status:  common.ApiResponse_SUCCESS,
-		Code:    "202",
-		Message: "OK",
-		Details: "UpdateUser success",
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "202",
 	}
 	response.UserUpdateAvatar = updateAvatar
 	return response, nil
@@ -177,21 +176,17 @@ func UpdateUserStatus(ctx context.Context, req *generated.UpdateUserStatusReques
 	updateStatus := req.GetUserUpdateStatus()
 	updateStatus.UserId = userId
 
-	err = messaging.SendMessage(ctx, messaging.UpdateUserStatus, messaging.UpdateUserStatus, updateStatus)
-	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+	go func(updateStatus *generated.UserUpdateStatus, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.UpdateUserStatus, messaging.UpdateUserStatus, updateStatus)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
 		}
-		return response, err
-	}
+	}(updateStatus, ctx)
 
 	response.Msg = &common.ApiResponse{
-		Status:  common.ApiResponse_SUCCESS,
-		Code:    "202",
-		Message: "OK",
-		Details: "UpdateUser success",
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "202",
 	}
 	return response, nil
 }
@@ -219,14 +214,17 @@ func UpdateUserBio(ctx context.Context, req *generated.UpdateUserBioRequest) (*g
 	updateBio := req.GetUserUpdateBio()
 	updateBio.UserId = userId
 
-	go dispatch.HandleRequest(updateBio, dispatch.UpdateUserBio)
-	go dispatch.HandleRequest(updateBio, dispatch.UpdateUserBioCache)
+	go func(updateBio *generated.UserUpdateBio, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.UpdateUserStatus, messaging.UpdateUserStatus, updateBio)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
+		}
+	}(updateBio, ctx)
 
 	response.Msg = &common.ApiResponse{
-		Status:  common.ApiResponse_SUCCESS,
-		Code:    "202",
-		Message: "OK",
-		Details: "UpdateUser success",
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "202",
 	}
 	return response, nil
 }

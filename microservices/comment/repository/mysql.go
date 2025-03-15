@@ -12,7 +12,7 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
-	"github.com/Yux77Yux/platform_backend/microservices/auth/tools"
+	tools "github.com/Yux77Yux/platform_backend/microservices/comment/tools"
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 

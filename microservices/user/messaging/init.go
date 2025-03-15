@@ -5,6 +5,8 @@ const (
 	StoreUser        = "StoreUser"
 	StoreCredentials = "StoreCredentials"
 	UpdateUserSpace  = "UpdateUserSpace"
+	UpdateUserBio    = "UpdateUserBio"
+	UpdateUserAvatar = "UpdateUserAvatar"
 	Follow           = "Follow"
 
 	// review
@@ -19,6 +21,8 @@ var (
 		StoreUser:        "direct",
 		StoreCredentials: "direct",
 		UpdateUserSpace:  "direct",
+		UpdateUserBio:    "direct",
+		UpdateUserAvatar: "direct",
 		UpdateUserStatus: "direct",
 		DelReviewer:      "direct",
 		Follow:           "direct",

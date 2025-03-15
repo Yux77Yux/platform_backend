@@ -344,11 +344,10 @@ func GetUserCards(ctx context.Context, userIds []int64) ([]*common.UserCreationC
 	return users, nil
 }
 
-func GetFolloweesByTime(userId int64, page int32) ([]int64, error) {
+func GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]int64, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 	end := start + 19
-	ctx := context.Background()
 	strs, err := CacheClient.RevRangeZSet(ctx, "Time_Followees", strconv.FormatInt(userId, 10), start, end)
 	if err != nil {
 		return nil, err
@@ -366,11 +365,10 @@ func GetFolloweesByTime(userId int64, page int32) ([]int64, error) {
 	return ids, nil
 }
 
-func GetFolloweesByView(userId int64, page int32) ([]int64, error) {
+func GetFolloweesByView(ctx context.Context, userId int64, page int32) ([]int64, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 	end := start + 19
-	ctx := context.Background()
 	strs, err := CacheClient.RevRangeZSet(ctx, "View_Followees", strconv.FormatInt(userId, 10), start, end)
 	if err != nil {
 		return nil, err
@@ -388,11 +386,10 @@ func GetFolloweesByView(userId int64, page int32) ([]int64, error) {
 	return ids, nil
 }
 
-func GetFollowers(userId int64, page int32) ([]int64, error) {
+func GetFollowers(ctx context.Context, userId int64, page int32) ([]int64, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 	end := start + 19
-	ctx := context.Background()
 	strs, err := CacheClient.RevRangeZSet(ctx, "Followers", strconv.FormatInt(userId, 10), start, end)
 	if err != nil {
 		return nil, err
@@ -426,8 +423,7 @@ func CancelFollow(ctx context.Context, follow *generated.Follow) error {
 	return nil
 }
 
-func DelCredentials(username string) error {
-	ctx := context.Background()
+func DelCredentials(ctx context.Context, username string) error {
 	_, err := CacheClient.DelHashField(ctx, "User", "Credentials", username)
 	return err
 }

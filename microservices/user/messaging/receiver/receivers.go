@@ -96,6 +96,36 @@ func updateUserSpaceProcessor(ctx context.Context, msg *anypb.Any) error {
 	return nil
 }
 
+func updateUserBioProcessor(ctx context.Context, msg *anypb.Any) error {
+	user := new(generated.UserUpdateBio)
+
+	err := msg.UnmarshalTo(user)
+	if err != nil {
+		return fmt.Errorf("updateUserBioProcessor error: %w", err)
+	}
+
+	// 更新 数据库用户表
+	go dispatch.HandleRequest(user, dispatch.UpdateUserBio)
+	go dispatch.HandleRequest(user, dispatch.UpdateUserBioCache)
+
+	return nil
+}
+
+func updateUserAvatarProcessor(ctx context.Context, msg *anypb.Any) error {
+	user := new(generated.UserUpdateAvatar)
+
+	err := msg.UnmarshalTo(user)
+	if err != nil {
+		return fmt.Errorf("updateUserAvatarProcessor error: %w", err)
+	}
+
+	// 更新 数据库用户表
+	go dispatch.HandleRequest(user, dispatch.UpdateUserAvatar)
+	go dispatch.HandleRequest(user, dispatch.UpdateUserAvatarCache)
+
+	return nil
+}
+
 func delReviewerProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(common.UserDefault)
 
@@ -111,14 +141,14 @@ func delReviewerProcessor(ctx context.Context, msg *anypb.Any) error {
 		return err
 	}
 
-	err = cache.DelCredentials(username)
+	err = cache.DelCredentials(ctx, username)
 	if err != nil {
 		log.Printf("error: %v", err)
 		return err
 	}
 
 	if email != "" {
-		err = cache.DelCredentials(email)
+		err = cache.DelCredentials(ctx, email)
 		if err != nil {
 			log.Printf("error: %v", err)
 			return err

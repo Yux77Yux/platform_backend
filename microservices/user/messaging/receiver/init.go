@@ -11,6 +11,8 @@ const (
 	StoreUser        = messaging.StoreUser
 	StoreCredentials = messaging.StoreCredentials
 	UpdateUserSpace  = messaging.UpdateUserSpace
+	UpdateUserAvatar = messaging.UpdateUserAvatar
+	UpdateUserBio    = messaging.UpdateUserBio
 	Follow           = messaging.Follow
 
 	// review
@@ -36,6 +38,10 @@ func Run(ctx context.Context) {
 			go messaging.ListenToQueue(exchange, StoreCredentials, StoreCredentials, storeCredentialsProcessor)
 		case UpdateUserSpace:
 			go messaging.ListenToQueue(exchange, UpdateUserSpace, UpdateUserSpace, updateUserSpaceProcessor)
+		case UpdateUserAvatar:
+			go messaging.ListenToQueue(exchange, UpdateUserAvatar, UpdateUserAvatar, updateUserAvatarProcessor)
+		case UpdateUserBio:
+			go messaging.ListenToQueue(exchange, UpdateUserBio, UpdateUserBio, updateUserBioProcessor)
 		case UpdateUserStatus:
 			go messaging.ListenToQueue(exchange, UpdateUserStatus, UpdateUserStatus, updateUserStatusProcessor)
 		case DelReviewer:

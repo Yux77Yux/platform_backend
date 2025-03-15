@@ -8,11 +8,14 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	grpcStatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
 // SET
@@ -88,17 +91,16 @@ func UserAddInfoInTransaction(ctx context.Context, users []*generated.User) erro
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
+			tools.LogError("", "db recover", err)
 		}
 	}()
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
+		if err := db.RollbackTransaction(tx); err != nil {
+			return err
 		}
-
-		return err
+		return errMap.GetStatusError(err)
 	default:
 		_, err := tx.ExecContext(
 			ctx,
@@ -106,9 +108,8 @@ func UserAddInfoInTransaction(ctx context.Context, users []*generated.User) erro
 			values...,
 		)
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+				tools.LogError("", "db roolback", errSecond)
 			}
 
 			return err
@@ -175,17 +176,16 @@ func UserRegisterInTransaction(ctx context.Context, user_credentials []*generate
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
+			tools.LogError("", "db recover", err)
 		}
 	}()
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
+		if err := db.RollbackTransaction(tx); err != nil {
+			return err
 		}
-
-		return err
+		return errMap.GetStatusError(err)
 	default:
 		_, err = tx.ExecContext(
 			ctx,
@@ -194,9 +194,8 @@ func UserRegisterInTransaction(ctx context.Context, user_credentials []*generate
 		)
 
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+				tools.LogError("", "db roolback", errSecond)
 			}
 
 			return err
@@ -208,7 +207,7 @@ func UserRegisterInTransaction(ctx context.Context, user_credentials []*generate
 	}
 
 	if err != nil {
-		return fmt.Errorf("not the database error but the others occurred :%w", err)
+		return err
 	}
 	return nil
 }
@@ -235,13 +234,12 @@ func Follow(ctx context.Context, subs []*generated.Follow) error {
 		ON DUPLICATE KEY UPDATE
 		follower_id = follower_id;`, strings.Join(sqlStr, ","))
 
-	_, err := db.Exec(
+	_, err := db.ExecContext(
+		ctx,
 		query,
 		values...,
 	)
 	if err != nil {
-		err = fmt.Errorf("transaction exec failed because %v", err)
-
 		return err
 	}
 	return nil
@@ -262,7 +260,7 @@ func Exists(ctx context.Context, isEmail bool, usernameOrEmail string) (bool, er
 	var exists bool
 	err := db.QueryRowContext(ctx, query, usernameOrEmail).Scan(&exists)
 	if err != nil {
-		return false, err
+		return false, errMap.MapMySQLErrorToStatus(err)
 	}
 
 	return exists, nil
@@ -286,7 +284,7 @@ func UserGetInfoInTransaction(ctx context.Context, id int64) (*generated.User, e
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		var (
 			name       string
@@ -306,10 +304,7 @@ func UserGetInfoInTransaction(ctx context.Context, id int64) (*generated.User, e
 			&followees,
 		)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil
-			}
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 
 		status, ok := generated.UserStatus_value[statusStr]
@@ -370,8 +365,7 @@ func GetUsers(ctx context.Context, userIds []int64) ([]*common.UserCreationComme
 		var name, avatar, bio string
 
 		if err := rows.Scan(&id, &name, &avatar, &bio); err != nil {
-			log.Printf("error: row Scan %v", err) // 处理扫描错误
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 		users = append(users, &common.UserCreationComment{
 			UserDefault: &common.UserDefault{
@@ -426,8 +420,7 @@ func GetFolloweers(ctx context.Context, userId int64, page int32) ([]*common.Use
 		var id int64
 		var name, avatar, bio string
 		if err := rows.Scan(&id, &name, &avatar, &bio); err != nil {
-			log.Printf("error: row Scan %v", err) // 处理扫描错误
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 		results = append(results, &common.UserCreationComment{
 			UserDefault: &common.UserDefault{
@@ -441,8 +434,7 @@ func GetFolloweers(ctx context.Context, userId int64, page int32) ([]*common.Use
 
 	// 检查是否有错误发生在遍历过程中
 	if err := rows.Err(); err != nil {
-		log.Printf("error: rows iteration %v", err)
-		return nil, err
+		return nil, errMap.MapMySQLErrorToStatus(err)
 	}
 
 	return results, nil
@@ -482,8 +474,7 @@ func GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]*commo
 		var id int64
 		var name, avatar, bio string
 		if err := rows.Scan(&id, &name, &avatar, &bio); err != nil {
-			log.Printf("error: row Scan %v", err) // 处理扫描错误
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 		results = append(results, &common.UserCreationComment{
 			UserDefault: &common.UserDefault{
@@ -538,8 +529,7 @@ func GetFolloweesByViews(ctx context.Context, userId int64, page int32) ([]*comm
 		var id int64
 		var name, avatar, bio string
 		if err := rows.Scan(&id, &name, &avatar, &bio); err != nil {
-			log.Printf("error: row Scan %v", err) // 处理扫描错误
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 		results = append(results, &common.UserCreationComment{
 			UserDefault: &common.UserDefault{
@@ -590,16 +580,13 @@ func UserVerifyInTranscation(ctx context.Context, user_credential *generated.Use
 	default:
 		err := db.QueryRow(query, value).Scan(&id, &passwordHash, &email, &role)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil
-			}
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 	}
 
 	match, err := tools.VerifyPassword(passwordHash, user_credential.GetPassword())
 	if err != nil {
-		return nil, fmt.Errorf("failed to verify password: %w", err)
+		return nil, grpcStatus.Error(codes.PermissionDenied, "username or password is invalid")
 	}
 	if !match {
 		return nil, nil
@@ -667,17 +654,16 @@ func UserEmailUpdateInTransaction(ctx context.Context, user_credentials []*gener
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
+			tools.LogError("", "db recover", err)
 		}
 	}()
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
+		if err := db.RollbackTransaction(tx); err != nil {
+			return err
 		}
-
-		return err
+		return errMap.GetStatusError(err)
 	default:
 		_, err := tx.ExecContext(
 			ctx,
@@ -685,9 +671,8 @@ func UserEmailUpdateInTransaction(ctx context.Context, user_credentials []*gener
 			values...,
 		)
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+				tools.LogError("", "db roolback", errSecond)
 			}
 
 			return err
@@ -818,47 +803,13 @@ func UserUpdateAvatarInTransaction(ctx context.Context, users []*generated.UserU
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
 
-	tx, err := db.BeginTransaction()
+	_, err := db.ExecContext(
+		ctx,
+		query,
+		values...,
+	)
 	if err != nil {
 		return err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return err
-	default:
-		_, err := tx.ExecContext(
-			ctx,
-			query,
-			values...,
-		)
-		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
-			return err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -898,47 +849,13 @@ func UserUpdateStatusInTransaction(ctx context.Context, users []*generated.UserU
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
 
-	tx, err := db.BeginTransaction()
+	_, err := db.ExecContext(
+		ctx,
+		query,
+		values...,
+	)
 	if err != nil {
 		return err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return err
-	default:
-		_, err := tx.ExecContext(
-			ctx,
-			query,
-			values...,
-		)
-		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
-			return err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -978,47 +895,13 @@ func UserUpdateBioInTransaction(ctx context.Context, users []*generated.UserUpda
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
 
-	tx, err := db.BeginTransaction()
+	_, err := db.ExecContext(
+		ctx,
+		query,
+		values...,
+	)
 	if err != nil {
 		return err
-	}
-
-	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
-		}
-
-		return err
-	default:
-		_, err := tx.ExecContext(
-			ctx,
-			query,
-			values...,
-		)
-		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
-			}
-
-			return err
-		}
-
-		if err = db.CommitTransaction(tx); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -1058,22 +941,19 @@ func DelReviewer(ctx context.Context, reviewerId int64) (string, string, error) 
 	// 查询 username 并加行锁
 	err = tx.QueryRowContext(ctx, querySELECT, reviewerId).Scan(&username, &email)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", "", nil
-		}
-		return "", "", fmt.Errorf("failed to query username: %w", err)
+		return "", "", errMap.MapMySQLErrorToStatus(err)
 	}
 
 	// 更新角色
 	_, err = tx.ExecContext(ctx, queryUpdate, reviewerId)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to update role: %w", err)
+		return "", "", err
 	}
 
 	// 提交事务
 	err = db.CommitTransaction(tx)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to commit transaction: %w", err)
+		return "", "", err
 	}
 
 	return username, email.String, nil
