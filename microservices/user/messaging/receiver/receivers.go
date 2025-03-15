@@ -105,7 +105,7 @@ func delReviewerProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 删除审核员身份
-	username, email, err := db.DelReviewer(req.GetUserId())
+	username, email, err := db.DelReviewer(ctx, req.GetUserId())
 	if err != nil {
 		log.Printf("error: %v", err)
 		return err

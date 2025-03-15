@@ -25,13 +25,13 @@ func computeSimilarProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	id := req.GetId()
-	results, err := recommend.RecommendItemBased(id)
+	results, err := recommend.RecommendItemBased(ctx, id)
 	if err != nil {
 		log.Printf("error: RecommendItemBased %v", err)
 		return err
 	}
 
-	err = cache.SetRecommendBaseItem(id, results)
+	err = cache.SetRecommendBaseItem(ctx, id, results)
 	if err != nil {
 		log.Printf("error: cache SetRecommendBaseItem %v", err)
 		return err
@@ -47,13 +47,13 @@ func computeUserProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	id := req.GetUserId()
-	results, err := recommend.Recommend(id)
+	results, err := recommend.Recommend(ctx, id)
 	if err != nil {
 		log.Printf("error: RecommendItemBased %v", err)
 		return err
 	}
 
-	err = cache.SetRecommendBaseUser(id, results)
+	err = cache.SetRecommendBaseUser(ctx, id, results)
 	if err != nil {
 		log.Printf("error: cache SetRecommendBaseUser %v", err)
 		return err

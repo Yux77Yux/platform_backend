@@ -4,14 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"math"
 	"strings"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	grpcStatus "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
+	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
@@ -48,6 +50,7 @@ func CreationAddInTransaction(ctx context.Context, creation *generated.Creation)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
+			tools.LogError("", "db recover", err)
 		}
 	}()
 
@@ -66,12 +69,10 @@ func CreationAddInTransaction(ctx context.Context, creation *generated.Creation)
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
+		if err := db.RollbackTransaction(tx); err != nil {
+			return err
 		}
-
-		return err
+		return errMap.GetStatusError(err)
 	default:
 		_, err := tx.ExecContext(
 			ctx,
@@ -88,10 +89,11 @@ func CreationAddInTransaction(ctx context.Context, creation *generated.Creation)
 			upload_time,
 		)
 		if err != nil {
-			if errRollback := db.RollbackTransaction(tx); errRollback != nil {
-				log.Printf("Transaction rollback failed: %v\n", errRollback)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				tools.LogError("", "db roolback", errSecond)
 			}
-			return errMap.MapMySQLErrorToStatus(err)
+
+			return err
 		}
 
 		_, err = tx.Exec(
@@ -99,14 +101,15 @@ func CreationAddInTransaction(ctx context.Context, creation *generated.Creation)
 			id,
 		)
 		if err != nil {
-			if errRollback := db.RollbackTransaction(tx); errRollback != nil {
-				log.Printf("Transaction rollback failed: %v\n", errRollback)
+			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+				tools.LogError("", "db roolback", errSecond)
 			}
-			return errMap.MapMySQLErrorToStatus(err)
+
+			return err
 		}
 
 		if err = db.CommitTransaction(tx); err != nil {
-			return errMap.MapMySQLErrorToStatus(err)
+			return err
 		}
 	}
 
@@ -169,7 +172,7 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		// 查作品信息
 		err := db.QueryRowContext(
@@ -189,10 +192,7 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 			&upload_time,
 		)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil
-			}
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 
 		// 查 统计数
@@ -208,10 +208,7 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 			&publish_time,
 		)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil
-			}
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 
 		// 查 分区
@@ -226,10 +223,7 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 			&description,
 		)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil
-			}
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 	}
 
@@ -279,7 +273,7 @@ func GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, err
 
 	select {
 	case <-ctx.Done():
-		return -1, ctx.Err()
+		return -1, errMap.GetStatusError(ctx.Err())
 	default:
 		// 查作品信息
 		err := db.QueryRowContext(
@@ -291,10 +285,7 @@ func GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, err
 			&author_id,
 		)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return 0, nil
-			}
-			return -1, err
+			return 0, errMap.MapMySQLErrorToStatus(err)
 		}
 	}
 	return author_id, nil
@@ -338,7 +329,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 	var count int32
 	select {
 	case <-ctx.Done():
-		return nil, -1, ctx.Err()
+		return nil, -1, errMap.GetStatusError(ctx.Err())
 	default:
 		if page <= 1 {
 			var num int32
@@ -349,10 +340,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 				status,
 			).Scan(&num)
 			if err != nil {
-				if err == sql.ErrNoRows {
-					return nil, 0, nil
-				}
-				return nil, -1, err
+				return nil, -1, errMap.MapMySQLErrorToStatus(err)
 			}
 			if num <= 0 {
 				return nil, 0, nil
@@ -385,7 +373,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 			// 从当前行读取值，依次填充到变量中
 			err := rows.Scan(&creationId, &src, &thumbnail, &title, &duration, &upload_time)
 			if err != nil {
-				return nil, -1, err
+				return nil, -1, errMap.MapMySQLErrorToStatus(err)
 			}
 
 			// 存储 卡片基本信息切片
@@ -409,12 +397,12 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 
 		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
 		if err = rows.Err(); err != nil {
-			return nil, -1, err
+			return nil, -1, errMap.MapMySQLErrorToStatus(err)
 		}
 
 		// 结束第一次查询
 		if err = rows.Close(); err != nil {
-			return nil, -1, err
+			return nil, -1, errMap.MapMySQLErrorToStatus(err)
 		}
 
 		if len(sqlStr) <= 0 {
@@ -453,7 +441,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 			// 从当前行读取值，依次填充到变量中
 			err := rows.Scan(&views, &likes, &saves, &publish_time)
 			if err != nil {
-				return nil, -1, err
+				return nil, -1, errMap.MapMySQLErrorToStatus(err)
 			}
 
 			// 存储 作品卡片的统计信息
@@ -467,8 +455,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 
 		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
 		if err = rows.Err(); err != nil {
-			err = fmt.Errorf("rows iteration failed because %v", err)
-			return nil, -1, err
+			return nil, -1, errMap.MapMySQLErrorToStatus(err)
 		}
 	}
 
@@ -519,7 +506,7 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		rows, err := db.QueryContext(
 			ctx,
@@ -547,7 +534,7 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 			// 从当前行读取值，依次填充到变量中
 			err := rows.Scan(&id, &author_id, &src, &thumbnail, &title, &status, &duration, &category_id, &upload_time)
 			if err != nil {
-				return nil, err
+				return nil, errMap.MapMySQLErrorToStatus(err)
 			}
 
 			c_status := generated.CreationStatus(generated.CreationStatus_value[status])
@@ -572,12 +559,12 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 
 		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
 		if err = rows.Err(); err != nil {
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 
 		// 结束第一次查询
 		if err = rows.Close(); err != nil {
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 
 		// 查 统计数
@@ -600,7 +587,7 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 			// 从当前行读取值，依次填充到变量中
 			err := rows.Scan(&creation_id, &views, &publish_time)
 			if err != nil {
-				return nil, err
+				return nil, errMap.MapMySQLErrorToStatus(err)
 			}
 
 			// 存储 作品卡片的统计信息
@@ -614,8 +601,7 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 
 		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
 		if err = rows.Err(); err != nil {
-			err = fmt.Errorf("rows iteration failed because %v", err)
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 	}
 
@@ -633,14 +619,13 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 }
 
 // DELETE
-func DeleteCreationInTransaction(id int64) error {
+func DeleteCreationInTransaction(ctx context.Context, id int64) error {
 	query := `DELETE FROM db_creation_1.Creation 
 		WHERE id = ?`
 
-	ctx := context.Background()
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return errMap.GetStatusError(ctx.Err())
 	default:
 		_, err := db.ExecContext(
 			ctx,
@@ -656,18 +641,15 @@ func DeleteCreationInTransaction(id int64) error {
 }
 
 // UPDATE
-func UpdateViewsInTransaction(creationId int64, changingNum int) error {
+func UpdateViewsInTransaction(ctx context.Context, creationId int64, changingNum int) error {
 	query := `
 	UPDATE db_creation_engagment_1.CreationEngagement
 	SET views = views + ?
 	WHERE creation_id = ?`
 
-	ctx := context.Background()
-
 	select {
 	case <-ctx.Done():
-		err := fmt.Errorf("exec timeout :%w", ctx.Err())
-		return err
+		return errMap.GetStatusError(ctx.Err())
 	default:
 		_, err := db.ExecContext(
 			ctx,
@@ -676,26 +658,22 @@ func UpdateViewsInTransaction(creationId int64, changingNum int) error {
 			creationId,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
-			return err
+			return errMap.MapMySQLErrorToStatus(err)
 		}
 	}
 
 	return nil
 }
 
-func UpdateLikesInTransaction(creationId int64, changingNum int) error {
+func UpdateLikesInTransaction(ctx context.Context, creationId int64, changingNum int) error {
 	query := `
 	UPDATE db_creation_engagment_1.CreationEngagement
 	SET likes = likes + ?
 	WHERE creation_id = ?`
 
-	ctx := context.Background()
-
 	select {
 	case <-ctx.Done():
-		err := fmt.Errorf("exec timeout :%w", ctx.Err())
-		return err
+		return errMap.GetStatusError(ctx.Err())
 	default:
 		_, err := db.ExecContext(
 			ctx,
@@ -704,7 +682,6 @@ func UpdateLikesInTransaction(creationId int64, changingNum int) error {
 			creationId,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
 			return err
 		}
 	}
@@ -712,18 +689,15 @@ func UpdateLikesInTransaction(creationId int64, changingNum int) error {
 	return nil
 }
 
-func UpdateSavesInTransaction(creationId int64, changingNum int) error {
+func UpdateSavesInTransaction(ctx context.Context, creationId int64, changingNum int) error {
 	query := `
 	UPDATE db_creation_engagment_1.CreationEngagement
 	SET saves = saves + ?
 	WHERE creation_id = ?`
 
-	ctx := context.Background()
-
 	select {
 	case <-ctx.Done():
-		err := fmt.Errorf("exec timeout :%w", ctx.Err())
-		return err
+		return errMap.GetStatusError(ctx.Err())
 	default:
 		_, err := db.ExecContext(
 			ctx,
@@ -732,7 +706,6 @@ func UpdateSavesInTransaction(creationId int64, changingNum int) error {
 			creationId,
 		)
 		if err != nil {
-			err = fmt.Errorf("queryCreation transaction exec failed because %v", err)
 			return err
 		}
 	}
@@ -805,15 +778,15 @@ func UpdateCreationInTransaction(ctx context.Context, creation *generated.Creati
 	}
 	num, err := affected.RowsAffected()
 	if err != nil {
-		return err
+		return errMap.MapMySQLErrorToStatus(err)
 	}
 	if num <= 0 {
-		return fmt.Errorf("not match the author")
+		return grpcStatus.Errorf(codes.NotFound, "not match the author")
 	}
 	return nil
 }
 
-func UpdateCreationStatusInTransaction(creation *generated.CreationUpdateStatus) error {
+func UpdateCreationStatusInTransaction(ctx context.Context, creation *generated.CreationUpdateStatus) error {
 	var (
 		status = creation.GetStatus()
 		userId = creation.GetAuthorId()
@@ -835,21 +808,21 @@ func UpdateCreationStatusInTransaction(creation *generated.CreationUpdateStatus)
 		WHERE 
 			id = ? 
 		%s`, AND)
-	affected, err := db.Exec(query, values...)
+	affected, err := db.ExecContext(ctx, query, values...)
 	if err != nil {
 		return err
 	}
 	num, err := affected.RowsAffected()
 	if err != nil {
-		return err
+		return errMap.MapMySQLErrorToStatus(err)
 	}
 	if num <= 0 {
-		return fmt.Errorf("not match the author")
+		return grpcStatus.Errorf(codes.NotFound, "not match the author")
 	}
 	return nil
 }
 
-func PublishCreationInTransaction(creationId int64, publishTime *timestamppb.Timestamp) error {
+func PublishCreationInTransaction(ctx context.Context, creationId int64, publishTime *timestamppb.Timestamp) error {
 	query := `
 		UPDATE db_creation_engagment_1.CreationEngagement
 		SET publish_time = CASE 
@@ -857,7 +830,8 @@ func PublishCreationInTransaction(creationId int64, publishTime *timestamppb.Tim
     		ELSE publish_time 
 		END
 		WHERE id = ?`
-	_, err := db.Exec(
+	_, err := db.ExecContext(
+		ctx,
 		query,
 		publishTime.AsTime(),
 		creationId,

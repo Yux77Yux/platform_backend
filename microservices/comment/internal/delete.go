@@ -7,6 +7,7 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/comment/messaging"
+	tools "github.com/Yux77Yux/platform_backend/microservices/comment/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
@@ -26,11 +27,13 @@ func DeleteComment(ctx context.Context, req *generated.DeleteCommentRequest) err
 		CommentId:  req.GetCommentId(),
 		CreationId: req.GetCreationId(),
 	}
-	err = messaging.SendMessage(ctx, messaging.DeleteComment, messaging.DeleteComment, afterAuth)
-	if err != nil {
-		err = fmt.Errorf("error: SendMessage DeleteComment error %w", err)
-		return err
-	}
+	go func(afterAuth *common.AfterAuth, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.DeleteComment, messaging.DeleteComment, afterAuth)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
+		}
+	}(afterAuth, ctx)
 
 	return nil
 }

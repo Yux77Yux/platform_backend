@@ -10,5 +10,5 @@ import (
 )
 
 func (s *Server) CancelFollow(ctx context.Context, req *generated.FollowRequest) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, internal.CancelFollow(req)
+	return &emptypb.Empty{}, internal.CancelFollow(ctx, req)
 }

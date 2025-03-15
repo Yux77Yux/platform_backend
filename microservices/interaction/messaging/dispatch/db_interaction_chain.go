@@ -13,6 +13,7 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	"github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
+	"github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
 
 func InitialDbChain() *DbInteractionChain {
@@ -51,10 +52,13 @@ func (chain *DbInteractionChain) ExecuteBatch() {
 		go func(interactionsPtr *[]*generated.OperateInteraction) {
 			interactions := *interactionsPtr
 			// 插入数据库
-			err := db.UpdateInteractions(interactions)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := db.UpdateInteractions(ctx, interactions)
+			cancel()
 			if err != nil {
-				log.Printf("error: UpdateInteractions error %v", err)
+				tools.LogError("", "db UpdateInteractions", err)
 				// 死信，但没做
+				return
 			}
 
 			// 发到消息队列，异步更新数据库中的likes，saves

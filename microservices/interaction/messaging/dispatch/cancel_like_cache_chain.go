@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
+	"github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
 
 func InitialCancelLikeCacheChain() *CancelLikeCacheChain {
@@ -48,9 +50,11 @@ func (chain *CancelLikeCacheChain) ExecuteBatch() {
 		go func(interactionsPtr *[]*generated.BaseInteraction) {
 			interactions := *interactionsPtr
 			// 插入数据库
-			err := cache.DelLike(interactions)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := cache.DelLike(ctx, interactions)
+			cancel()
 			if err != nil {
-				log.Printf("error: DelLike error")
+				tools.LogError("", "cache DelLike", err)
 			}
 
 			// 放回对象池

@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -11,6 +12,7 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	cache "github.com/Yux77Yux/platform_backend/microservices/comment/cache"
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
+	"github.com/Yux77Yux/platform_backend/microservices/comment/tools"
 )
 
 func InitialInsertChain() *InsertChain {
@@ -49,17 +51,24 @@ func (chain *InsertChain) ExecuteBatch() {
 		go func(insertCommentsPtr *[]*generated.Comment) {
 			insertComments := *insertCommentsPtr
 			// 插入数据库
-			affectedCount, err := db.BatchInsert(insertComments)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			affectedCount, err := db.BatchInsert(ctx, insertComments)
+			cancel()
 			if err != nil {
-				log.Printf("error: BatchInsert error %v", err)
+				tools.LogError("", "db BatchInsert", err)
 				// 入死信
 				return
 			}
+
 			// 更新Redis
 			id := insertComments[0].GetCreationId()
-			err = cache.UpdateCommentsCount(id, affectedCount)
+			ctx, cancel = context.WithTimeout(context.Background(), time.Second*30)
+			err = cache.UpdateCommentsCount(ctx, id, affectedCount)
+			cancel()
 			if err != nil {
-				log.Printf("error: UpdateCommentsCount %v", err)
+				tools.LogError("", "cache UpdateCommentsCount", err)
+				// 入死信
+				return
 			}
 
 			*insertCommentsPtr = insertComments[:0]

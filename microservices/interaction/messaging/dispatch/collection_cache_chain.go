@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
+	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
 
 func InitialCollectionCacheChain() *CollectionCacheChain {
@@ -48,9 +50,11 @@ func (chain *CollectionCacheChain) ExecuteBatch() {
 		go func(interactionsPtr *[]*generated.OperateInteraction) {
 			interactions := *interactionsPtr
 			// 插入数据库
-			err := cache.ModifyCollections(interactions)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := cache.ModifyCollections(ctx, interactions)
+			cancel()
 			if err != nil {
-				log.Printf("error: ModifyCollections error")
+				tools.LogError("", "cache ModifyCollections", err)
 			}
 
 			*interactionsPtr = interactions[:0]

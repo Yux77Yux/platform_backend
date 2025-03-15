@@ -73,15 +73,14 @@ func UpdateCreation(ctx context.Context, req *generated.UpdateCreationRequest) (
 	}
 
 	UpdateInfo.AuthorId = user_id
-	err = messaging.SendMessage(ctx, messaging.UpdateDbCreation, messaging.UpdateDbCreation, UpdateInfo)
-	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+
+	go func(UpdateInfo *generated.CreationUpdated, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.UpdateDbCreation, messaging.UpdateDbCreation, UpdateInfo)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
 		}
-		return response, nil
-	}
+	}(UpdateInfo, ctx)
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
@@ -111,11 +110,6 @@ func UpdateCreationStatus(ctx context.Context, req *generated.UpdateCreationStat
 		return response, nil
 	}
 
-	response.Msg = &common.ApiResponse{
-		Status: common.ApiResponse_SUCCESS,
-		Code:   "202",
-	}
-
 	updateInfo := req.GetUpdateInfo()
 	if updateInfo == nil {
 		err := fmt.Errorf("error: not entail the request")
@@ -128,13 +122,17 @@ func UpdateCreationStatus(ctx context.Context, req *generated.UpdateCreationStat
 	}
 
 	updateInfo.AuthorId = user_id
-	err = messaging.SendMessage(ctx, messaging.UpdateCreationStatus, messaging.UpdateCreationStatus, updateInfo)
-	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+	go func(updateInfo *generated.CreationUpdateStatus, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.UpdateCreationStatus, messaging.UpdateCreationStatus, updateInfo)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
 		}
+	}(updateInfo, ctx)
+
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "202",
 	}
 	return response, nil
 }

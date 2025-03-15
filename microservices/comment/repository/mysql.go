@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"math"
 	"strings"
 	"time"
@@ -13,11 +12,12 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
+	"github.com/Yux77Yux/platform_backend/microservices/auth/tools"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
 // POST
-func BatchInsert(comments []*generated.Comment) (int64, error) {
-	ctx := context.Background()
+func BatchInsert(ctx context.Context, comments []*generated.Comment) (int64, error) {
 	count := len(comments)
 	// 构建用于构建 IN 子句的占位符部分
 	queryCommentCount := make([]string, count) // 使用切片存储占位符
@@ -53,8 +53,6 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 
 	// 格式化输入
 	for _, comment := range comments {
-		log.Printf("timestamp: %v", comment.GetCreatedAt())
-		log.Printf("time: %v", comment.GetCreatedAt().AsTime())
 		CommentValues = append(CommentValues,
 			comment.GetRoot(),
 			comment.GetParent(),
@@ -77,18 +75,17 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
+			tools.LogError("", "db recover", err)
 		}
 	}()
 
 	var rowsAffected int64
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
-		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
+		if err := db.RollbackTransaction(tx); err != nil {
+			return -1, err
 		}
-
-		return -1, err
+		return -1, errMap.GetStatusError(err)
 	default:
 		// 执行拿到id
 		ids, err := tx.ExecContext(
@@ -97,9 +94,8 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 			CommentValues...,
 		)
 		if err != nil {
-			err = fmt.Errorf("batchInsert transaction exec failed during queryComment because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+				tools.LogError("", "db roolback", errSecond)
 			}
 
 			return -1, err
@@ -108,18 +104,16 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 		// 获取最后插入 ID 和插入的总记录数
 		lastInsertID, err := ids.LastInsertId()
 		if err != nil {
-			err = fmt.Errorf("batchInsert transaction exec failed during LastInsertId because  %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+				tools.LogError("", "db roolback", errSecond)
 			}
 
 			return -1, err
 		}
 		rowsAffected, err = ids.RowsAffected()
 		if err != nil {
-			err = fmt.Errorf("batchInsert transaction exec failed during RowsAffected because  %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+				tools.LogError("", "db roolback", errSecond)
 			}
 
 			return -1, err
@@ -127,7 +121,7 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 
 		countInt64 := int64(count)
 		if countInt64 != rowsAffected {
-			return -1, fmt.Errorf("count not match the rowsAffected")
+			return -1, errMap.GetStatusError(err)
 		}
 
 		// 映射 comment_id
@@ -143,9 +137,8 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 			ContentValues...,
 		)
 		if err != nil {
-			err = fmt.Errorf("batchInsert transaction exec failed during queryContent because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+				tools.LogError("", "db roolback", errMap.MapMySQLErrorToStatus(errSecond))
 			}
 
 			return -1, err
@@ -158,9 +151,8 @@ func BatchInsert(comments []*generated.Comment) (int64, error) {
 			count,
 		)
 		if err != nil {
-			err = fmt.Errorf("batchInsert transaction exec failed during queryArea because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+				tools.LogError("", "db roolback", errSecond)
 			}
 
 			return -1, err
@@ -193,7 +185,7 @@ func GetCreationIdInTransaction(ctx context.Context, comment_id int32) (int64, i
 
 	select {
 	case <-ctx.Done():
-		return -1, -1, ctx.Err()
+		return -1, -1, errMap.GetStatusError(ctx.Err())
 	default:
 		// 查统计
 		err := db.QueryRowContext(
@@ -203,10 +195,7 @@ func GetCreationIdInTransaction(ctx context.Context, comment_id int32) (int64, i
 		).Scan(&creationId, &userId)
 
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return 0, 0, nil
-			}
-			return -1, -1, err
+			return -1, -1, errMap.MapMySQLErrorToStatus(err)
 		}
 	}
 	return creationId, userId, nil
@@ -274,7 +263,7 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 
 	select {
 	case <-ctx.Done():
-		return nil, nil, -1, ctx.Err()
+		return nil, nil, -1, errMap.GetStatusError(ctx.Err())
 	default:
 		// 查统计
 		err := db.QueryRowContext(ctx,
@@ -282,10 +271,7 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 			creation_id,
 		).Scan(&total, &status)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil, 0, nil
-			}
-			return nil, nil, -1, err
+			return nil, nil, -1, errMap.MapMySQLErrorToStatus(err)
 		}
 
 		err = db.QueryRowContext(ctx,
@@ -293,17 +279,14 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 			creation_id,
 		).Scan(&count)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil, 0, nil
-			}
-			return nil, nil, -1, err
+			return nil, nil, -1, errMap.MapMySQLErrorToStatus(err)
 		}
 
 		// 非公开则直接返回
 		if status != generated.CommentArea_DEFAULT.String() {
 			return &generated.CommentArea{
 				AreaStatus: generated.CommentArea_Status(generated.CommentArea_Status_value[status]),
-			}, nil, -1, nil
+			}, nil, -0, nil
 		}
 
 		// 查评论
@@ -332,7 +315,7 @@ func GetInitialTopCommentsInTransaction(ctx context.Context, creation_id int64) 
 
 			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media, &subCount)
 			if err != nil {
-				return nil, nil, -1, err
+				return nil, nil, -1, errMap.MapMySQLErrorToStatus(err)
 			}
 			comments = append(comments, &generated.TopComment{
 				Comment: &generated.Comment{
@@ -395,7 +378,7 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		// 查评论
 		rows, err := db.QueryContext(ctx,
@@ -404,7 +387,7 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 			offset,
 		)
 		if err != nil {
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 		defer rows.Close()
 
@@ -423,7 +406,7 @@ func GetTopCommentsInTransaction(ctx context.Context, creation_id int64, pageNum
 
 			err = rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media, &subCount)
 			if err != nil {
-				return nil, err
+				return nil, errMap.MapMySQLErrorToStatus(err)
 			}
 			comments = append(comments, &generated.TopComment{
 				Comment: &generated.Comment{
@@ -482,7 +465,7 @@ func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		// 查评论
 		rows, err := db.QueryContext(ctx,
@@ -510,7 +493,7 @@ func GetSecondCommentsInTransaction(ctx context.Context, creation_id int64, root
 			)
 
 			if err := rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media, &reply_user_id); err != nil {
-				return nil, err
+				return nil, errMap.MapMySQLErrorToStatus(err)
 			}
 			comments = append(comments, &generated.SecondComment{
 				Comment: &generated.Comment{
@@ -591,7 +574,10 @@ func GetReplyCommentsInTransaction(ctx context.Context, user_id int64, page int3
 				media       sql.NullString
 			)
 
-			rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
+			err := rows.Scan(&id, &root, &parent, &dialog, &user_id, &created_at, &content, &media)
+			if err != nil {
+				return nil, errMap.MapMySQLErrorToStatus(err)
+			}
 			comments = append(comments, &generated.Comment{
 				CommentId:  id,
 				Root:       root,
@@ -609,9 +595,7 @@ func GetReplyCommentsInTransaction(ctx context.Context, user_id int64, page int3
 	return comments, nil
 }
 
-func GetCommentInfo(comments []*common.AfterAuth) ([]*common.AfterAuth, error) {
-	ctx := context.Background()
-
+func GetCommentInfo(ctx context.Context, comments []*common.AfterAuth) ([]*common.AfterAuth, error) {
 	count := len(comments)
 	// 构建用于构建 IN 子句的占位符部分
 	queryCount := make([]string, count) // 使用切片存储占位符
@@ -637,7 +621,7 @@ func GetCommentInfo(comments []*common.AfterAuth) ([]*common.AfterAuth, error) {
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errMap.MapMySQLErrorToStatus(ctx.Err())
 	default:
 		// 查评论
 		rows, err := db.QueryContext(
@@ -656,7 +640,10 @@ func GetCommentInfo(comments []*common.AfterAuth) ([]*common.AfterAuth, error) {
 				creationId int64
 			)
 
-			rows.Scan(&id, &creationId)
+			err := rows.Scan(&id, &creationId)
+			if err != nil {
+				return nil, errMap.MapMySQLErrorToStatus(err)
+			}
 			result = append(result, &common.AfterAuth{
 				CommentId:  id,
 				CreationId: creationId,
@@ -702,7 +689,7 @@ func GetComments(ctx context.Context, ids []int32) ([]*generated.Comment, error)
 	comments := make([]*generated.Comment, 0, count)
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		// 查评论
 		rows, err := db.QueryContext(
@@ -729,7 +716,7 @@ func GetComments(ctx context.Context, ids []int32) ([]*generated.Comment, error)
 			)
 
 			if err := rows.Scan(&id, &root, &parent, &dialog, &user_id, &creation_id, &created_at, &content, &media); err != nil {
-				return nil, err
+				return nil, errMap.MapMySQLErrorToStatus(err)
 			}
 			comments = append(comments, &generated.Comment{
 				CommentId:  id,
@@ -749,9 +736,7 @@ func GetComments(ctx context.Context, ids []int32) ([]*generated.Comment, error)
 }
 
 // UPDATE
-func BatchUpdateDeleteStatus(comments []*common.AfterAuth) (int64, error) {
-	ctx := context.Background()
-
+func BatchUpdateDeleteStatus(ctx context.Context, comments []*common.AfterAuth) (int64, error) {
 	count := len(comments)
 	// 构建用于构建 IN 子句的占位符部分
 	queryCount := make([]string, count) // 使用切片存储占位符
@@ -792,20 +777,19 @@ func BatchUpdateDeleteStatus(comments []*common.AfterAuth) (int64, error) {
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
+			tools.LogError("", "db recover", err)
 		}
 	}()
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("exec timeout :%w", ctx.Err())
 		if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-			err = fmt.Errorf("%w and %w", err, errSecond)
+			tools.LogError("", "db recover", errSecond)
 		}
-		return -1, ctx.Err()
+		return -1, errMap.GetStatusError(ctx.Err())
 	default:
 		result, err := tx.ExecContext(
 			ctx,
@@ -813,9 +797,8 @@ func BatchUpdateDeleteStatus(comments []*common.AfterAuth) (int64, error) {
 			values...,
 		)
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+				tools.LogError("", "db rollback", errSecond)
 			}
 
 			return -1, err
@@ -823,12 +806,11 @@ func BatchUpdateDeleteStatus(comments []*common.AfterAuth) (int64, error) {
 
 		rowsAffected, err = result.RowsAffected()
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+				tools.LogError("", "db rollback", errSecond)
 			}
 
-			return -1, err
+			return -1, errMap.MapMySQLErrorToStatus(err)
 		}
 		_, err = tx.ExecContext(
 			ctx,
@@ -837,9 +819,8 @@ func BatchUpdateDeleteStatus(comments []*common.AfterAuth) (int64, error) {
 			creationId,
 		)
 		if err != nil {
-			err = fmt.Errorf("transaction exec failed because %v", err)
 			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				err = fmt.Errorf("%w and %w", err, errSecond)
+				tools.LogError("", "db rollback", errSecond)
 			}
 
 			return -1, err

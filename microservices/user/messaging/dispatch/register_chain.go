@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
 /*
@@ -53,10 +55,13 @@ func (chain *RegisterChain) ExecuteBatch() {
 	for userCredentialsPtr := range chain.exeChannel {
 		go func(userCredentialsPtr *[]*generated.UserCredentials) {
 			userCredentials := *userCredentialsPtr
-			// 用户注册信息插入数据库
-			err := db.UserRegisterInTransaction(userCredentials)
+			// 插入数据库
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := db.UserRegisterInTransaction(ctx, userCredentials)
+			cancel()
 			if err != nil {
-				log.Printf("error: UserRegisterInTransaction %v", err)
+				tools.LogError("", "db UserRegisterInTransaction", err)
+				return
 			}
 
 			// 放回对象池

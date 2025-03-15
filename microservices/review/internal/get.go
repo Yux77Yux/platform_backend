@@ -7,49 +7,58 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/review/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/review/repository"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
 func GetReviews(ctx context.Context, req *generated.GetReviewsRequest) (*generated.GetReviewsResponse, error) {
+	response := new(generated.GetReviewsResponse)
+
 	reviewerId := req.GetReviewerId()
 	reviews, count, err := db.GetReviews(ctx, reviewerId, req.GetType(), req.GetStatus(), req.GetPage())
 	if err != nil {
-		return &generated.GetReviewsResponse{
-			Msg: &common.ApiResponse{
-				Code:    "500",
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
 				Details: err.Error(),
-			},
-		}, err
+			}
+			return response, err
+		}
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
+			Details: err.Error(),
+		}
+		return response, nil
 	}
 
-	return &generated.GetReviewsResponse{
-		Count:   count,
-		Reviews: reviews,
-		Msg: &common.ApiResponse{
-			Code:   "200",
-			Status: common.ApiResponse_SUCCESS,
-		},
-	}, nil
+	response.Count = count
+	response.Reviews = reviews
+	response.Msg = &common.ApiResponse{
+		Code:   "200",
+		Status: common.ApiResponse_SUCCESS,
+	}
+	return response, nil
 }
 
 func GetNewReviews(ctx context.Context, req *generated.GetNewReviewsRequest) (*generated.GetReviewsResponse, error) {
+	response := new(generated.GetReviewsResponse)
+
 	reviewerId := req.GetReviewerId()
 	reviews, err := messaging.GetPendingReviews(ctx, reviewerId, req.GetType())
 	if err != nil {
-		return &generated.GetReviewsResponse{
-			Msg: &common.ApiResponse{
-				Code:    "500",
-				Status:  common.ApiResponse_ERROR,
-				Details: err.Error(),
-			},
-		}, err
+		response.Msg = &common.ApiResponse{
+			Code:    "500",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
 	}
 
-	return &generated.GetReviewsResponse{
-		Reviews: reviews,
-		Msg: &common.ApiResponse{
-			Code:   "200",
-			Status: common.ApiResponse_SUCCESS,
-		},
-	}, nil
+	response.Reviews = reviews
+	response.Msg = &common.ApiResponse{
+		Code:   "200",
+		Status: common.ApiResponse_SUCCESS,
+	}
+	return response, nil
 }

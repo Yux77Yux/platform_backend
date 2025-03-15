@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -11,6 +12,7 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	cache "github.com/Yux77Yux/platform_backend/microservices/comment/cache"
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
+	"github.com/Yux77Yux/platform_backend/microservices/comment/tools"
 )
 
 /*
@@ -58,15 +60,20 @@ func (chain *DeleteChain) ExecuteBatch() {
 		go func(delCommentsPtr *[]*common.AfterAuth) {
 			delComments := *delCommentsPtr
 			// 更新数据库
-			affectedCount, err := db.BatchUpdateDeleteStatus(delComments)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			affectedCount, err := db.BatchUpdateDeleteStatus(ctx, delComments)
+			cancel()
 			if err != nil {
-				log.Printf("error: BatchUpdateDeleteStatus error %v", err)
+				tools.LogError("", "db BatchUpdateDeleteStatus", err)
+				return
 			}
 			// 更新Redis
 			id := delComments[0].GetCreationId()
-			err = cache.UpdateCommentsCount(id, affectedCount*-1)
+			ctx, cancel = context.WithTimeout(context.Background(), time.Second*30)
+			err = cache.UpdateCommentsCount(ctx, id, affectedCount*-1)
+			cancel()
 			if err != nil {
-				log.Printf("error: UpdateCommentsCount %v", err)
+				tools.LogError("", "cache UpdateCommentsCount", err)
 			}
 
 			*delCommentsPtr = delComments[:0] // 清空切片内容

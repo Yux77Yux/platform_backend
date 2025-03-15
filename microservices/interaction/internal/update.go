@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"log"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -10,6 +9,7 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
+	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
@@ -47,16 +47,13 @@ func ClickCollection(ctx context.Context, req *generated.UpdateInteractionReques
 		SaveAt:    timest,
 	}
 
-	err = messaging.SendMessage(ctx, messaging.AddCollection, messaging.AddCollection, operateInteraction)
-	if err != nil {
-		log.Printf("error: SendMessage %v", err)
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+	go func(operateInteraction *generated.OperateInteraction, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.AddCollection, messaging.AddCollection, operateInteraction)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
 		}
-		return response, nil
-	}
+	}(operateInteraction, ctx)
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
@@ -67,7 +64,6 @@ func ClickCollection(ctx context.Context, req *generated.UpdateInteractionReques
 }
 
 func ClickLike(ctx context.Context, req *generated.UpdateInteractionRequest) (*generated.UpdateInteractionResponse, error) {
-	log.Printf("req %v", req)
 	token := req.GetAccessToken().GetValue()
 	response := new(generated.UpdateInteractionResponse)
 	pass, userId, err := auth.Auth("update", "interaction", token)
@@ -99,16 +95,13 @@ func ClickLike(ctx context.Context, req *generated.UpdateInteractionRequest) (*g
 		UpdatedAt: timest,
 	}
 
-	err = messaging.SendMessage(ctx, messaging.AddLike, messaging.AddLike, operateInteraction)
-	if err != nil {
-		log.Printf("error: SendMessage %v", err)
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+	go func(operateInteraction *generated.OperateInteraction, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.AddLike, messaging.AddLike, operateInteraction)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
 		}
-		return response, nil
-	}
+	}(operateInteraction, ctx)
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
@@ -142,9 +135,8 @@ func CancelCollections(ctx context.Context, req *generated.UpdateInteractionsReq
 		val.UserId = userId
 	}
 
-	err = cache.DelCollections(base_interactions)
+	err = cache.DelCollections(ctx, base_interactions)
 	if err != nil {
-		log.Printf("error: DelCollections %v", err)
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
 			Code:    "500",
@@ -164,18 +156,16 @@ func CancelCollections(ctx context.Context, req *generated.UpdateInteractionsReq
 		}
 	}
 
-	anyOperateInteraction := &generated.AnyOperateInteraction{
-		OperateInteractions: operateInteractions,
-	}
-	err = messaging.SendMessage(ctx, messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
-	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+	go func(operateInteraction []*generated.OperateInteraction, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		anyOperateInteraction := &generated.AnyOperateInteraction{
+			OperateInteractions: operateInteractions,
 		}
-		return response, err
-	}
+		err = messaging.SendMessage(ctx, messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
+		}
+	}(operateInteractions, ctx)
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
@@ -207,9 +197,10 @@ func DelHistories(ctx context.Context, req *generated.UpdateInteractionsRequest)
 		val.UserId = userId
 	}
 
-	err = cache.DelHistories(base_interactions)
+	err = cache.DelHistories(ctx, base_interactions)
 	if err != nil {
-		log.Printf("error: DelHistories %v", err)
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		tools.LogError(traceId, fullName, err)
 	}
 
 	timest := timestamppb.Now()
@@ -223,18 +214,16 @@ func DelHistories(ctx context.Context, req *generated.UpdateInteractionsRequest)
 		}
 	}
 
-	anyOperateInteraction := &generated.AnyOperateInteraction{
-		OperateInteractions: operateInteractions,
-	}
-	err = messaging.SendMessage(ctx, messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
-	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+	go func(operateInteraction []*generated.OperateInteraction, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		anyOperateInteraction := &generated.AnyOperateInteraction{
+			OperateInteractions: operateInteractions,
 		}
-		return response, err
-	}
+		err = messaging.SendMessage(ctx, messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
+		}
+	}(operateInteractions, ctx)
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
@@ -271,10 +260,13 @@ func CancelLike(ctx context.Context, req *generated.UpdateInteractionRequest) (*
 		Action:    common.Operate_CANCEL_LIKE,
 		UpdatedAt: timestamppb.Now(),
 	}
-	err = messaging.SendMessage(ctx, messaging.CancelLike, messaging.CancelLike, interaction)
-	if err != nil {
-		log.Printf("error: SendMessage CancelLike %v", err)
-	}
+	go func(interaction *generated.OperateInteraction, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.CancelLike, messaging.CancelLike, interaction)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
+		}
+	}(interaction, ctx)
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,

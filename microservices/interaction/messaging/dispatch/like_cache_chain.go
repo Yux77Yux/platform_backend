@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
+	"github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
 
 func InitialLikeCacheChain() *LikeCacheChain {
@@ -47,10 +49,12 @@ func (chain *LikeCacheChain) ExecuteBatch() {
 	for interactionsPtr := range chain.exeChannel {
 		go func(interactionsPtr *[]*generated.OperateInteraction) {
 			interactions := *interactionsPtr
-			// 插入数据库
-			err := cache.ModifyLike(interactions)
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := cache.ModifyLike(ctx, interactions)
+			cancel()
 			if err != nil {
-				log.Printf("error: ModifyLike error")
+				tools.LogError("", "cache ModifyLike", err)
 			}
 
 			// 放回对象池

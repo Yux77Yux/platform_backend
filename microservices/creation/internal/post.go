@@ -2,8 +2,6 @@ package internal
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -91,7 +89,7 @@ func UploadCreation(ctx context.Context, req *generated.UploadCreationRequest) (
 			if isServerError := errMap.IsServerError(err); isServerError {
 				response.Msg = &common.ApiResponse{
 					Status:  common.ApiResponse_ERROR,
-					Code:    "500",
+					Code:    errMap.GrpcCodeToHTTPStatusString(err),
 					Details: err.Error(),
 				}
 				return response, err
@@ -115,31 +113,24 @@ func UploadCreation(ctx context.Context, req *generated.UploadCreationRequest) (
 
 	// 异步处理
 	if status == generated.CreationStatus_PENDING {
-		err = messaging.SendMessage(ctx, messaging.PendingCreation, messaging.PendingCreation, &common.CreationId{
-			Id: creationId,
-		})
-		if err != nil {
-			log.Printf("error: publish failed because %v", err)
-			newErr := fmt.Errorf("error: publish error %w and trun back into draft", err)
-
-			updateStatus := &generated.CreationUpdateStatus{
-				CreationId: creation.GetCreationId(),
-				AuthorId:   baseInfo.GetAuthorId(),
-				Status:     generated.CreationStatus_DRAFT,
+		go func(creationId int64, ctx context.Context) {
+			traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+			err = messaging.SendMessage(ctx, messaging.PendingCreation, messaging.PendingCreation, &common.CreationId{
+				Id: creationId,
+			})
+			if err != nil {
+				tools.LogError(traceId, fullName, err)
+				updateStatus := &generated.CreationUpdateStatus{
+					CreationId: creation.GetCreationId(),
+					AuthorId:   baseInfo.GetAuthorId(),
+					Status:     generated.CreationStatus_DRAFT,
+				}
+				errSecond := db.UpdateCreationStatusInTransaction(ctx, updateStatus)
+				if errSecond != nil {
+					tools.LogError(traceId, fullName, errSecond)
+				}
 			}
-			errSecond := db.UpdateCreationStatusInTransaction(updateStatus)
-			if errSecond != nil {
-				log.Printf("error: db UpdateCreationStatusInTransaction occur error: %v", err)
-				newErr = fmt.Errorf("%w,but  %w", newErr, errSecond)
-			}
-
-			response.Msg = &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    "201",
-				Details: newErr.Error(),
-			}
-			return response, newErr
-		}
+		}(creationId, ctx)
 	}
 
 	response.Msg = &common.ApiResponse{

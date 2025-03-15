@@ -2,12 +2,11 @@ package internal
 
 import (
 	"context"
-	"fmt"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/comment/messaging"
-	"github.com/Yux77Yux/platform_backend/microservices/comment/tools"
+	tools "github.com/Yux77Yux/platform_backend/microservices/comment/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
@@ -46,9 +45,7 @@ func PublishComment(ctx context.Context, req *generated.PublishCommentRequest) (
 	comment.UserId = user_id
 
 	// 异步处理
-	err = messaging.SendMessage(ctx, messaging.PublishComment, messaging.PublishComment, comment)
 	if err != nil {
-		err = fmt.Errorf("error: SendMessage PublishComment error %w", err)
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
 			Code:    "500",
@@ -56,6 +53,14 @@ func PublishComment(ctx context.Context, req *generated.PublishCommentRequest) (
 		}
 		return response, nil
 	}
+
+	go func(comment *generated.Comment, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.PublishComment, messaging.PublishComment, comment)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
+		}
+	}(comment, ctx)
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_PENDING,

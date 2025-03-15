@@ -15,9 +15,7 @@ import (
 )
 
 // POST
-func CreationAddInCache(creationInfo *generated.CreationInfo) error {
-	ctx := context.Background()
-
+func CreationAddInCache(ctx context.Context, creationInfo *generated.CreationInfo) error {
 	creation := creationInfo.GetCreation()
 
 	id := strconv.FormatInt(creation.GetCreationId(), 10)
@@ -362,7 +360,7 @@ func GetCreationList(ctx context.Context, creationIds []int64) ([]*generated.Cre
 }
 
 // UPDATE
-func UpdateCreation(creation *generated.CreationUpdated) error {
+func UpdateCreation(ctx context.Context, creation *generated.CreationUpdated) error {
 	var (
 		creationId = creation.GetCreationId()
 		thumbnail  = creation.GetThumbnail()
@@ -392,12 +390,11 @@ func UpdateCreation(creation *generated.CreationUpdated) error {
 		return nil
 	}
 
-	ctx := context.Background()
 	err := CacheClient.SetFieldsHash(ctx, "CreationInfo", strconv.FormatInt(creationId, 10), values...)
 	return err
 }
 
-func UpdateCreationStatus(creation *generated.CreationUpdateStatus) error {
+func UpdateCreationStatus(ctx context.Context, creation *generated.CreationUpdateStatus) error {
 	var (
 		creationId = creation.GetCreationId()
 		status     = creation.GetStatus()
@@ -406,7 +403,6 @@ func UpdateCreationStatus(creation *generated.CreationUpdateStatus) error {
 	values := make([]any, 0, 2)
 	values = append(values, "status", status.String())
 
-	ctx := context.Background()
 	err := CacheClient.SetFieldsHash(ctx, "CreationInfo", strconv.FormatInt(creationId, 10), values...)
 	return err
 }

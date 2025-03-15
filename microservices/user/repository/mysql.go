@@ -16,7 +16,7 @@ import (
 )
 
 // SET
-func UserAddInfoInTransaction(users []*generated.User) error {
+func UserAddInfoInTransaction(ctx context.Context, users []*generated.User) error {
 	const QM = "(?,?,?,?,?,?,?,?,?)"
 	const fieldsCount = 9
 	count := len(users)
@@ -76,8 +76,6 @@ func UserAddInfoInTransaction(users []*generated.User) error {
 		// )
 	}
 
-	ctx := context.Background()
-
 	tx, err := db.BeginTransaction()
 	if err != nil {
 		return err
@@ -124,7 +122,7 @@ func UserAddInfoInTransaction(users []*generated.User) error {
 	return nil
 }
 
-func UserRegisterInTransaction(user_credentials []*generated.UserCredentials) error {
+func UserRegisterInTransaction(ctx context.Context, user_credentials []*generated.UserCredentials) error {
 	const QM = "(?,?,?,?,?)"
 	const fieldsCount = 5
 	count := len(user_credentials)
@@ -164,8 +162,6 @@ func UserRegisterInTransaction(user_credentials []*generated.UserCredentials) er
 		values[i*5+3] = UserEmail
 		values[i*5+4] = UserRole
 	}
-
-	ctx := context.Background()
 
 	tx, err := db.BeginTransaction()
 	if err != nil {
@@ -217,7 +213,7 @@ func UserRegisterInTransaction(user_credentials []*generated.UserCredentials) er
 	return nil
 }
 
-func Follow(subs []*generated.Follow) error {
+func Follow(ctx context.Context, subs []*generated.Follow) error {
 	const (
 		QM = "(?,?)"
 	)
@@ -252,6 +248,26 @@ func Follow(subs []*generated.Follow) error {
 }
 
 // GET
+func Exists(ctx context.Context, isEmail bool, usernameOrEmail string) (bool, error) {
+	str := "username"
+	if isEmail {
+		str = "email"
+	}
+	query := fmt.Sprintf(`
+	SELECT EXISTS(
+		SELECT 1 FROM db_user_credentials_1.UserCredentials
+		WHERE %s = ?
+	)`, str)
+
+	var exists bool
+	err := db.QueryRowContext(ctx, query, usernameOrEmail).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
 func UserGetInfoInTransaction(ctx context.Context, id int64) (*generated.User, error) {
 	query := `
     	SELECT 
@@ -604,7 +620,7 @@ func UserVerifyInTranscation(ctx context.Context, user_credential *generated.Use
 }
 
 // UPDATE
-func UserEmailUpdateInTransaction(user_credentials []*generated.UserCredentials) error {
+func UserEmailUpdateInTransaction(ctx context.Context, user_credentials []*generated.UserCredentials) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
 	const fieldsCount = 1*2 + 1 // 一行2+1个问号
@@ -639,7 +655,6 @@ func UserEmailUpdateInTransaction(user_credentials []*generated.UserCredentials)
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
 
-	ctx := context.Background()
 	tx, err := db.BeginTransaction()
 	if err != nil {
 		return err
@@ -686,7 +701,7 @@ func UserEmailUpdateInTransaction(user_credentials []*generated.UserCredentials)
 	return nil
 }
 
-func UserUpdateSpaceInTransaction(users []*generated.UserUpdateSpace) error {
+func UserUpdateSpaceInTransaction(ctx context.Context, users []*generated.UserUpdateSpace) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
 	const fieldsCount = 4*2 + 1 // 一个用户需要4*2+1个问号
@@ -757,8 +772,6 @@ func UserUpdateSpaceInTransaction(users []*generated.UserUpdateSpace) error {
 		strings.Join(sqlStr, ","),
 	)
 
-	ctx := context.Background()
-
 	_, err := db.ExecContext(
 		ctx,
 		query,
@@ -771,7 +784,7 @@ func UserUpdateSpaceInTransaction(users []*generated.UserUpdateSpace) error {
 	return nil
 }
 
-func UserUpdateAvatarInTransaction(users []*generated.UserUpdateAvatar) error {
+func UserUpdateAvatarInTransaction(ctx context.Context, users []*generated.UserUpdateAvatar) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
 	const fieldsCount = 1*2 + 1 // 一行2+1个问号
@@ -805,8 +818,6 @@ func UserUpdateAvatarInTransaction(users []*generated.UserUpdateAvatar) error {
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
 
-	ctx := context.Background()
-
 	tx, err := db.BeginTransaction()
 	if err != nil {
 		return err
@@ -853,7 +864,7 @@ func UserUpdateAvatarInTransaction(users []*generated.UserUpdateAvatar) error {
 	return nil
 }
 
-func UserUpdateStatusInTransaction(users []*generated.UserUpdateStatus) error {
+func UserUpdateStatusInTransaction(ctx context.Context, users []*generated.UserUpdateStatus) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
 	const fieldsCount = 1*2 + 1 // 一行2+1个问号
@@ -887,8 +898,6 @@ func UserUpdateStatusInTransaction(users []*generated.UserUpdateStatus) error {
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
 
-	ctx := context.Background()
-
 	tx, err := db.BeginTransaction()
 	if err != nil {
 		return err
@@ -935,7 +944,7 @@ func UserUpdateStatusInTransaction(users []*generated.UserUpdateStatus) error {
 	return nil
 }
 
-func UserUpdateBioInTransaction(users []*generated.UserUpdateBio) error {
+func UserUpdateBioInTransaction(ctx context.Context, users []*generated.UserUpdateBio) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
 	const fieldsCount = 1*2 + 1 // 一行2+1个问号
@@ -969,8 +978,6 @@ func UserUpdateBioInTransaction(users []*generated.UserUpdateBio) error {
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
 
-	ctx := context.Background()
-
 	tx, err := db.BeginTransaction()
 	if err != nil {
 		return err
@@ -1017,7 +1024,7 @@ func UserUpdateBioInTransaction(users []*generated.UserUpdateBio) error {
 	return nil
 }
 
-func DelReviewer(reviewerId int64) (string, string, error) {
+func DelReviewer(ctx context.Context, reviewerId int64) (string, string, error) {
 	querySELECT := `
 		SELECT 
 			username,
@@ -1034,8 +1041,6 @@ func DelReviewer(reviewerId int64) (string, string, error) {
 		username string
 		email    sql.NullString
 	)
-
-	ctx := context.Background()
 
 	// 开始事务
 	tx, err := db.BeginTransaction()
@@ -1074,7 +1079,7 @@ func DelReviewer(reviewerId int64) (string, string, error) {
 	return username, email.String, nil
 }
 
-func ViewFollowee(subs []*generated.Follow) error {
+func ViewFollowee(ctx context.Context, subs []*generated.Follow) error {
 	const (
 		QM = "(?,?)"
 	)
@@ -1110,7 +1115,7 @@ func ViewFollowee(subs []*generated.Follow) error {
 }
 
 // Del
-func CancelFollow(f *generated.Follow) error {
+func CancelFollow(ctx context.Context, f *generated.Follow) error {
 	query := `
 		DELETE FROM db_user_1.Follow 
 		WHERE follower_id = ?

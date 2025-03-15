@@ -29,16 +29,13 @@ func NewReview(ctx context.Context, req *generated.NewReviewRequest) (*generated
 	review.Id = id
 	review.CreatedAt = timestamppb.Now()
 
-	err := messaging.SendMessage(ctx, messaging.New_review, messaging.New_review, review)
-	if err != nil {
-		return &generated.NewReviewResponse{
-			Msg: &common.ApiResponse{
-				Code:    "500",
-				Status:  common.ApiResponse_ERROR,
-				Details: err.Error(),
-			},
-		}, nil
-	}
+	go func(review *generated.NewReview, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err := messaging.SendMessage(ctx, messaging.New_review, messaging.New_review, review)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
+		}
+	}(review, ctx)
 
 	return &generated.NewReviewResponse{
 		Msg: &common.ApiResponse{

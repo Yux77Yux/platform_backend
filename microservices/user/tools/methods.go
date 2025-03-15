@@ -13,12 +13,17 @@ func GetMetadataValue(ctx context.Context, key string) string {
 }
 
 func IsValidImageURL(url string) bool {
-	const urlPattern = `^(https?|ftp)://[^\s]+\.(jpg|jpeg|png|gif|bmp|svg|webp|avif)$`
-	return utils.CheckString(url, urlPattern)
+	const pattern = `^(https?|ftp)://[^\s]+\.(jpg|jpeg|png|gif|bmp|svg|webp|avif)$`
+	return utils.CheckString(url, pattern)
 }
 
 func CheckStringLength(obj string, min, max int) error {
 	return utils.CheckStringLength(obj, min, max)
+}
+
+func IsValidEmail(email string) bool {
+	const pattern = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+	return utils.CheckString(email, pattern)
 }
 
 func EnsureTimestampPB(input interface{}) (*timestamppb.Timestamp, error) {

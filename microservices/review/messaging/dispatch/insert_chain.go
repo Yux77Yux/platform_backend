@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
 	db "github.com/Yux77Yux/platform_backend/microservices/review/repository"
+	tools "github.com/Yux77Yux/platform_backend/microservices/review/tools"
 )
 
 func InitialInsertChain() *InsertChain {
@@ -48,9 +50,12 @@ func (chain *InsertChain) ExecuteBatch() {
 		go func(ReviewsPtr *[]*generated.NewReview) {
 			Reviews := *ReviewsPtr
 			// 插入数据库
-			err := db.PostReviews(Reviews)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := db.PostReviews(ctx, Reviews)
+			cancel()
 			if err != nil {
-				log.Printf("error: PostReviews %v", err)
+				tools.LogError("", "db PostReviews", err)
+				return
 			}
 
 			// 放回对象池

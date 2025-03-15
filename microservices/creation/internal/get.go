@@ -7,6 +7,7 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 
 	cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
@@ -50,13 +51,13 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 
 		status := creation.GetCreation().GetBaseInfo().GetStatus()
 		if status == generated.CreationStatus_PUBLISHED {
-			// 存作品至redis
-			go func(creation *generated.CreationInfo) {
+			go func(creation *generated.CreationInfo, ctx context.Context) {
+				traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 				err := messaging.SendMessage(ctx, messaging.StoreCreationInfo, messaging.StoreCreationInfo, creation)
 				if err != nil {
-					log.Printf("error: GetCreation SendMessage %v", err)
+					tools.LogError(traceId, fullName, err)
 				}
-			}(creation)
+			}(creation, ctx)
 		}
 	}
 
@@ -103,13 +104,20 @@ func GetCreationPrivate(ctx context.Context, req *generated.GetCreationPrivateRe
 	creationId := req.GetCreationId()
 	creationInfo, err := db.GetDetailInTransaction(ctx, creationId)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Message: "Internal Server Error",
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	if creationInfo.Creation.BaseInfo.GetAuthorId() != authorId {
@@ -135,12 +143,20 @@ func GetCreationList(ctx context.Context, req *generated.GetCreationListRequest)
 	ids := req.GetIds()
 	creations, err := db.GetCreationCardInTransaction(ctx, ids)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	response.CreationInfoGroup = creations
@@ -157,12 +173,20 @@ func GetPublicCreationList(ctx context.Context, req *generated.GetCreationListRe
 	ids := req.GetIds()
 	creations, err := db.GetCreationCardInTransaction(ctx, ids)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	length := len(ids)
@@ -205,12 +229,20 @@ func GetSpaceCreations(ctx context.Context, req *generated.GetSpaceCreationsRequ
 
 	infos, err := db.GetCreationCardInTransaction(ctx, ids)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	filter := make([]*generated.CreationInfo, 0, len(infos))
@@ -256,12 +288,20 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 
 	infos, count, err := db.GetUserCreations(ctx, req)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	response.CreationInfoGroup = infos

@@ -190,7 +190,7 @@ func UpdateUserSpace(ctx context.Context, users []*generated.UserUpdateSpace) er
 	}
 	_, err := pipe.Exec(ctx)
 	if err != nil && err != redis.Nil {
-		fmt.Errorf("pipeline execution failed: %w", err)
+		return fmt.Errorf("pipeline execution failed: %w", err)
 	}
 	return nil
 

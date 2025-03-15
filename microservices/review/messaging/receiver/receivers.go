@@ -83,7 +83,7 @@ func UpdateProcessor(ctx context.Context, msg *anypb.Any) error {
 		return fmt.Errorf("UpdateProcessor error: %w", err)
 	}
 
-	err = db.UpdateReview(review)
+	err = db.UpdateReview(ctx, review)
 	if err != nil {
 		return fmt.Errorf("error: db UpdateReview %w", err)
 	}

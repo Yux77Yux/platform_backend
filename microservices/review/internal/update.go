@@ -7,7 +7,9 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/review/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/review/repository"
+	tools "github.com/Yux77Yux/platform_backend/microservices/review/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
 func UpdateReview(ctx context.Context, req *generated.UpdateReviewRequest) (*generated.UpdateReviewResponse, error) {
@@ -32,29 +34,35 @@ func UpdateReview(ctx context.Context, req *generated.UpdateReviewRequest) (*gen
 
 	review := req.GetReview()
 
-	targetId, targetType, err := db.GetTarget(review.New.GetId())
+	targetId, targetType, err := db.GetTarget(ctx, review.New.GetId())
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
-			Code:    "500",
 			Status:  common.ApiResponse_ERROR,
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	review.ReviewerId = reviewerId
 	review.New.TargetId = targetId
 	review.New.TargetType = *targetType
 
-	err = messaging.SendMessage(ctx, messaging.Update, messaging.Update, review)
-	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Code:    "500",
-			Status:  common.ApiResponse_ERROR,
-			Details: err.Error(),
+	go func(review *generated.Review, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.Update, messaging.Update, review)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
 		}
-		return response, err
-	}
+	}(review, ctx)
 
 	return &generated.UpdateReviewResponse{
 		Msg: &common.ApiResponse{

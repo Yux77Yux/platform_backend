@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 	"fmt"
-	"log"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/aggregator"
 	comment "github.com/Yux77Yux/platform_backend/generated/comment"
@@ -99,26 +98,25 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 		return response, nil
 	}
 
-	// 事件发布
-	// 播放数
-	ipv4 := tools.GetMetadataValue(ctx, "x-forwarded-for")
-	if ipv4 != "" {
-		go func(id int64, ipv4 string) {
-			err := messaging.SendMessage(
-				ctx,
-				event.Exchange_EXCHANGE_ADD_VIEW.String(),
-				event.RoutingKey_KEY_ADD_VIEW.String(),
-				&common.ViewCreation{
-					Id:   id,
-					Ipv4: ipv4,
-				},
-			)
-			if err != nil {
-				log.Printf("error: SendMessage ADD_VIEW %v", err)
-			}
-
-		}(id, ipv4)
-	}
+	go func(id int64, ctx context.Context) {
+		ipv4 := tools.GetMetadataValue(ctx, "x-forwarded-for")
+		if ipv4 == "" {
+			return
+		}
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err := messaging.SendMessage(
+			ctx,
+			event.Exchange_EXCHANGE_ADD_VIEW.String(),
+			event.RoutingKey_KEY_ADD_VIEW.String(),
+			&common.ViewCreation{
+				Id:   id,
+				Ipv4: ipv4,
+			},
+		)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
+		}
+	}(id, ctx)
 
 	// 组装开始
 	user := userResponse.GetUser()

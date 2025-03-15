@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
 // GET
@@ -29,9 +30,7 @@ func GetActionTag(ctx context.Context, req *generated.BaseInteraction) (*generat
 
 	select {
 	case <-ctx.Done():
-		err := fmt.Errorf("exec timeout :%w", ctx.Err())
-
-		return nil, err
+		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		err := db.QueryRowContext(
 			ctx,
@@ -39,10 +38,7 @@ func GetActionTag(ctx context.Context, req *generated.BaseInteraction) (*generat
 			userId,
 			creationId).Scan(&actionTag)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil
-			}
-			return nil, err
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 	}
 
@@ -68,7 +64,7 @@ func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		rows, err := db.QueryContext(ctx, query, userId, offset)
 		if err != nil {
@@ -83,7 +79,7 @@ func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated
 			)
 			err := rows.Scan(&creation_id, &save_at)
 			if err != nil {
-				return nil, err
+				return nil, errMap.MapMySQLErrorToStatus(err)
 			}
 			interactions = append(interactions, &generated.Interaction{
 				Base:   &generated.BaseInteraction{CreationId: creation_id},
@@ -111,7 +107,7 @@ func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.I
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		rows, err := db.QueryContext(ctx, query, userId, offset)
 		if err != nil {
@@ -126,7 +122,7 @@ func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.I
 			)
 			err := rows.Scan(&creation_id, &updated_at)
 			if err != nil {
-				return nil, err
+				return nil, errMap.MapMySQLErrorToStatus(err)
 			}
 			interactions = append(interactions, &generated.Interaction{
 				Base:      &generated.BaseInteraction{CreationId: creation_id},
@@ -157,7 +153,7 @@ func GetOtherUserHistories(ctx context.Context, userId int64, page int32) ([]*ge
 
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		rows, err := db.QueryContext(ctx, query, userId, userId, offset)
 		if err != nil {
@@ -173,8 +169,7 @@ func GetOtherUserHistories(ctx context.Context, userId int64, page int32) ([]*ge
 			)
 			err := rows.Scan(&creation_id, &action_tag, &updated_at)
 			if err != nil {
-				err = fmt.Errorf("error: GetHistories rows.Scan error %v", err)
-				return nil, err
+				return nil, errMap.MapMySQLErrorToStatus(err)
 			}
 			interactions = append(interactions, &generated.Interaction{
 				Base:      &generated.BaseInteraction{CreationId: creation_id},
@@ -188,7 +183,7 @@ func GetOtherUserHistories(ctx context.Context, userId int64, page int32) ([]*ge
 }
 
 // UPDATE
-func UpdateInteractions(req []*generated.OperateInteraction) error {
+func UpdateInteractions(ctx context.Context, req []*generated.OperateInteraction) error {
 	const (
 		QM = "(?,?,?,?,?)"
 	)
@@ -229,11 +224,9 @@ func UpdateInteractions(req []*generated.OperateInteraction) error {
 		END,
     		save_at = VALUES(save_at);`, strings.Join(sqlStr, ","))
 
-	ctx := context.Background()
-
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return errMap.GetStatusError(ctx.Err())
 	default:
 		_, err := db.ExecContext(
 			ctx,

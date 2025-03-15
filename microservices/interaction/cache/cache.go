@@ -105,9 +105,7 @@ func GetLikes(ctx context.Context, userId int64, page int32) ([]*generated.Inter
 }
 
 // 观看作品的用户
-func GetUsers(creationId int64) ([]int64, error) {
-	ctx := context.Background()
-
+func GetUsers(ctx context.Context, creationId int64) ([]int64, error) {
 	creationIdStr := strconv.FormatInt(creationId, 10)
 	results, err := CacheClient.RevRangeZSet(ctx, "Item_Histories", creationIdStr, 0, 199)
 
@@ -259,8 +257,7 @@ func GetRecommendBaseItem(ctx context.Context, id int64) ([]int64, bool, error) 
 // 查看是否过期，是否重新计算
 
 // POST
-func SetRecommendBaseUser(id int64, ids []int64) error {
-	ctx := context.Background()
+func SetRecommendBaseUser(ctx context.Context, id int64, ids []int64) error {
 	count := len(ids)
 	values := make([]any, count)
 	for i, val := range ids {
@@ -274,8 +271,7 @@ func SetRecommendBaseUser(id int64, ids []int64) error {
 	return nil
 }
 
-func SetRecommendBaseItem(id int64, ids []int64) error {
-	ctx := context.Background()
+func SetRecommendBaseItem(ctx context.Context, id int64, ids []int64) error {
 	count := len(ids)
 	values := make([]any, count)
 	for i, val := range ids {
@@ -301,8 +297,7 @@ func SetRecommendBaseItem(id int64, ids []int64) error {
 
 // POST & UPDATE
 // 历史记录 更新时间戳
-func UpdateHistories(data []*generated.OperateInteraction) error {
-	ctx := context.Background()
+func UpdateHistories(ctx context.Context, data []*generated.OperateInteraction) error {
 	pipe := CacheClient.Pipeline()
 	for _, option := range data {
 		base := option.GetBase()
@@ -334,8 +329,7 @@ func UpdateHistories(data []*generated.OperateInteraction) error {
 }
 
 // 收藏夹
-func ModifyCollections(data []*generated.OperateInteraction) error {
-	ctx := context.Background()
+func ModifyCollections(ctx context.Context, data []*generated.OperateInteraction) error {
 	pipe := CacheClient.Pipeline()
 	for _, option := range data {
 		base := option.GetBase()
@@ -367,8 +361,7 @@ func ModifyCollections(data []*generated.OperateInteraction) error {
 }
 
 // 点赞
-func ModifyLike(data []*generated.OperateInteraction) error {
-	ctx := context.Background()
+func ModifyLike(ctx context.Context, data []*generated.OperateInteraction) error {
 	pipe := CacheClient.Pipeline()
 	for _, option := range data {
 		base := option.GetBase()
@@ -401,8 +394,7 @@ func ModifyLike(data []*generated.OperateInteraction) error {
 
 // DELETE
 
-func DelHistories(data []*generated.BaseInteraction) error {
-	ctx := context.Background()
+func DelHistories(ctx context.Context, data []*generated.BaseInteraction) error {
 	pipe := CacheClient.Pipeline()
 	for _, base := range data {
 		userId := base.GetUserId()
@@ -419,8 +411,7 @@ func DelHistories(data []*generated.BaseInteraction) error {
 	return nil
 }
 
-func DelCollections(data []*generated.BaseInteraction) error {
-	ctx := context.Background()
+func DelCollections(ctx context.Context, data []*generated.BaseInteraction) error {
 	pipe := CacheClient.Pipeline()
 	for _, base := range data {
 		userId := base.GetUserId()
@@ -437,8 +428,7 @@ func DelCollections(data []*generated.BaseInteraction) error {
 	return nil
 }
 
-func DelLike(data []*generated.BaseInteraction) error {
-	ctx := context.Background()
+func DelLike(ctx context.Context, data []*generated.BaseInteraction) error {
 	pipe := CacheClient.Pipeline()
 	for _, base := range data {
 		userId := base.GetUserId()
@@ -457,9 +447,7 @@ func DelLike(data []*generated.BaseInteraction) error {
 
 // Scan
 // 拿到别人的历史记录
-func ScanZSetsByHistories() ([]string, error) {
-	ctx := context.Background()
-
+func ScanZSetsByHistories(ctx context.Context) ([]string, error) {
 	results, _, err := CacheClient.ScanZSet(ctx, "User_Histories", "*", 0, 2500)
 	if err != nil {
 		return nil, err
@@ -475,9 +463,7 @@ func ScanZSetsByHistories() ([]string, error) {
 	return idStrs, nil
 }
 
-func ScanZSetsByCreationId() ([]string, error) {
-	ctx := context.Background()
-
+func ScanZSetsByCreationId(ctx context.Context) ([]string, error) {
 	results, _, err := CacheClient.ScanZSet(ctx, "Item_Histories", "*", 0, 2500)
 	if err != nil {
 		return nil, err
@@ -493,11 +479,10 @@ func ScanZSetsByCreationId() ([]string, error) {
 	return idStrs, nil
 }
 
-func GetAllInteractions(idStrs []string) (map[int64]map[int64]float64, error) {
+func GetAllInteractions(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error) {
 	const (
 		viewWeight = 1
 	)
-	ctx := context.Background()
 	pipe := CacheClient.Pipeline()
 
 	// 用来存储 pipeline 请求的结果
@@ -547,11 +532,10 @@ func GetAllInteractions(idStrs []string) (map[int64]map[int64]float64, error) {
 	return histories, nil
 }
 
-func GetAllItemUsers(idStrs []string) (map[int64]map[int64]float64, error) {
+func GetAllItemUsers(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error) {
 	const (
 		viewWeight = 1
 	)
-	ctx := context.Background()
 	pipe := CacheClient.Pipeline()
 
 	// 用来存储 pipeline 请求的结果

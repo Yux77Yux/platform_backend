@@ -2,20 +2,21 @@ package internal
 
 import (
 	"context"
-	"log"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
-	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
-	"google.golang.org/protobuf/types/known/timestamppb"
-
 	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
+	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
+	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
 func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequest) (*generated.GetCreationInteractionResponse, error) {
-	var response = new(generated.GetCreationInteractionResponse)
+	response := new(generated.GetCreationInteractionResponse)
 	token := req.GetAccessToken().GetValue()
 	pass, userId, err := auth.Auth("update", "interaction", token)
 	if err != nil {
@@ -38,35 +39,42 @@ func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequ
 	base := req.GetBase()
 	base.UserId = userId
 
-	go func() {
-		newInteraction := &generated.OperateInteraction{
-			Base:      base,
-			UpdatedAt: timestamppb.Now(),
-			Action:    common.Operate_VIEW,
-		}
+	newInteraction := &generated.OperateInteraction{
+		Base:      base,
+		UpdatedAt: timestamppb.Now(),
+		Action:    common.Operate_VIEW,
+	}
 
+	go func(newInteraction *generated.OperateInteraction, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 		err = messaging.SendMessage(ctx, messaging.AddView, messaging.AddView, newInteraction)
 		if err != nil {
-			log.Printf("error: SendMessage %v", err)
+			tools.LogError(traceId, fullName, err)
 		}
-	}()
+	}(newInteraction, ctx)
 
 	interaction, err := cache.GetInteraction(ctx, base)
 	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
-		}
 		interaction, err = db.GetActionTag(ctx, base)
 		if err != nil {
-			response.Msg.Details = err.Error()
+			if errMap.IsServerError(err) {
+				response.Msg = &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    errMap.GrpcCodeToHTTPStatusString(err),
+					Details: err.Error(),
+				}
+				return response, err
+			}
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
 			return response, nil
 		}
 	}
 
 	response.ActionTag = interaction.GetActionTag()
-	log.Printf("response %v", response)
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",
@@ -75,7 +83,7 @@ func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequ
 }
 
 func GetCollections(ctx context.Context, req *generated.GetCollectionsRequest) (*generated.GetInteractionsResponse, error) {
-	var response = new(generated.GetInteractionsResponse)
+	response := new(generated.GetInteractionsResponse)
 	pageNum := req.GetPage()
 	userId := req.GetUserId()
 
@@ -86,8 +94,20 @@ func GetCollections(ctx context.Context, req *generated.GetCollectionsRequest) (
 			Code:   "500",
 		}
 		interactions, err = db.GetCollections(ctx, userId, pageNum)
-
 		if err != nil {
+			if errMap.IsServerError(err) {
+				response.Msg = &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    errMap.GrpcCodeToHTTPStatusString(err),
+					Details: err.Error(),
+				}
+				return response, err
+			}
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
 			return response, nil
 		}
 
@@ -105,7 +125,7 @@ func GetCollections(ctx context.Context, req *generated.GetCollectionsRequest) (
 }
 
 func GetHistories(ctx context.Context, req *generated.GetHistoriesRequest) (*generated.GetInteractionsResponse, error) {
-	var response = new(generated.GetInteractionsResponse)
+	response := new(generated.GetInteractionsResponse)
 	pageNum := req.GetPage()
 	userId := req.GetUserId()
 
@@ -116,8 +136,20 @@ func GetHistories(ctx context.Context, req *generated.GetHistoriesRequest) (*gen
 			Code:   "500",
 		}
 		interactions, err = db.GetHistories(ctx, userId, pageNum)
-
 		if err != nil {
+			if errMap.IsServerError(err) {
+				response.Msg = &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    errMap.GrpcCodeToHTTPStatusString(err),
+					Details: err.Error(),
+				}
+				return response, err
+			}
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
 			return response, nil
 		}
 	}
@@ -133,28 +165,38 @@ func GetHistories(ctx context.Context, req *generated.GetHistoriesRequest) (*gen
 }
 
 func GetRecommendBaseUser(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
-	var response = new(generated.GetRecommendResponse)
+	response := new(generated.GetRecommendResponse)
 
 	userId := req.GetId()
 	interactions, count, err := cache.GetRecommendBaseUser(ctx, userId)
 	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Status: common.ApiResponse_ERROR,
-			Code:   "500",
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
 		}
-		return response, err
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
+			Details: err.Error(),
+		}
+		return response, nil
 	}
 
-	go func() {
+	go func(count, userId int64, ctx context.Context) {
 		if count <= 17 {
+			traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 			err = messaging.SendMessage(ctx, messaging.ComputeUser, messaging.ComputeUser, &common.UserDefault{
 				UserId: userId,
 			})
 			if err != nil {
-				log.Printf("error:GetRecommendBaseUser SendMessage %v", err)
+				tools.LogError(traceId, fullName, err)
 			}
 		}
-	}()
+	}(count, userId, ctx)
 
 	response.Creations = interactions
 	response.Msg = &common.ApiResponse{
@@ -165,7 +207,7 @@ func GetRecommendBaseUser(ctx context.Context, req *generated.GetRecommendReques
 }
 
 func GetRecommendBaseCreation(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
-	var response = new(generated.GetRecommendResponse)
+	response := new(generated.GetRecommendResponse)
 
 	id := req.GetId()
 	creations, reset, err := cache.GetRecommendBaseItem(ctx, id)
@@ -177,16 +219,15 @@ func GetRecommendBaseCreation(ctx context.Context, req *generated.GetRecommendRe
 		return response, err
 	}
 
-	go func() {
-		if reset {
-			err = messaging.SendMessage(ctx, messaging.ComputeSimilarCreation, messaging.ComputeSimilarCreation, &common.CreationId{
-				Id: id,
-			})
-			if err != nil {
-				log.Printf("error:GetRecommendBaseItem SendMessage %v", err)
-			}
+	go func(reset bool, id int64, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.ComputeSimilarCreation, messaging.ComputeSimilarCreation, &common.CreationId{
+			Id: id,
+		})
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
 		}
-	}()
+	}(reset, id, ctx)
 
 	response.Creations = creations
 	response.Msg = &common.ApiResponse{

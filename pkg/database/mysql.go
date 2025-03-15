@@ -3,9 +3,9 @@ package database
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"log"
 
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
+	utils "github.com/Yux77Yux/platform_backend/pkg/utils"
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -20,13 +20,13 @@ func InitDb(readStr string, writeStr string) (SqlMethods, error) {
 	db := &MysqlClass{}
 	mainDB, err := sql.Open("mysql", writeStr)
 	if err != nil {
-		log.Printf("open error %s", err.Error())
+		utils.LogSuperError(err)
 		return nil, err
 	}
 	db.mainDB = mainDB
 
 	if err = db.mainDB.Ping(); err != nil {
-		log.Printf("Ping error %s", err.Error())
+		utils.LogSuperError(err)
 		return nil, err
 	}
 
@@ -51,13 +51,8 @@ func InitDb(readStr string, writeStr string) (SqlMethods, error) {
 func (dbs *MysqlClass) Close() error {
 	err := dbs.mainDB.Close()
 	if err != nil {
-		return fmt.Errorf("failed to close main database connection baecause %w", err)
+		return errMap.MapMySQLErrorToStatus(err)
 	}
-
-	// err = dbs.replicaDB.Close()
-	// if err != nil {
-	// 	return fmt.Errorf("failed to close replica database connection baecause %w", err)
-	// }
 
 	return nil
 }
@@ -65,29 +60,25 @@ func (dbs *MysqlClass) Close() error {
 // 执行查询操作
 func (dbs *MysqlClass) QueryRow(query string, args ...interface{}) *sql.Row {
 	return dbs.mainDB.QueryRow(query, args...)
-	// return dbs.replicaDB.QueryRow(query, args...)
 }
 
 func (dbs *MysqlClass) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	return dbs.mainDB.QueryRowContext(ctx, query, args...)
-	// return dbs.replicaDB.QueryRow(query, args...)
 }
 
 // 执行查询返回多个结果
 func (dbs *MysqlClass) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	result, err := dbs.mainDB.Query(query, args...)
-	// result, err := dbs.replicaDB.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("query failed because %w", err)
+		return nil, errMap.MapMySQLErrorToStatus(err)
 	}
 	return result, nil
 }
 
 func (dbs *MysqlClass) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	result, err := dbs.mainDB.QueryContext(ctx, query, args...)
-	// result, err := dbs.replicaDB.Query(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("query failed because %w", err)
+		return nil, errMap.MapMySQLErrorToStatus(err)
 	}
 	return result, nil
 }
@@ -96,7 +87,7 @@ func (dbs *MysqlClass) QueryContext(ctx context.Context, query string, args ...i
 func (dbs *MysqlClass) Exec(query string, args ...interface{}) (sql.Result, error) {
 	result, err := dbs.mainDB.Exec(query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("exec failed because %w", err)
+		return nil, errMap.MapMySQLErrorToStatus(err)
 	}
 	return result, nil
 }
@@ -104,7 +95,7 @@ func (dbs *MysqlClass) Exec(query string, args ...interface{}) (sql.Result, erro
 func (dbs *MysqlClass) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	result, err := dbs.mainDB.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("exec failed because %w", err)
+		return nil, errMap.MapMySQLErrorToStatus(err)
 	}
 	return result, nil
 }
@@ -113,7 +104,7 @@ func (dbs *MysqlClass) ExecContext(ctx context.Context, query string, args ...in
 func (dbs *MysqlClass) BeginTransaction() (*sql.Tx, error) {
 	tx, err := dbs.mainDB.Begin()
 	if err != nil {
-		return nil, fmt.Errorf("open transaction failed because %w", err)
+		return nil, errMap.MapMySQLErrorToStatus(err)
 	}
 	return tx, nil
 }
@@ -122,7 +113,7 @@ func (dbs *MysqlClass) BeginTransaction() (*sql.Tx, error) {
 func (dbs *MysqlClass) CommitTransaction(tx *sql.Tx) error {
 	err := tx.Commit()
 	if err != nil {
-		return fmt.Errorf("commit transaction failed because %w", err)
+		return errMap.MapMySQLErrorToStatus(err)
 	}
 	return nil
 }
@@ -131,7 +122,7 @@ func (dbs *MysqlClass) CommitTransaction(tx *sql.Tx) error {
 func (dbs *MysqlClass) RollbackTransaction(tx *sql.Tx) error {
 	err := tx.Rollback()
 	if err != nil {
-		return fmt.Errorf("rollback transaction failed because %w", err)
+		return errMap.MapMySQLErrorToStatus(err)
 	}
 	return nil
 }

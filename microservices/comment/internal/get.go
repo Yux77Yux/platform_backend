@@ -7,6 +7,7 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
 func GetComments(ctx context.Context, req *generated.GetCommentsRequest) (*generated.GetCommentsResponse, error) {
@@ -15,12 +16,20 @@ func GetComments(ctx context.Context, req *generated.GetCommentsRequest) (*gener
 
 	comments, err := db.GetComments(ctx, ids)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 	response.Comments = comments
 
@@ -38,12 +47,20 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 
 	area, comments, count, err := db.GetInitialTopCommentsInTransaction(ctx, creationId)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "404",
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	if area == nil {
@@ -54,15 +71,14 @@ func InitialComments(ctx context.Context, req *generated.InitialCommentsRequest)
 		return response, nil
 	}
 
-	return &generated.InitialCommentsResponse{
-		Comments:    comments,
-		CommentArea: area,
-		PageCount:   count,
-		Msg: &common.ApiResponse{
-			Status: common.ApiResponse_SUCCESS,
-			Code:   "200",
-		},
-	}, nil
+	response.CommentArea = area
+	response.Comments = comments
+	response.PageCount = count
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
 }
 
 // 一级评论
@@ -73,10 +89,17 @@ func GetTopComments(ctx context.Context, req *generated.GetTopCommentsRequest) (
 
 	comments, err := db.GetTopCommentsInTransaction(ctx, creationId, page)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Message: err.Error(),
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
 		return response, nil
@@ -99,10 +122,17 @@ func GetSecondComments(ctx context.Context, req *generated.GetSecondCommentsRequ
 
 	comments, err := db.GetSecondCommentsInTransaction(ctx, creationId, root, page)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Message: err.Error(),
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
 		return response, nil
@@ -137,10 +167,17 @@ func GetReplyComments(ctx context.Context, req *generated.GetReplyCommentsReques
 
 	comments, err := db.GetReplyCommentsInTransaction(ctx, user_id, req.GetPage())
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Message: err.Error(),
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
 		return response, nil

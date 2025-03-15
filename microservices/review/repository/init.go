@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	pkgDb "github.com/Yux77Yux/platform_backend/pkg/db"
+	pkgDb "github.com/Yux77Yux/platform_backend/pkg/database"
 )
 
 var (

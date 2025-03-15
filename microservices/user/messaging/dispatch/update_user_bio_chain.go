@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
 /*
@@ -53,10 +55,13 @@ func (chain *UserBioChain) ExecuteBatch() {
 	for usersPtr := range chain.exeChannel {
 		go func(usersPtr *[]*generated.UserUpdateBio) {
 			users := *usersPtr
-			// 更新头像
-			err := db.UserUpdateBioInTransaction(users)
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := db.UserUpdateBioInTransaction(ctx, users)
+			cancel()
 			if err != nil {
-				log.Printf("error: UserUpdateBioInTransaction error")
+				tools.LogError("", "db UserUpdateBioInTransaction", err)
+				return
 			}
 
 			*usersPtr = users[:0]

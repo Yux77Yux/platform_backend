@@ -1,6 +1,7 @@
 package recommend
 
 import (
+	"context"
 	"log"
 	"math"
 )
@@ -24,10 +25,10 @@ func CosineSimilarity(user1, user2 *Behavior) float64 {
 }
 
 // 根据用户的相似度来推荐作品
-func Recommend(userID int64) ([]int64, error) {
+func Recommend(ctx context.Context, userID int64) ([]int64, error) {
 	// 获取目标用户的行为数据
 	targetUser := GetUserBehavior(userID)
-	otherUsers, err := GetOtherUsers()
+	otherUsers, err := GetOtherUsers(ctx)
 	if err != nil {
 		log.Printf("error: %v", err)
 		return nil, err

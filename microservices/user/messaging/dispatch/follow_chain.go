@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
 func InitialFollowChain() *FollowChain {
@@ -44,14 +46,16 @@ type FollowChain struct {
 }
 
 func (chain *FollowChain) ExecuteBatch() {
-	log.Printf("我他妈来啦!!！ ")
 	for FollowUsersPtr := range chain.exeChannel {
 		go func(FollowUsersPtr *[]*generated.Follow) {
 			FollowUsers := *FollowUsersPtr
 			// 插入数据库
-			err := db.Follow(FollowUsers)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := db.Follow(ctx, FollowUsers)
+			cancel()
 			if err != nil {
-				log.Printf("error: Follow error")
+				tools.LogError("", "db Follow", err)
+				return
 			}
 
 			// 放回对象池

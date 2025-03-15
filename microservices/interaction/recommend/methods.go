@@ -48,15 +48,15 @@ func GetUserBehavior(userID int64) *Behavior {
 	return Behavior
 }
 
-func GetOtherUsers() ([]*Behavior, error) {
-	others, err := cache.ScanZSetsByHistories()
+func GetOtherUsers(ctx context.Context) ([]*Behavior, error) {
+	others, err := cache.ScanZSetsByHistories(ctx)
 	if err != nil {
 		log.Printf("ScanZSetsByHistories err %v", err)
 		return nil, err
 	}
 	length := len(others)
 
-	otherMap, err := cache.GetAllInteractions(others)
+	otherMap, err := cache.GetAllInteractions(ctx, others)
 	if err != nil {
 		log.Printf("GetAllInteractions err %v", err)
 		return nil, err
@@ -80,12 +80,12 @@ func GetOtherUsers() ([]*Behavior, error) {
 
 // 基于物品的协同过滤
 // 获取观看过作品的用户
-func GetCreationViewer(creationId int64) *Behavior {
+func GetCreationViewer(ctx context.Context, creationId int64) *Behavior {
 	const (
 		viewWeight = 1
 	)
 
-	itemUsers, err := cache.GetUsers(creationId)
+	itemUsers, err := cache.GetUsers(ctx, creationId)
 	if err != nil {
 		log.Printf("GetHistories err %v", err)
 	}
@@ -110,15 +110,15 @@ func GetCreationViewer(creationId int64) *Behavior {
 	return Behavior
 }
 
-func GetOtherCreationViewer() ([]*Behavior, error) {
-	others, err := cache.ScanZSetsByCreationId()
+func GetOtherCreationViewer(ctx context.Context) ([]*Behavior, error) {
+	others, err := cache.ScanZSetsByCreationId(ctx)
 	if err != nil {
 		log.Printf("ScanZSetsByCreationId err %v", err)
 		return nil, err
 	}
 	length := len(others)
 
-	otherMap, err := cache.GetAllItemUsers(others)
+	otherMap, err := cache.GetAllItemUsers(ctx, others)
 	if err != nil {
 		log.Printf("GetAllItemUsers err %v", err)
 		return nil, err

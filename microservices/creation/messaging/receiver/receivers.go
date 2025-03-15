@@ -27,7 +27,7 @@ func storeCreationProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 写入缓存
-	err = cache.CreationAddInCache(req)
+	err = cache.CreationAddInCache(ctx, req)
 	if err != nil {
 		return fmt.Errorf("cache CreationAddInCache occur error: %w", err)
 	}
@@ -86,7 +86,7 @@ func updateCreationStatusProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 更新数据库
-	err = db.UpdateCreationStatusInTransaction(req)
+	err = db.UpdateCreationStatusInTransaction(ctx, req)
 	if err != nil {
 		return fmt.Errorf("db UpdateCreationStatusInTransaction occur : %w", err)
 	}
@@ -97,7 +97,7 @@ func updateCreationStatusProcessor(ctx context.Context, msg *anypb.Any) error {
 	if status == generated.CreationStatus_PUBLISHED {
 		// 更改发布时间
 		publishedTime := timestamppb.Now()
-		err = db.PublishCreationInTransaction(reqId, publishedTime)
+		err = db.PublishCreationInTransaction(ctx, reqId, publishedTime)
 		if err != nil {
 			return err
 		}
@@ -144,13 +144,13 @@ func deleteCreationProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 删除数据库中作品
-	err = db.UpdateCreationStatusInTransaction(req)
+	err = db.UpdateCreationStatusInTransaction(ctx, req)
 	if err != nil {
 		return fmt.Errorf("error: deleteCreationProcessor UpdateCreationStatusInTransaction error %w", err)
 	}
 
 	// 删除缓存中作品
-	err = cache.UpdateCreationStatus(req)
+	err = cache.UpdateCreationStatus(ctx, req)
 	if err != nil {
 		return fmt.Errorf("error: deleteCreationProcessor UpdateCreationStatus error %w", err)
 	}
@@ -168,7 +168,7 @@ func addInteractionCount(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	actions := anyAction.GetActions()
-	err = cache.UpdateCreationCount(context.Background(), actions)
+	err = cache.UpdateCreationCount(ctx, actions)
 	if err != nil {
 		// 入死信，没做
 

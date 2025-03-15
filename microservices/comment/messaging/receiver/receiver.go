@@ -5,7 +5,6 @@ package receiver
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"google.golang.org/protobuf/types/known/anypb"
 
@@ -31,7 +30,6 @@ func DeleteCommentProcessor(ctx context.Context, msg *anypb.Any) error {
 	// 反序列化
 	err := msg.UnmarshalTo(req)
 	if err != nil {
-		log.Printf("error: DeleteCommentProcessor unmarshaling message: %v", err)
 		return fmt.Errorf("deleteCommentProcessor processor error: %w", err)
 	}
 
@@ -45,7 +43,7 @@ func DeleteCommentProcessor(ctx context.Context, msg *anypb.Any) error {
 	req.CreationId = creationId
 
 	if req.GetUserId() != -403 && req.GetUserId() != userId {
-		return nil
+		return fmt.Errorf("not the master")
 	}
 
 	// 发送集中处理

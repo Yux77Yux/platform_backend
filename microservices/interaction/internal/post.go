@@ -2,13 +2,13 @@ package internal
 
 import (
 	"context"
-	"log"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
+	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
@@ -42,16 +42,13 @@ func PostInteraction(ctx context.Context, req *generated.PostInteractionRequest)
 		UpdatedAt: timestamppb.Now(),
 	}
 
-	err = messaging.SendMessage(ctx, messaging.AddView, messaging.AddView, operateInteraction)
-	if err != nil {
-		log.Printf("error: SendMessage %v", err)
-		response.Msg = &common.ApiResponse{
-			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Details: err.Error(),
+	go func(operateInteraction *generated.OperateInteraction, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err = messaging.SendMessage(ctx, messaging.AddView, messaging.AddView, operateInteraction)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
 		}
-		return response, nil
-	}
+	}(operateInteraction, ctx)
 
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,

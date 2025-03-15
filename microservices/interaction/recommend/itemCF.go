@@ -1,6 +1,7 @@
 package recommend
 
 import (
+	"context"
 	"log"
 	"math"
 	"sort"
@@ -11,12 +12,12 @@ import (
 // 1. 从所有用户（包括目标用户）构造倒排索引：每个视频对应一个 map，记录哪些用户看过该视频及其权重。
 // 2. 对于目标用户每个看过的视频，遍历该视频的用户列表，找出他们看过的其他视频，并计算物品相似度（余弦相似度）。
 // 3. 累加相似度得分，最后排序返回未看过的热门视频。
-func RecommendItemBased(id int64) ([]int64, error) {
+func RecommendItemBased(ctx context.Context, id int64) ([]int64, error) {
 	// 获取目标用户的行为数据
-	targetUser := GetCreationViewer(id)
+	targetUser := GetCreationViewer(ctx, id)
 
 	// 获取其他所有用户的数据
-	others, err := GetOtherCreationViewer()
+	others, err := GetOtherCreationViewer(ctx)
 	if err != nil {
 		log.Printf("GetOtherCreationViewer err: %v", err)
 		return nil, err

@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
 /*
@@ -53,10 +55,13 @@ func (chain *UserSpaceChain) ExecuteBatch() {
 	for usersPtr := range chain.exeChannel {
 		go func(usersPtr *[]*generated.UserUpdateSpace) {
 			users := *usersPtr
-			// 更新头像
-			err := db.UserUpdateSpaceInTransaction(users)
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := db.UserUpdateSpaceInTransaction(ctx, users)
+			cancel()
 			if err != nil {
-				log.Printf("error: UserUpdateSpaceInTransaction %s", err.Error())
+				tools.LogError("", "db UserUpdateSpaceInTransaction", err)
+				return
 			}
 
 			*usersPtr = users[:0]

@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
 func InitialInsertChain() *InsertChain {
@@ -48,9 +50,12 @@ func (chain *InsertChain) ExecuteBatch() {
 		go func(insertUsersPtr *[]*generated.User) {
 			insertUsers := *insertUsersPtr
 			// 插入数据库
-			err := db.UserAddInfoInTransaction(insertUsers)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := db.UserAddInfoInTransaction(ctx, insertUsers)
+			cancel()
 			if err != nil {
-				log.Printf("error: UserAddInfoInTransaction error")
+				tools.LogError("", "db UserAddInfoInTransaction", err)
+				return
 			}
 
 			// 放回对象池

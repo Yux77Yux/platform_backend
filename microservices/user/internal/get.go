@@ -2,8 +2,6 @@ package internal
 
 import (
 	"context"
-	"fmt"
-	"log"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
@@ -11,91 +9,70 @@ import (
 	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
 func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.GetUserResponse, error) {
+	response := new(generated.GetUserResponse)
 	user_id := req.GetUserId()
 
-	// 判断redis有无存有
-	exist, err := cache.ExistsUserInfo(ctx, user_id)
+	result, err := cache.GetUserInfo(ctx, user_id, nil)
 	if err != nil {
-		return &generated.GetUserResponse{
-			Msg: &common.ApiResponse{
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		go tools.LogError(traceId, fullName, err)
+	}
+	if result != nil {
+		user_info, err := tools.MapUserByString(result)
+		if err != nil {
+			response.Msg = &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,
 				Code:    "500",
-				Message: "cache client error occur",
 				Details: err.Error(),
-			},
-		}, fmt.Errorf("fail to get user info in redis: %w", err)
-	}
-
-	var user_info *generated.User
-	if exist {
-		// 先从redis取信息
-		result, err := cache.GetUserInfo(ctx, user_id, nil)
-		if err != nil {
-			return &generated.GetUserResponse{
-				Msg: &common.ApiResponse{
-					Status:  common.ApiResponse_ERROR,
-					Code:    "500",
-					Message: "redis client error occur",
-					Details: err.Error(),
-				},
-			}, fmt.Errorf("fail to get user info in redis: %w", err)
+			}
+			return response, err
 		}
-		log.Printf("cache result  %v", result)
-
-		// 调用函数，传递转换后的 map
-		user_info, err = tools.MapUserByString(result)
-		if err != nil {
-			return &generated.GetUserResponse{
-				Msg: &common.ApiResponse{
-					Status:  common.ApiResponse_ERROR,
-					Code:    "500",
-					Details: err.Error(),
-				},
-			}, err
-		}
-	} else {
-		// redis未存有，则从数据库取信息
-		result, err := db.UserGetInfoInTransaction(ctx, user_id)
-		if err != nil {
-			return &generated.GetUserResponse{
-				Msg: &common.ApiResponse{
-					Status:  common.ApiResponse_ERROR,
-					Code:    "500",
-					Message: "mysql client error occur",
-					Details: err.Error(),
-				},
-			}, fmt.Errorf("fail to get user info in db: %w", err)
-		}
-		log.Printf("db result  %v", result)
-
-		if result == nil {
-			return &generated.GetUserResponse{
-				Msg: &common.ApiResponse{
-					Status:  common.ApiResponse_ERROR,
-					Code:    "404",
-					Message: "user not found",
-					Details: "No user found with the given ID",
-				},
-			}, nil
-		}
-
-		go messaging.SendMessage(ctx, messaging.StoreUser, messaging.StoreUser, result)
-	}
-
-	log.Printf("exist  %v", exist)
-	log.Printf("user_info  %v", user_info)
-	user_info.UserDefault.UserId = user_id
-
-	return &generated.GetUserResponse{
-		User: user_info,
-		Msg: &common.ApiResponse{
+		response.User = user_info
+		response.Msg = &common.ApiResponse{
 			Status: common.ApiResponse_SUCCESS,
 			Code:   "200",
-		},
-	}, nil
+		}
+		return response, nil
+	}
+
+	// redis未存有，则从数据库取信息
+	user_info, err := db.UserGetInfoInTransaction(ctx, user_id)
+	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
+			Details: err.Error(),
+		}
+		return response, nil
+	}
+
+	user_info.UserDefault.UserId = user_id
+	go func(user_info *generated.User, ctx context.Context) {
+		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+		err := messaging.SendMessage(ctx, messaging.StoreUser, messaging.StoreUser, user_info)
+		if err != nil {
+			tools.LogError(traceId, fullName, err)
+		}
+	}(user_info, ctx)
+
+	response.User = user_info
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
 }
 
 func GetFolloweesByTime(ctx context.Context, req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
@@ -107,13 +84,20 @@ func GetFolloweesByTime(ctx context.Context, req *generated.GetFollowRequest) (*
 
 	cards, err := db.GetFolloweesByTime(ctx, userId, page)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Message: "database error",
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	response.Master = master
@@ -134,13 +118,20 @@ func GetFolloweesByViews(ctx context.Context, req *generated.GetFollowRequest) (
 
 	cards, err := db.GetFolloweesByViews(ctx, userId, page)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Message: "database error",
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	response.Master = master
@@ -161,13 +152,20 @@ func GetFollowers(ctx context.Context, req *generated.GetFollowRequest) (*genera
 
 	cards, err := db.GetFolloweers(ctx, userId, page)
 	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    "500",
-			Message: "database error",
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
-		return response, err
+		return response, nil
 	}
 
 	response.Master = master
@@ -180,17 +178,25 @@ func GetFollowers(ctx context.Context, req *generated.GetFollowRequest) (*genera
 }
 
 func GetUsers(ctx context.Context, req *generated.GetUsersRequest) (*generated.GetUsersResponse, error) {
+	response := new(generated.GetUsersResponse)
 	ids := req.GetIds()
 
 	users, err := db.GetUsers(ctx, ids)
 	if err != nil {
-		return &generated.GetUsersResponse{
-			Msg: &common.ApiResponse{
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,
-				Code:    "500",
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
 				Details: err.Error(),
-			},
-		}, err
+			}
+			return response, err
+		}
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
+			Details: err.Error(),
+		}
+		return response, nil
 	}
 
 	return &generated.GetUsersResponse{

@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
+	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
 /*
@@ -53,10 +55,13 @@ func (chain *UserAvatarChain) ExecuteBatch() {
 	for userAvatarsPtr := range chain.exeChannel {
 		go func(userAvatarsPtr *[]*generated.UserUpdateAvatar) {
 			userAvatars := *userAvatarsPtr
-			// 更新头像
-			err := db.UserUpdateAvatarInTransaction(userAvatars)
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := db.UserUpdateAvatarInTransaction(ctx, userAvatars)
+			cancel()
 			if err != nil {
-				log.Printf("error: UserUpdateAvatarInTransaction error")
+				tools.LogError("", "db UserUpdateAvatarInTransaction", err)
+				return
 			}
 
 			*userAvatarsPtr = userAvatars[:0]

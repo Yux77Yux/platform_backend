@@ -9,6 +9,7 @@ import (
 	"time"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
+	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -67,10 +68,7 @@ func GetReviews(
 			status.String(),
 		).Scan(&num)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, 0, nil
-			}
-			return nil, -1, err
+			return nil, -1, errMap.MapMySQLErrorToStatus(err)
 		}
 		if num <= 0 {
 			return nil, 0, nil
@@ -128,7 +126,7 @@ func GetReviews(
 	return reviews, count, nil
 }
 
-func GetTarget(id int64) (int64, *generated.TargetType, error) {
+func GetTarget(ctx context.Context, id int64) (int64, *generated.TargetType, error) {
 	query := `
 		SELECT target_id,target_type
 		FROM db_review_1.Review
@@ -141,17 +139,14 @@ func GetTarget(id int64) (int64, *generated.TargetType, error) {
 
 	err := db.QueryRow(query, id).Scan(&targetId, &targetType)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return 0, nil, nil
-		}
-		return -1, nil, err
+		return -1, nil, errMap.MapMySQLErrorToStatus(err)
 	}
 	target_Type := generated.TargetType(generated.TargetType_value[targetType])
 	return targetId, &target_Type, nil
 }
 
 // POST
-func PostReviews(reviews []*generated.NewReview) error {
+func PostReviews(ctx context.Context, reviews []*generated.NewReview) error {
 	const (
 		QM          = "(?,?,?,?)"
 		FieldsCount = 4
@@ -180,7 +175,6 @@ func PostReviews(reviews []*generated.NewReview) error {
 		VALUES %s
 		ON DUPLICATE KEY UPDATE id = id;`, strings.Join(sqlStr, ","))
 
-	ctx := context.Background()
 	_, err := db.ExecContext(
 		ctx,
 		query,
@@ -191,7 +185,7 @@ func PostReviews(reviews []*generated.NewReview) error {
 }
 
 // UPDATE
-func UpdateReviews(reviews []*generated.Review) error {
+func UpdateReviews(ctx context.Context, reviews []*generated.Review) error {
 	const (
 		QM          = "?"
 		QQM         = "WHEN id = ? THEN ?"
@@ -245,7 +239,6 @@ func UpdateReviews(reviews []*generated.Review) error {
 		join,
 		strings.Join(QMS, ","))
 
-	ctx := context.Background()
 	_, err := db.ExecContext(
 		ctx,
 		query,
@@ -255,7 +248,7 @@ func UpdateReviews(reviews []*generated.Review) error {
 	return err
 }
 
-func UpdateReview(review *generated.Review) error {
+func UpdateReview(ctx context.Context, review *generated.Review) error {
 	query := `
 		UPDATE db_review_1.Review 
 		SET 
@@ -271,7 +264,6 @@ func UpdateReview(review *generated.Review) error {
 		id          = review.GetNew().GetId()
 	)
 
-	ctx := context.Background()
 	_, err := db.ExecContext(
 		ctx,
 		query,
