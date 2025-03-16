@@ -11,6 +11,7 @@ import (
 
 // 监听者结构体
 type ViewListener struct {
+	chain        ChainInterface
 	exeChannel   chan *[]*generated.OperateInteraction
 	datasChannel chan *generated.OperateInteraction
 	count        uint32
@@ -59,7 +60,7 @@ func (listener *ViewListener) SendBatch() {
 		return
 	}
 
-	datasPtr := interactionsPool.Get().(*[]*generated.OperateInteraction)
+	datasPtr := listener.chain.GetPoolObj().(*[]*generated.OperateInteraction)
 	*datasPtr = (*datasPtr)[:count]
 	insertUsers := *datasPtr
 	for i := 0; uint32(i) < count; i++ {
@@ -116,7 +117,7 @@ func (listener *ViewListener) RestartTimeoutTimer() {
 		if count == 0 {
 			// 超时后销毁监听者
 			listener.Cleanup()
-			viewCacheChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

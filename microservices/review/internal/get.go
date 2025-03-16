@@ -5,8 +5,6 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/review/messaging"
-	db "github.com/Yux77Yux/platform_backend/microservices/review/repository"
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 

@@ -3,25 +3,19 @@ package messaging
 import (
 	"context"
 
-	"google.golang.org/protobuf/proto"
-
+	dispatch "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/dispatch"
+	receiver "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/receiver"
 	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue/rabbitmq"
 )
 
-var _client MessageQueueInterface
+func Run(ctx context.Context) func() {
+	_client := pkgMQ.GetClient(connStr)
+	_dispatch := dispatch.Run()
 
-func SendMessage(ctx context.Context, exchange string, routeKey string, req proto.Message) error {
-	return _client.SendMessage(ctx, exchange, routeKey, req)
-}
+	receiver.Run(_client, _dispatch)
 
-func ListenToQueue(exchange, queueName, routeKey string, handler HandlerFunc) {
-	_client.ListenToQueue(exchange, queueName, routeKey, handler)
-}
-
-func Init() {
-	_client = pkgMQ.GetClient(connStr)
-}
-
-func Close(ctx context.Context) {
-	_client.Close(ctx)
+	return func() {
+		_client.Close(ctx)
+		_dispatch.Close()
+	}
 }

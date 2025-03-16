@@ -12,6 +12,7 @@ import (
 
 // 监听者结构体
 type RegisterCacheListener struct {
+	chain                  ChainInterface
 	exeChannel             chan *[]*generated.UserCredentials // 批量发送的通道
 	userCredentialsChannel chan *generated.UserCredentials    // 用于接收的通道
 	count                  uint32
@@ -64,7 +65,7 @@ func (listener *RegisterCacheListener) SendBatch() {
 	}
 
 	log.Printf("RegisterCacheListener SendBatch %d", count)
-	insertUserCredentialsPtr := insertUserCredentialsPool.Get().(*[]*generated.UserCredentials)
+	insertUserCredentialsPtr := listener.chain.GetPoolObj().(*[]*generated.UserCredentials)
 	*insertUserCredentialsPtr = (*insertUserCredentialsPtr)[:count]
 	insertUserCredentials := *insertUserCredentialsPtr
 	for i := uint32(0); i < count; i++ {
@@ -120,7 +121,7 @@ func (listener *RegisterCacheListener) RestartTimeoutTimer() {
 		if count == 0 {
 			listener.Cleanup()
 			// 超时后销毁监听者
-			registerCacheChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

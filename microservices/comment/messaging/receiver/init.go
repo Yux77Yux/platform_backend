@@ -1,22 +1,40 @@
 package receiver
 
-import (
-	"context"
-
-	messaging "github.com/Yux77Yux/platform_backend/microservices/comment/messaging"
-)
-
-const (
-	PublishComment = messaging.PublishComment
-	DeleteComment  = messaging.DeleteComment
+var (
+	ExchangesConfig = map[string]string{
+		"PublishComment": "direct",
+		"DeleteComment":  "direct",
+	}
 )
 
 var (
-	ExchangesConfig = messaging.ExchangesConfig
+	// dispatch
+	DispatchInsert string
+	DispatchDelete string
 )
 
-func Run(ctx context.Context) {
-	messaging.Init()
+var (
+	db        SqlMethod
+	messaging MessageQueueMethod
+	cache     CacheMethod
+)
+
+func InitDb(_db SqlMethod) {
+	db = _db
+}
+
+func InitMQ(_messaging MessageQueueMethod) {
+	messaging = _messaging
+}
+
+func InitCache(_cache CacheMethod) {
+	cache = _cache
+}
+
+func Run(mq MessageQueueMethod, _dispatch DispatchInterface) {
+	messaging := mq
+	dispatch = _dispatch
+
 	for exchange := range ExchangesConfig {
 		switch exchange {
 		// 不同的exchange使用不同函数
@@ -26,6 +44,4 @@ func Run(ctx context.Context) {
 			go messaging.ListenToQueue(exchange, DeleteComment, DeleteComment, DeleteCommentProcessor)
 		}
 	}
-	<-ctx.Done()
-	messaging.Close(ctx)
 }

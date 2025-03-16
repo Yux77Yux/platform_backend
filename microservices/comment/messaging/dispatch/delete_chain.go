@@ -10,19 +10,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
-	cache "github.com/Yux77Yux/platform_backend/microservices/comment/cache"
-	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
-	"github.com/Yux77Yux/platform_backend/microservices/comment/tools"
+	tools "github.com/Yux77Yux/platform_backend/microservices/comment/tools"
 )
-
-/*
-	这里的链表不太符合高并发特点的设计，问题在于持有锁时间会很长
-	改进的办法是使用堆建立，或者使用HASH对节点进行映射
-	先留着，以后改map
-
-	......
-	写的挺烂的
-*/
 
 func InitialDeleteChain() *DeleteChain {
 	_chain := &DeleteChain{
@@ -30,13 +19,20 @@ func InitialDeleteChain() *DeleteChain {
 		Tail:       &DeleteListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*common.AfterAuth, 3),
-		listenerPool: sync.Pool{
+		pool: sync.Pool{
 			New: func() any {
-				return &DeleteListener{
-					timeoutDuration: 10 * time.Second,
-					updateInterval:  3 * time.Second,
-				}
+				slice := make([]*common.AfterAuth, 0, MAX_BATCH_SIZE)
+				return &slice
 			},
+		},
+	}
+
+	_chain.listenerPool = sync.Pool{
+		New: func() any {
+			return &DeleteListener{
+				timeoutDuration: 10 * time.Second,
+				updateInterval:  3 * time.Second,
+			}
 		},
 	}
 	_chain.Head.next = _chain.Tail
@@ -53,6 +49,22 @@ type DeleteChain struct {
 	Count        int32 // 监听者数量
 	exeChannel   chan *[]*common.AfterAuth
 	listenerPool sync.Pool
+	pool         sync.Pool
+	cond         sync.Cond
+}
+
+func (chain *DeleteChain) Close(signal chan any) {
+	chain.nodeMux.Lock()
+	for atomic.LoadInt32(&chain.Count) > 0 {
+		chain.cond.Wait() // 等待 Count 变成 0
+	}
+	chain.nodeMux.Unlock()
+
+	close(signal)
+}
+
+func (chain *DeleteChain) GetPoolObj() any {
+	return chain.pool.Get()
 }
 
 func (chain *DeleteChain) ExecuteBatch() {
@@ -77,7 +89,7 @@ func (chain *DeleteChain) ExecuteBatch() {
 			}
 
 			*delCommentsPtr = delComments[:0] // 清空切片内容
-			delCommentsPool.Put(delCommentsPtr)
+			chain.pool.Put(delCommentsPtr)
 		}(delCommentsPtr)
 	}
 }

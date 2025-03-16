@@ -16,7 +16,7 @@ type MysqlClass struct {
 	// replicaDB *sql.DB
 }
 
-func InitDb(readStr string, writeStr string) (SqlMethods, error) {
+func InitDb(readStr string, writeStr string) (SqlInterface, error) {
 	db := &MysqlClass{}
 	mainDB, err := sql.Open("mysql", writeStr)
 	if err != nil {

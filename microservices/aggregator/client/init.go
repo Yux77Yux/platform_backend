@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"log"
 	"sync"
 )
@@ -99,7 +98,7 @@ func InitStr(SERVER_ADDRESS string) {
 }
 
 // 使用了envoy，所以使用envoy地址即可
-func Run(ctx context.Context) {
+func Run() func() {
 	var wg sync.WaitGroup
 
 	wg.Add(6)
@@ -160,6 +159,7 @@ func Run(ctx context.Context) {
 
 	wg.Wait() // 等待所有 gRPC 客户端初始化完成
 
-	<-ctx.Done()
-	Close()
+	return func() {
+		Close()
+	}
 }

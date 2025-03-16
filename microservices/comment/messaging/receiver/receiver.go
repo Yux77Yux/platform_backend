@@ -10,8 +10,6 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
-	dispatch "github.com/Yux77Yux/platform_backend/microservices/comment/messaging/dispatch"
-	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
 )
 
 func JoinCommentProcessor(_ context.Context, msg *anypb.Any) error {
@@ -21,7 +19,7 @@ func JoinCommentProcessor(_ context.Context, msg *anypb.Any) error {
 		return err
 	}
 	// 传递至责任链
-	dispatch.HandleRequest(req, dispatch.Insert)
+	dispatch.HandleRequest(req, DispatchInsert)
 	return nil
 }
 
@@ -47,6 +45,6 @@ func DeleteCommentProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 发送集中处理
-	dispatch.HandleRequest(req, dispatch.Delete)
+	dispatch.HandleRequest(req, DispatchDelete)
 	return nil
 }

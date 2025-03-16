@@ -11,6 +11,7 @@ import (
 
 // 监听者结构体
 type UserAvatarCacheListener struct {
+	chain                   ChainInterface
 	exeChannel              chan *[]*generated.UserUpdateAvatar // 批量发送的通道
 	userUpdateAvatarChannel chan *generated.UserUpdateAvatar    // 用于接收的通道
 	count                   uint32
@@ -58,7 +59,7 @@ func (listener *UserAvatarCacheListener) SendBatch() {
 		return
 	}
 
-	userUpdateAvatarPtr := userAvatarPool.Get().(*[]*generated.UserUpdateAvatar)
+	userUpdateAvatarPtr := listener.chain.GetPoolObj().(*[]*generated.UserUpdateAvatar)
 	*userUpdateAvatarPtr = (*userUpdateAvatarPtr)[:count]
 	userUpdateAvatar := *userUpdateAvatarPtr
 	for i := uint32(0); i < count; i++ {
@@ -117,7 +118,7 @@ func (listener *UserAvatarCacheListener) RestartTimeoutTimer() {
 		if count == 0 {
 			listener.Cleanup()
 			// 超时后销毁监听者
-			userAvatarCacheChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

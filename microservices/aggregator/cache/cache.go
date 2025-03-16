@@ -9,19 +9,23 @@ import (
 	"github.com/Yux77Yux/platform_backend/generated/common"
 )
 
-func AddIpInSet(ctx context.Context, req *common.ViewCreation) error {
+type CacheMethodStruct struct {
+	CacheClient CacheInterface
+}
+
+func (c *CacheMethodStruct) AddIpInSet(ctx context.Context, req *common.ViewCreation) error {
 	id := req.GetId()
 	ip := req.GetIpv4()
 
 	key := fmt.Sprintf("Set_Ip_Creation_%d", id)
 	// 检查集合是否存在
-	exists, err := CacheClient.Exists(ctx, key)
+	exists, err := c.CacheClient.Exists(ctx, key)
 	if err != nil {
 		return err
 	}
 
 	// 创建管道
-	pipeline := CacheClient.TxPipeline()
+	pipeline := c.CacheClient.TxPipeline()
 
 	// 先检查集合是否存在，如果不存在则插入数据并设置过期时间
 	if !exists {
@@ -42,13 +46,13 @@ func AddIpInSet(ctx context.Context, req *common.ViewCreation) error {
 	return err
 }
 
-func ExistIpInSet(ctx context.Context, req *common.ViewCreation) (bool, error) {
+func (c *CacheMethodStruct) ExistIpInSet(ctx context.Context, req *common.ViewCreation) (bool, error) {
 	id := req.GetId()
 	ip := req.GetIpv4()
 
 	idStr := strconv.FormatInt(id, 10)
 
-	exist, err := CacheClient.ExistsInSet(ctx, "Ip_Creation", idStr, ip)
+	exist, err := c.CacheClient.ExistsInSet(ctx, "Ip_Creation", idStr, ip)
 	if err != nil {
 		return false, err // 如果 Redis 出现错误，返回错误
 	}

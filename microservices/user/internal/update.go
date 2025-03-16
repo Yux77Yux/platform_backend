@@ -8,7 +8,6 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
 	oss "github.com/Yux77Yux/platform_backend/microservices/user/oss"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
@@ -18,7 +17,7 @@ func DelReviewer(ctx context.Context, req *generated.DelReviewerRequest) (*gener
 
 	go func(req *generated.DelReviewerRequest, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err := messaging.SendMessage(ctx, messaging.DelReviewer, messaging.DelReviewer, req)
+		err := messaging.SendMessage(ctx, EXCHANGE_DEL_REVIEWER, KEY_DEL_REVIEWER, req)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}
@@ -57,7 +56,7 @@ func UpdateUserSpace(ctx context.Context, req *generated.UpdateUserSpaceRequest)
 
 	go func(space *generated.UserUpdateSpace, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.UpdateUserSpace, messaging.UpdateUserSpace, space)
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_USER_SPACE, KEY_UPDATE_USER_SPACE, space)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}
@@ -139,7 +138,7 @@ func UpdateUserAvatar(ctx context.Context, req *generated.UpdateUserAvatarReques
 
 	go func(updateAvatar *generated.UserUpdateAvatar, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.UpdateUserAvatar, messaging.UpdateUserAvatar, updateAvatar)
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_USER_AVATAR, KEY_UPDATE_USER_AVATAR, updateAvatar)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}
@@ -178,7 +177,7 @@ func UpdateUserStatus(ctx context.Context, req *generated.UpdateUserStatusReques
 
 	go func(updateStatus *generated.UserUpdateStatus, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.UpdateUserStatus, messaging.UpdateUserStatus, updateStatus)
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_USER_STATUS, KEY_UPDATE_USER_STATUS, updateStatus)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}
@@ -216,7 +215,7 @@ func UpdateUserBio(ctx context.Context, req *generated.UpdateUserBioRequest) (*g
 
 	go func(updateBio *generated.UserUpdateBio, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.UpdateUserStatus, messaging.UpdateUserStatus, updateBio)
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_USER_BIO, KEY_UPDATE_USER_BIO, updateBio)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

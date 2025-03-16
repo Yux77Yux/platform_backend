@@ -18,8 +18,12 @@ import (
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
+type SqlMethodStruct struct {
+	db SqlInterface
+}
+
 // SET
-func UserAddInfoInTransaction(ctx context.Context, users []*generated.User) error {
+func (s *SqlMethodStruct) UserAddInfoInTransaction(ctx context.Context, users []*generated.User) error {
 	const QM = "(?,?,?,?,?,?,?,?,?)"
 	const fieldsCount = 9
 	count := len(users)
@@ -32,7 +36,7 @@ func UserAddInfoInTransaction(ctx context.Context, users []*generated.User) erro
 		sqlStr[i] = QM
 	}
 
-	query := fmt.Sprintf(`insert into db_user_1.User 
+	query := fmt.Sprintf(`insert into s.db_user_1.User 
 	(id,
 	name,
 	avatar,
@@ -79,7 +83,7 @@ func UserAddInfoInTransaction(ctx context.Context, users []*generated.User) erro
 		// )
 	}
 
-	tx, err := db.BeginTransaction()
+	tx, err := s.db.BeginTransaction()
 	if err != nil {
 		return err
 	}
@@ -87,17 +91,16 @@ func UserAddInfoInTransaction(ctx context.Context, users []*generated.User) erro
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			if errSecond := s.db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
-			tools.LogError("", "db recover", err)
+			tools.LogError("", "s.db recover", err)
 		}
 	}()
 
 	select {
 	case <-ctx.Done():
-		if err := db.RollbackTransaction(tx); err != nil {
+		if err := s.db.RollbackTransaction(tx); err != nil {
 			return err
 		}
 		return errMap.GetStatusError(err)
@@ -108,14 +111,14 @@ func UserAddInfoInTransaction(ctx context.Context, users []*generated.User) erro
 			values...,
 		)
 		if err != nil {
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				tools.LogError("", "db roolback", errSecond)
+			if errSecond := s.db.RollbackTransaction(tx); errSecond != nil {
+				tools.LogError("", "s.db roolback", errSecond)
 			}
 
 			return err
 		}
 
-		if err = db.CommitTransaction(tx); err != nil {
+		if err = s.db.CommitTransaction(tx); err != nil {
 			return err
 		}
 	}
@@ -123,7 +126,7 @@ func UserAddInfoInTransaction(ctx context.Context, users []*generated.User) erro
 	return nil
 }
 
-func UserRegisterInTransaction(ctx context.Context, user_credentials []*generated.UserCredentials) error {
+func (s *SqlMethodStruct) UserRegisterInTransaction(ctx context.Context, user_credentials []*generated.UserCredentials) error {
 	const QM = "(?,?,?,?,?)"
 	const fieldsCount = 5
 	count := len(user_credentials)
@@ -136,7 +139,7 @@ func UserRegisterInTransaction(ctx context.Context, user_credentials []*generate
 		sqlStr[i] = QM
 	}
 
-	query := fmt.Sprintf(`INSERT INTO db_user_credentials_1.UserCredentials(
+	query := fmt.Sprintf(`INSERT INTO s.db_user_credentials_1.UserCredentials(
 			id,
 			username,
 			password,
@@ -164,7 +167,7 @@ func UserRegisterInTransaction(ctx context.Context, user_credentials []*generate
 		values[i*5+4] = UserRole
 	}
 
-	tx, err := db.BeginTransaction()
+	tx, err := s.db.BeginTransaction()
 	if err != nil {
 		return err
 	}
@@ -172,17 +175,16 @@ func UserRegisterInTransaction(ctx context.Context, user_credentials []*generate
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			if errSecond := s.db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
-			tools.LogError("", "db recover", err)
+			tools.LogError("", "s.db recover", err)
 		}
 	}()
 
 	select {
 	case <-ctx.Done():
-		if err := db.RollbackTransaction(tx); err != nil {
+		if err := s.db.RollbackTransaction(tx); err != nil {
 			return err
 		}
 		return errMap.GetStatusError(err)
@@ -194,14 +196,14 @@ func UserRegisterInTransaction(ctx context.Context, user_credentials []*generate
 		)
 
 		if err != nil {
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				tools.LogError("", "db roolback", errSecond)
+			if errSecond := s.db.RollbackTransaction(tx); errSecond != nil {
+				tools.LogError("", "s.db roolback", errSecond)
 			}
 
 			return err
 		}
 
-		if err = db.CommitTransaction(tx); err != nil {
+		if err = s.db.CommitTransaction(tx); err != nil {
 			return err
 		}
 	}
@@ -212,7 +214,7 @@ func UserRegisterInTransaction(ctx context.Context, user_credentials []*generate
 	return nil
 }
 
-func Follow(ctx context.Context, subs []*generated.Follow) error {
+func (s *SqlMethodStruct) Follow(ctx context.Context, subs []*generated.Follow) error {
 	const (
 		QM = "(?,?)"
 	)
@@ -229,12 +231,12 @@ func Follow(ctx context.Context, subs []*generated.Follow) error {
 	}
 
 	query := fmt.Sprintf(`
-		INSERT INTO db_user_1.Follow (follower_id, followee_id)
+		INSERT INTO s.db_user_1.Follow (follower_id, followee_id)
 		VALUES %s 
 		ON DUPLICATE KEY UPDATE
 		follower_id = follower_id;`, strings.Join(sqlStr, ","))
 
-	_, err := db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx,
 		query,
 		values...,
@@ -246,19 +248,19 @@ func Follow(ctx context.Context, subs []*generated.Follow) error {
 }
 
 // GET
-func Exists(ctx context.Context, isEmail bool, usernameOrEmail string) (bool, error) {
+func (s *SqlMethodStruct) Exists(ctx context.Context, isEmail bool, usernameOrEmail string) (bool, error) {
 	str := "username"
 	if isEmail {
 		str = "email"
 	}
 	query := fmt.Sprintf(`
 	SELECT EXISTS(
-		SELECT 1 FROM db_user_credentials_1.UserCredentials
+		SELECT 1 FROM s.db_user_credentials_1.UserCredentials
 		WHERE %s = ?
 	)`, str)
 
 	var exists bool
-	err := db.QueryRowContext(ctx, query, usernameOrEmail).Scan(&exists)
+	err := s.db.QueryRowContext(ctx, query, usernameOrEmail).Scan(&exists)
 	if err != nil {
 		return false, errMap.MapMySQLErrorToStatus(err)
 	}
@@ -266,7 +268,7 @@ func Exists(ctx context.Context, isEmail bool, usernameOrEmail string) (bool, er
 	return exists, nil
 }
 
-func UserGetInfoInTransaction(ctx context.Context, id int64) (*generated.User, error) {
+func (s *SqlMethodStruct) UserGetInfoInTransaction(ctx context.Context, id int64) (*generated.User, error) {
 	query := `
     	SELECT 
     		u.name,
@@ -277,9 +279,9 @@ func UserGetInfoInTransaction(ctx context.Context, id int64) (*generated.User, e
     		u.bday,
     		u.created_at,
     		u.updated_at,
-    		(SELECT COUNT(*) FROM db_user_1.Follow WHERE followee_id = u.id) AS followers,
-    		(SELECT COUNT(*) FROM db_user_1.Follow WHERE follower_id = u.id) AS followees
-		FROM db_user_1.User u
+    		(SELECT COUNT(*) FROM s.db_user_1.Follow WHERE followee_id = u.id) AS followers,
+    		(SELECT COUNT(*) FROM s.db_user_1.Follow WHERE follower_id = u.id) AS followees
+		FROM s.db_user_1.User u
 		WHERE u.id = ?;`
 
 	select {
@@ -298,7 +300,7 @@ func UserGetInfoInTransaction(ctx context.Context, id int64) (*generated.User, e
 			followers  int32
 			followees  int32
 		)
-		err := db.QueryRowContext(ctx, query, id).Scan(
+		err := s.db.QueryRowContext(ctx, query, id).Scan(
 			&name, &avatar, &bio, &statusStr, &genderStr,
 			&bdayOrNull, &created_at, &updated_at, &followers,
 			&followees,
@@ -334,7 +336,7 @@ func UserGetInfoInTransaction(ctx context.Context, id int64) (*generated.User, e
 	}
 }
 
-func GetUsers(ctx context.Context, userIds []int64) ([]*common.UserCreationComment, error) {
+func (s *SqlMethodStruct) GetUsers(ctx context.Context, userIds []int64) ([]*common.UserCreationComment, error) {
 	count := len(userIds)
 	sqlStr := make([]string, count)
 	values := make([]any, count)
@@ -351,10 +353,10 @@ func GetUsers(ctx context.Context, userIds []int64) ([]*common.UserCreationComme
 			avatar,
 			bio
 		FROM 
-			db_user_1.User
+			s.db_user_1.User
 		WHERE id IN (%s)`, strings.Join(sqlStr, ","))
 
-	rows, err := db.QueryContext(ctx, query, values...)
+	rows, err := s.db.QueryContext(ctx, query, values...)
 	if err != nil {
 		return nil, err
 	}
@@ -386,7 +388,7 @@ func GetUsers(ctx context.Context, userIds []int64) ([]*common.UserCreationComme
 	return users, nil
 }
 
-func GetFolloweers(ctx context.Context, userId int64, page int32) ([]*common.UserCreationComment, error) {
+func (s *SqlMethodStruct) GetFolloweers(ctx context.Context, userId int64, page int32) ([]*common.UserCreationComment, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 
@@ -397,11 +399,11 @@ func GetFolloweers(ctx context.Context, userId int64, page int32) ([]*common.Use
 			avatar,
 			bio
 		FROM 
-			db_user_1.User u
+			s.db_user_1.User u
 		JOIN
 		(
 			SELECT follower_id
-			FROM db_user_1.Follow
+			FROM s.db_user_1.Follow
 			WHERE followee_id = ?
 			ORDER BY created_at,views DESC
 			LIMIT ? 
@@ -410,7 +412,7 @@ func GetFolloweers(ctx context.Context, userId int64, page int32) ([]*common.Use
 		ON u.id = f.follower_id;`
 
 	results := make([]*common.UserCreationComment, 0, 20)
-	rows, err := db.QueryContext(ctx, query, userId, LIMIT, start)
+	rows, err := s.db.QueryContext(ctx, query, userId, LIMIT, start)
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +442,7 @@ func GetFolloweers(ctx context.Context, userId int64, page int32) ([]*common.Use
 	return results, nil
 }
 
-func GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]*common.UserCreationComment, error) {
+func (s *SqlMethodStruct) GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]*common.UserCreationComment, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 
@@ -451,11 +453,11 @@ func GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]*commo
 			avatar,
 			bio
 		FROM 
-			db_user_1.User u
+			s.db_user_1.User u
 		JOIN
 		(
 			SELECT followee_id
-			FROM db_user_1.Follow
+			FROM s.db_user_1.Follow
 			WHERE follower_id = ?
 			ORDER BY created_at,views DESC
 			LIMIT ? 
@@ -464,7 +466,7 @@ func GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]*commo
 		ON u.id = f.followee_id;`
 
 	results := make([]*common.UserCreationComment, 0, 20)
-	rows, err := db.QueryContext(ctx, query, userId, LIMIT, start)
+	rows, err := s.db.QueryContext(ctx, query, userId, LIMIT, start)
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +497,7 @@ func GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]*commo
 	return results, nil
 }
 
-func GetFolloweesByViews(ctx context.Context, userId int64, page int32) ([]*common.UserCreationComment, error) {
+func (s *SqlMethodStruct) GetFolloweesByViews(ctx context.Context, userId int64, page int32) ([]*common.UserCreationComment, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 
@@ -506,11 +508,11 @@ func GetFolloweesByViews(ctx context.Context, userId int64, page int32) ([]*comm
 			avatar,
 			bio
 		FROM 
-			db_user_1.User u
+			s.db_user_1.User u
 		JOIN
 		(
 			SELECT followee_id
-			FROM db_user_1.Follow
+			FROM s.db_user_1.Follow
 			WHERE follower_id = ?
 			ORDER BY views,followee_id DESC
 			LIMIT ? 
@@ -519,7 +521,7 @@ func GetFolloweesByViews(ctx context.Context, userId int64, page int32) ([]*comm
 		ON u.id = f.followee_id;`
 
 	results := make([]*common.UserCreationComment, 0, 20)
-	rows, err := db.QueryContext(ctx, query, userId, LIMIT, start)
+	rows, err := s.db.QueryContext(ctx, query, userId, LIMIT, start)
 	if err != nil {
 		return nil, err
 	}
@@ -551,7 +553,7 @@ func GetFolloweesByViews(ctx context.Context, userId int64, page int32) ([]*comm
 }
 
 // Verify
-func UserVerifyInTranscation(ctx context.Context, user_credential *generated.UserCredentials) (*generated.UserCredentials, error) {
+func (s *SqlMethodStruct) UserVerifyInTranscation(ctx context.Context, user_credential *generated.UserCredentials) (*generated.UserCredentials, error) {
 	identifier := "username = ?"
 	value := user_credential.GetUsername()
 	if user_credential.GetUserEmail() != "" {
@@ -564,7 +566,7 @@ func UserVerifyInTranscation(ctx context.Context, user_credential *generated.Use
 			password,
 			email,
 			role
-		FROM db_user_credentials_1.UserCredentials 
+		FROM s.db_user_credentials_1.UserCredentials 
 		WHERE %s`, identifier)
 
 	var (
@@ -578,7 +580,7 @@ func UserVerifyInTranscation(ctx context.Context, user_credential *generated.Use
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
-		err := db.QueryRow(query, value).Scan(&id, &passwordHash, &email, &role)
+		err := s.db.QueryRow(query, value).Scan(&id, &passwordHash, &email, &role)
 		if err != nil {
 			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
@@ -607,7 +609,7 @@ func UserVerifyInTranscation(ctx context.Context, user_credential *generated.Use
 }
 
 // UPDATE
-func UserEmailUpdateInTransaction(ctx context.Context, user_credentials []*generated.UserCredentials) error {
+func (s *SqlMethodStruct) UserEmailUpdateInTransaction(ctx context.Context, user_credentials []*generated.UserCredentials) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
 	const fieldsCount = 1*2 + 1 // 一行2+1个问号
@@ -635,14 +637,14 @@ func UserEmailUpdateInTransaction(ctx context.Context, user_credentials []*gener
 	}
 
 	query := fmt.Sprintf(`
-		UPDATE db_user_credentials_1.UserCredentials
+		UPDATE s.db_user_credentials_1.UserCredentials
 		SET 
 			email = CASE 
 				%s 
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
 
-	tx, err := db.BeginTransaction()
+	tx, err := s.db.BeginTransaction()
 	if err != nil {
 		return err
 	}
@@ -650,17 +652,16 @@ func UserEmailUpdateInTransaction(ctx context.Context, user_credentials []*gener
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			if errSecond := s.db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
-			tools.LogError("", "db recover", err)
+			tools.LogError("", "s.db recover", err)
 		}
 	}()
 
 	select {
 	case <-ctx.Done():
-		if err := db.RollbackTransaction(tx); err != nil {
+		if err := s.db.RollbackTransaction(tx); err != nil {
 			return err
 		}
 		return errMap.GetStatusError(err)
@@ -671,14 +672,14 @@ func UserEmailUpdateInTransaction(ctx context.Context, user_credentials []*gener
 			values...,
 		)
 		if err != nil {
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				tools.LogError("", "db roolback", errSecond)
+			if errSecond := s.db.RollbackTransaction(tx); errSecond != nil {
+				tools.LogError("", "s.db roolback", errSecond)
 			}
 
 			return err
 		}
 
-		if err = db.CommitTransaction(tx); err != nil {
+		if err = s.db.CommitTransaction(tx); err != nil {
 			return err
 		}
 	}
@@ -686,7 +687,7 @@ func UserEmailUpdateInTransaction(ctx context.Context, user_credentials []*gener
 	return nil
 }
 
-func UserUpdateSpaceInTransaction(ctx context.Context, users []*generated.UserUpdateSpace) error {
+func (s *SqlMethodStruct) UserUpdateSpaceInTransaction(ctx context.Context, users []*generated.UserUpdateSpace) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
 	const fieldsCount = 4*2 + 1 // 一个用户需要4*2+1个问号
@@ -734,7 +735,7 @@ func UserUpdateSpaceInTransaction(ctx context.Context, users []*generated.UserUp
 
 	// 拼接最终的 SQL
 	query := fmt.Sprintf(`
-		UPDATE db_user_1.User
+		UPDATE s.db_user_1.User
 		SET 
 			name = CASE 
 				%s
@@ -757,7 +758,7 @@ func UserUpdateSpaceInTransaction(ctx context.Context, users []*generated.UserUp
 		strings.Join(sqlStr, ","),
 	)
 
-	_, err := db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx,
 		query,
 		values...,
@@ -769,7 +770,7 @@ func UserUpdateSpaceInTransaction(ctx context.Context, users []*generated.UserUp
 	return nil
 }
 
-func UserUpdateAvatarInTransaction(ctx context.Context, users []*generated.UserUpdateAvatar) error {
+func (s *SqlMethodStruct) UserUpdateAvatarInTransaction(ctx context.Context, users []*generated.UserUpdateAvatar) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
 	const fieldsCount = 1*2 + 1 // 一行2+1个问号
@@ -796,14 +797,14 @@ func UserUpdateAvatarInTransaction(ctx context.Context, users []*generated.UserU
 		values[length+i] = id
 	}
 
-	query := fmt.Sprintf(`UPDATE db_user_1.User 
+	query := fmt.Sprintf(`UPDATE s.db_user_1.User 
 		SET 
     		avatar = CASE
 				%s
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
 
-	_, err := db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx,
 		query,
 		values...,
@@ -815,7 +816,7 @@ func UserUpdateAvatarInTransaction(ctx context.Context, users []*generated.UserU
 	return nil
 }
 
-func UserUpdateStatusInTransaction(ctx context.Context, users []*generated.UserUpdateStatus) error {
+func (s *SqlMethodStruct) UserUpdateStatusInTransaction(ctx context.Context, users []*generated.UserUpdateStatus) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
 	const fieldsCount = 1*2 + 1 // 一行2+1个问号
@@ -842,14 +843,14 @@ func UserUpdateStatusInTransaction(ctx context.Context, users []*generated.UserU
 		values[length+i] = id
 	}
 
-	query := fmt.Sprintf(`UPDATE db_user_1.User 
+	query := fmt.Sprintf(`UPDATE s.db_user_1.User 
 		SET 
     		status = CASE
 				%s
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
 
-	_, err := db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx,
 		query,
 		values...,
@@ -861,7 +862,7 @@ func UserUpdateStatusInTransaction(ctx context.Context, users []*generated.UserU
 	return nil
 }
 
-func UserUpdateBioInTransaction(ctx context.Context, users []*generated.UserUpdateBio) error {
+func (s *SqlMethodStruct) UserUpdateBioInTransaction(ctx context.Context, users []*generated.UserUpdateBio) error {
 	const QM = "?"
 	const Conf = "WHEN id = ? THEN ?"
 	const fieldsCount = 1*2 + 1 // 一行2+1个问号
@@ -888,14 +889,14 @@ func UserUpdateBioInTransaction(ctx context.Context, users []*generated.UserUpda
 		values[length+i] = id
 	}
 
-	query := fmt.Sprintf(`UPDATE db_user_1.User 
+	query := fmt.Sprintf(`UPDATE s.db_user_1.User 
 		SET 
     		bio = CASE
 				%s
 			END
 		WHERE id IN (%s)`, strings.Join(Cases, " "), strings.Join(sqlStr, ","))
 
-	_, err := db.ExecContext(
+	_, err := s.db.ExecContext(
 		ctx,
 		query,
 		values...,
@@ -907,16 +908,16 @@ func UserUpdateBioInTransaction(ctx context.Context, users []*generated.UserUpda
 	return nil
 }
 
-func DelReviewer(ctx context.Context, reviewerId int64) (string, string, error) {
+func (s *SqlMethodStruct) DelReviewer(ctx context.Context, reviewerId int64) (string, string, error) {
 	querySELECT := `
 		SELECT 
 			username,
 			email
-		FROM db_user_credentials_1.UserCredentials 
+		FROM s.db_user_credentials_1.UserCredentials 
 		WHERE id = ?
 		FOR UPDATE`
 	queryUpdate := `
-		UPDATE db_user_credentials_1.UserCredentials 
+		UPDATE s.db_user_credentials_1.UserCredentials 
 		SET role = USER 
 		WHERE id = ?`
 
@@ -926,7 +927,7 @@ func DelReviewer(ctx context.Context, reviewerId int64) (string, string, error) 
 	)
 
 	// 开始事务
-	tx, err := db.BeginTransaction()
+	tx, err := s.db.BeginTransaction()
 	if err != nil {
 		return "", "", err
 	}
@@ -934,7 +935,7 @@ func DelReviewer(ctx context.Context, reviewerId int64) (string, string, error) 
 	// 确保在错误时回滚事务
 	defer func() {
 		if err != nil {
-			_ = db.RollbackTransaction(tx) // 确保事务回滚
+			_ = s.db.RollbackTransaction(tx) // 确保事务回滚
 		}
 	}()
 
@@ -951,7 +952,7 @@ func DelReviewer(ctx context.Context, reviewerId int64) (string, string, error) 
 	}
 
 	// 提交事务
-	err = db.CommitTransaction(tx)
+	err = s.db.CommitTransaction(tx)
 	if err != nil {
 		return "", "", err
 	}
@@ -959,7 +960,7 @@ func DelReviewer(ctx context.Context, reviewerId int64) (string, string, error) 
 	return username, email.String, nil
 }
 
-func ViewFollowee(ctx context.Context, subs []*generated.Follow) error {
+func (s *SqlMethodStruct) ViewFollowee(ctx context.Context, subs []*generated.Follow) error {
 	const (
 		QM = "(?,?)"
 	)
@@ -976,38 +977,34 @@ func ViewFollowee(ctx context.Context, subs []*generated.Follow) error {
 	}
 
 	query := fmt.Sprintf(`
-		UPDATE db_user_1.Follow 
+		UPDATE s.db_user_1.Follow 
 		SET views = views + 1
 		WHERE (follower_id,followee_id) 
 		IN 
 			(%s);`, strings.Join(sqlStr, ","))
 
-	_, err := db.Exec(
+	_, err := s.db.Exec(
 		query,
 		values...,
 	)
 	if err != nil {
-		err = fmt.Errorf("transaction exec failed because %v", err)
-
 		return err
 	}
 	return nil
 }
 
 // Del
-func CancelFollow(ctx context.Context, f *generated.Follow) error {
+func (s *SqlMethodStruct) CancelFollow(ctx context.Context, f *generated.Follow) error {
 	query := `
-		DELETE FROM db_user_1.Follow 
+		DELETE FROM s.db_user_1.Follow 
 		WHERE follower_id = ?
 	 	AND followee_id = ?`
-	_, err := db.Exec(
+	_, err := s.db.Exec(
 		query,
 		f.FollowerId,
 		f.FolloweeId,
 	)
 	if err != nil {
-		err = fmt.Errorf("transaction exec failed because %v", err)
-
 		return err
 	}
 

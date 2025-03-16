@@ -10,14 +10,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
+	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
-
-/*
-	这里的链表不太符合高并发特点的设计，问题在于持有锁时间会很长
-	改进的办法是使用堆建立，或者使用HASH对节点进行映射
-	先留着，以后再建堆
-*/
 
 func InitialUserSpaceCacheChain() *UserSpaceCacheChain {
 	_chain := &UserSpaceCacheChain{
@@ -25,13 +19,20 @@ func InitialUserSpaceCacheChain() *UserSpaceCacheChain {
 		Tail:       &UserSpaceCacheListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.UserUpdateSpace, EXE_CHANNEL_COUNT),
-		listenerPool: sync.Pool{
+		pool: sync.Pool{
 			New: func() any {
-				return &UserSpaceCacheListener{
-					timeoutDuration: 10 * time.Second,
-					updateInterval:  3 * time.Second,
-				}
+				slice := make([]*generated.UserUpdateSpace, 0, MAX_BATCH_SIZE)
+				return &slice
 			},
+		},
+	}
+	_chain.listenerPool = sync.Pool{
+		New: func() any {
+			return &UserSpaceCacheListener{
+				chain:           _chain,
+				timeoutDuration: 10 * time.Second,
+				updateInterval:  3 * time.Second,
+			}
 		},
 	}
 	_chain.Head.next = _chain.Tail
@@ -48,6 +49,22 @@ type UserSpaceCacheChain struct {
 	Count        int32 // 监听者数量
 	exeChannel   chan *[]*generated.UserUpdateSpace
 	listenerPool sync.Pool
+	pool         sync.Pool
+	cond         sync.Cond
+}
+
+func (chain *UserSpaceCacheChain) Close(signal chan any) {
+	chain.nodeMux.Lock()
+	for atomic.LoadInt32(&chain.Count) > 0 {
+		chain.cond.Wait() // 等待 Count 变成 0
+	}
+	chain.nodeMux.Unlock()
+
+	close(signal)
+}
+
+func (chain *UserSpaceCacheChain) GetPoolObj() any {
+	return chain.pool.Get()
 }
 
 func (chain *UserSpaceCacheChain) ExecuteBatch() {
@@ -59,11 +76,12 @@ func (chain *UserSpaceCacheChain) ExecuteBatch() {
 			err := cache.UpdateUserSpace(ctx, users)
 			cancel()
 			if err != nil {
-				log.Printf("error: UserUserSpaceCacheInTransaction error")
+				tools.LogError("", "cache UpdateUserSpace", err)
+				return
 			}
 
 			*usersPtr = users[:0]
-			userSpacePool.Put(usersPtr)
+			chain.pool.Put(usersPtr)
 		}(usersPtr)
 	}
 }

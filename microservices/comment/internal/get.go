@@ -5,7 +5,6 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
-	db "github.com/Yux77Yux/platform_backend/microservices/comment/repository"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )

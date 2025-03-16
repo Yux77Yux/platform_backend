@@ -11,6 +11,7 @@ import (
 
 // 监听者结构体
 type AddViewListener struct {
+	chain        ChainInterface
 	exeChannel   chan *[]*common.UserAction // 批量发送评论的通道
 	datasChannel chan *common.UserAction    // 用于接收评论的通道
 	count        uint32
@@ -59,7 +60,7 @@ func (listener *AddViewListener) SendBatch() {
 		return
 	}
 
-	datasPtr := insertPool.Get().(*[]*common.UserAction)
+	datasPtr := listener.chain.GetPoolObj().(*[]*common.UserAction)
 	*datasPtr = (*datasPtr)[:count]
 	insertUsers := *datasPtr
 	for i := 0; uint32(i) < count; i++ {
@@ -116,7 +117,7 @@ func (listener *AddViewListener) RestartTimeoutTimer() {
 		if count == 0 {
 			// 超时后销毁监听者
 			listener.Cleanup()
-			addViewChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

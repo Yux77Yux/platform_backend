@@ -16,8 +16,12 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-func ExistsUsername(ctx context.Context, username string) (bool, error) {
-	exist, err := CacheClient.ExistsHashField(ctx, "User", "Credentials", username)
+type CacheMethodStruct struct {
+	CacheClient CacheInterface
+}
+
+func (c *CacheMethodStruct) ExistsUsername(ctx context.Context, username string) (bool, error) {
+	exist, err := c.CacheClient.ExistsHashField(ctx, "User", "Credentials", username)
 	if err != nil {
 		log.Printf("error: failed to execute cache method: ExistsUsername")
 		return false, err
@@ -27,8 +31,8 @@ func ExistsUsername(ctx context.Context, username string) (bool, error) {
 	return exist, nil
 }
 
-func ExistsEmail(ctx context.Context, email string) (bool, error) {
-	exist, err := CacheClient.ExistsHashField(ctx, "User", "Credentials", email)
+func (c *CacheMethodStruct) ExistsEmail(ctx context.Context, email string) (bool, error) {
+	exist, err := c.CacheClient.ExistsHashField(ctx, "User", "Credentials", email)
 
 	if err != nil {
 		return false, err
@@ -36,8 +40,8 @@ func ExistsEmail(ctx context.Context, email string) (bool, error) {
 	return exist, nil
 }
 
-func ExistsUserInfo(ctx context.Context, user_id int64) (bool, error) {
-	exist, err := CacheClient.ExistsHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
+func (c *CacheMethodStruct) ExistsUserInfo(ctx context.Context, user_id int64) (bool, error) {
+	exist, err := c.CacheClient.ExistsHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
 	if err != nil {
 		return false, err
 	}
@@ -47,7 +51,7 @@ func ExistsUserInfo(ctx context.Context, user_id int64) (bool, error) {
 // POST
 
 // 触发的可能有，过期，登录返回，设置邮箱字段
-func StoreEmail(ctx context.Context, credentials []*generated.UserCredentials) error {
+func (c *CacheMethodStruct) StoreEmail(ctx context.Context, credentials []*generated.UserCredentials) error {
 	count := len(credentials)
 	fieldValues := make([]interface{}, 0, count*2)
 
@@ -72,7 +76,7 @@ func StoreEmail(ctx context.Context, credentials []*generated.UserCredentials) e
 	if len(fieldValues) == 0 {
 		return nil
 	}
-	result := CacheClient.SetFieldsHash(ctx, "User", "Credentials",
+	result := c.CacheClient.SetFieldsHash(ctx, "User", "Credentials",
 		fieldValues...,
 	)
 	if result != nil {
@@ -81,7 +85,7 @@ func StoreEmail(ctx context.Context, credentials []*generated.UserCredentials) e
 	return nil
 }
 
-func StoreUsername(ctx context.Context, credentials []*generated.UserCredentials) error {
+func (c *CacheMethodStruct) StoreUsername(ctx context.Context, credentials []*generated.UserCredentials) error {
 	count := len(credentials)
 	fieldValues := make([]interface{}, count*2)
 
@@ -101,13 +105,13 @@ func StoreUsername(ctx context.Context, credentials []*generated.UserCredentials
 		fieldValues[i*2+1] = data
 	}
 
-	return CacheClient.SetFieldsHash(ctx, "User", "Credentials",
+	return c.CacheClient.SetFieldsHash(ctx, "User", "Credentials",
 		fieldValues...,
 	)
 }
 
-func StoreUserInfo(ctx context.Context, users []*generated.User) error {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) StoreUserInfo(ctx context.Context, users []*generated.User) error {
+	pipe := c.CacheClient.Pipeline()
 	for _, user := range users {
 
 		var userBday interface{}
@@ -141,10 +145,10 @@ func StoreUserInfo(ctx context.Context, users []*generated.User) error {
 	return nil
 }
 
-func Follow(ctx context.Context, subs []*generated.Follow) error {
+func (c *CacheMethodStruct) Follow(ctx context.Context, subs []*generated.Follow) error {
 	now := float64(timestamppb.Now().Seconds)
 	for _, follow := range subs {
-		pipe := CacheClient.TxPipeline()
+		pipe := c.CacheClient.TxPipeline()
 		pipe.ZAdd(ctx, fmt.Sprintf("ZSet_Time_Followees_%d", follow.FollowerId), &redis.Z{
 			Score:  now,
 			Member: follow.FolloweeId,
@@ -168,8 +172,8 @@ func Follow(ctx context.Context, subs []*generated.Follow) error {
 }
 
 // UPDATE
-func UpdateUserSpace(ctx context.Context, users []*generated.UserUpdateSpace) error {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) UpdateUserSpace(ctx context.Context, users []*generated.UserUpdateSpace) error {
+	pipe := c.CacheClient.Pipeline()
 	for _, user := range users {
 		var userBday interface{}
 		// 判断是否为空
@@ -196,8 +200,8 @@ func UpdateUserSpace(ctx context.Context, users []*generated.UserUpdateSpace) er
 
 }
 
-func UpdateUserAvatar(ctx context.Context, users []*generated.UserUpdateAvatar) error {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) UpdateUserAvatar(ctx context.Context, users []*generated.UserUpdateAvatar) error {
+	pipe := c.CacheClient.Pipeline()
 	for _, user := range users {
 		pipe.HSet(ctx, fmt.Sprintf("Hash_UserInfo_%d", user.GetUserId()),
 			"user_avatar", user.GetUserAvatar(),
@@ -211,8 +215,8 @@ func UpdateUserAvatar(ctx context.Context, users []*generated.UserUpdateAvatar) 
 	return nil
 }
 
-func UpdateUserBio(ctx context.Context, users []*generated.UserUpdateBio) error {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) UpdateUserBio(ctx context.Context, users []*generated.UserUpdateBio) error {
+	pipe := c.CacheClient.Pipeline()
 	for _, user := range users {
 		pipe.HSet(ctx, fmt.Sprintf("Hash_UserInfo_%d", user.GetUserId()),
 			"user_bio", user.GetUserBio(),
@@ -227,8 +231,8 @@ func UpdateUserBio(ctx context.Context, users []*generated.UserUpdateBio) error 
 	return nil
 }
 
-func UpdateUserStatus(ctx context.Context, users []*generated.UserUpdateStatus) error {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) UpdateUserStatus(ctx context.Context, users []*generated.UserUpdateStatus) error {
+	pipe := c.CacheClient.Pipeline()
 	for _, user := range users {
 		pipe.HSet(ctx, fmt.Sprintf("Hash_UserInfo_%d", user.GetUserId()),
 			"user_status", user.GetUserStatus().String(),
@@ -243,16 +247,16 @@ func UpdateUserStatus(ctx context.Context, users []*generated.UserUpdateStatus) 
 }
 
 // GET
-func GetUserInfo(ctx context.Context, user_id int64, fields []string) (map[string]string, error) {
+func (c *CacheMethodStruct) GetUserInfo(ctx context.Context, user_id int64, fields []string) (map[string]string, error) {
 	var (
 		result map[string]string
 		err    error
 		values []interface{}
 	)
 	if len(fields) == 0 {
-		result, err = CacheClient.GetAllHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
+		result, err = c.CacheClient.GetAllHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10))
 	} else {
-		values, err = CacheClient.GetAnyHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10), fields...)
+		values, err = c.CacheClient.GetAnyHash(ctx, "UserInfo", strconv.FormatInt(user_id, 10), fields...)
 		// 构造结果 map
 		result = make(map[string]string, len(fields))
 		for i, field := range fields {
@@ -274,14 +278,14 @@ func GetUserInfo(ctx context.Context, user_id int64, fields []string) (map[strin
 	return result, nil
 }
 
-func GetUserCredentials(ctx context.Context, userCrdentials *generated.UserCredentials) (*generated.UserCredentials, error) {
+func (c *CacheMethodStruct) GetUserCredentials(ctx context.Context, userCrdentials *generated.UserCredentials) (*generated.UserCredentials, error) {
 	email := userCrdentials.GetUserEmail()
 	field := userCrdentials.GetUsername()
 	if email != "" {
 		field = email
 	}
 
-	credentials, err := CacheClient.GetHash(ctx, "User", "Credentials", field)
+	credentials, err := c.CacheClient.GetHash(ctx, "User", "Credentials", field)
 	if err != nil {
 		if err != redis.Nil {
 			return nil, err
@@ -312,11 +316,11 @@ func GetUserCredentials(ctx context.Context, userCrdentials *generated.UserCrede
 
 // Follow methods
 
-func GetUserCards(ctx context.Context, userIds []int64) ([]*common.UserCreationComment, error) {
+func (c *CacheMethodStruct) GetUserCards(ctx context.Context, userIds []int64) ([]*common.UserCreationComment, error) {
 	length := len(userIds)
 	users := make([]*common.UserCreationComment, length)
 
-	pipe := CacheClient.Pipeline()
+	pipe := c.CacheClient.Pipeline()
 	// 用来存储 pipeline 请求的结果
 	cmds := make([]*redis.SliceCmd, length)
 	for i, userId := range userIds {
@@ -344,11 +348,11 @@ func GetUserCards(ctx context.Context, userIds []int64) ([]*common.UserCreationC
 	return users, nil
 }
 
-func GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]int64, error) {
+func (c *CacheMethodStruct) GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]int64, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 	end := start + 19
-	strs, err := CacheClient.RevRangeZSet(ctx, "Time_Followees", strconv.FormatInt(userId, 10), start, end)
+	strs, err := c.CacheClient.RevRangeZSet(ctx, "Time_Followees", strconv.FormatInt(userId, 10), start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -365,11 +369,11 @@ func GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]int64,
 	return ids, nil
 }
 
-func GetFolloweesByView(ctx context.Context, userId int64, page int32) ([]int64, error) {
+func (c *CacheMethodStruct) GetFolloweesByView(ctx context.Context, userId int64, page int32) ([]int64, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 	end := start + 19
-	strs, err := CacheClient.RevRangeZSet(ctx, "View_Followees", strconv.FormatInt(userId, 10), start, end)
+	strs, err := c.CacheClient.RevRangeZSet(ctx, "View_Followees", strconv.FormatInt(userId, 10), start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -386,11 +390,11 @@ func GetFolloweesByView(ctx context.Context, userId int64, page int32) ([]int64,
 	return ids, nil
 }
 
-func GetFollowers(ctx context.Context, userId int64, page int32) ([]int64, error) {
+func (c *CacheMethodStruct) GetFollowers(ctx context.Context, userId int64, page int32) ([]int64, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
 	end := start + 19
-	strs, err := CacheClient.RevRangeZSet(ctx, "Followers", strconv.FormatInt(userId, 10), start, end)
+	strs, err := c.CacheClient.RevRangeZSet(ctx, "Followers", strconv.FormatInt(userId, 10), start, end)
 	if err != nil {
 		return nil, err
 	}
@@ -408,8 +412,8 @@ func GetFollowers(ctx context.Context, userId int64, page int32) ([]int64, error
 }
 
 // Del
-func CancelFollow(ctx context.Context, follow *generated.Follow) error {
-	pipe := CacheClient.TxPipeline()
+func (c *CacheMethodStruct) CancelFollow(ctx context.Context, follow *generated.Follow) error {
+	pipe := c.CacheClient.TxPipeline()
 
 	pipe.ZRem(ctx, fmt.Sprintf("ZSet_Time_Followees_%d", follow.FollowerId), follow.FolloweeId)
 	pipe.ZRem(ctx, fmt.Sprintf("ZSet_View_Followees_%d", follow.FollowerId), follow.FolloweeId)
@@ -423,7 +427,7 @@ func CancelFollow(ctx context.Context, follow *generated.Follow) error {
 	return nil
 }
 
-func DelCredentials(ctx context.Context, username string) error {
-	_, err := CacheClient.DelHashField(ctx, "User", "Credentials", username)
+func (c *CacheMethodStruct) DelCredentials(ctx context.Context, username string) error {
+	_, err := c.CacheClient.DelHashField(ctx, "User", "Credentials", username)
 	return err
 }

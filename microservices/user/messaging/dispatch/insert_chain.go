@@ -10,7 +10,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
@@ -20,13 +19,21 @@ func InitialInsertChain() *InsertChain {
 		Tail:       &InsertListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.User, EXE_CHANNEL_COUNT),
-		listenerPool: sync.Pool{
+		pool: sync.Pool{
 			New: func() any {
-				return &InsertListener{
-					timeoutDuration: 10 * time.Second,
-					updateInterval:  3 * time.Second,
-				}
+				slice := make([]*generated.User, 0, MAX_BATCH_SIZE)
+				return &slice
 			},
+		},
+	}
+
+	_chain.listenerPool = sync.Pool{
+		New: func() any {
+			return &InsertListener{
+				chain:           _chain,
+				timeoutDuration: 10 * time.Second,
+				updateInterval:  3 * time.Second,
+			}
 		},
 	}
 	_chain.Head.next = _chain.Tail
@@ -43,6 +50,22 @@ type InsertChain struct {
 	nodeMux      sync.Mutex
 	exeChannel   chan *[]*generated.User
 	listenerPool sync.Pool
+	pool         sync.Pool
+	cond         sync.Cond
+}
+
+func (chain *InsertChain) Close(signal chan any) {
+	chain.nodeMux.Lock()
+	for atomic.LoadInt32(&chain.Count) > 0 {
+		chain.cond.Wait() // 等待 Count 变成 0
+	}
+	chain.nodeMux.Unlock()
+
+	close(signal)
+}
+
+func (chain *InsertChain) GetPoolObj() any {
+	return chain.pool.Get()
 }
 
 func (chain *InsertChain) ExecuteBatch() {
@@ -60,7 +83,7 @@ func (chain *InsertChain) ExecuteBatch() {
 
 			// 放回对象池
 			*insertUsersPtr = insertUsers[:0]
-			insertUsersPool.Put(insertUsersPtr)
+			chain.pool.Put(insertUsersPtr)
 		}(insertUsersPtr)
 	}
 }

@@ -1,16 +1,18 @@
 package repository
 
 import (
-	"context"
 	"fmt"
 
+	internal "github.com/Yux77Yux/platform_backend/microservices/comment/internal"
+	dispatch "github.com/Yux77Yux/platform_backend/microservices/comment/messaging/dispatch"
+	receiver "github.com/Yux77Yux/platform_backend/microservices/comment/messaging/receiver"
+	tools "github.com/Yux77Yux/platform_backend/microservices/comment/tools"
 	pkgDb "github.com/Yux77Yux/platform_backend/pkg/database"
 )
 
 var (
 	onlyReadStr  string
 	readWriteStr string
-	db           SqlMethods
 )
 
 func InitStr(or, wr string) {
@@ -18,23 +20,30 @@ func InitStr(or, wr string) {
 	readWriteStr = wr
 }
 
-func GetDB() (SqlMethods, error) {
+func GetDB() (SqlMethod, error) {
 	_db, err := pkgDb.InitDb(onlyReadStr, readWriteStr)
 	if err != nil {
 		return nil, err
 	}
-	db = _db
-	return db, nil
+
+	return &SqlMethodStruct{
+		db: _db,
+	}, nil
 }
 
-func Run(ctx context.Context) error {
+func Run() func() {
 	db, err := GetDB()
 	if err != nil {
-		return err
+		tools.LogSuperError(err)
 	}
-	<-ctx.Done()
-	if err := db.Close(); err != nil {
-		return fmt.Errorf("error: database close failed: %w", err)
+
+	dispatch.InitDb(db)
+	receiver.InitDb(db)
+	internal.InitDb(db)
+
+	return func() {
+		if err := db.Close(); err != nil {
+			tools.LogError("database", "Close", fmt.Errorf("error: database close failed: %w", err))
+		}
 	}
-	return nil
 }

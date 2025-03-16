@@ -2,13 +2,9 @@ package internal
 
 import (
 	"context"
-	"log"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
@@ -57,9 +53,10 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 		}
 
 		go func(user_part_info *generated.UserCredentials, ctx context.Context) {
-			err = messaging.SendMessage(ctx, messaging.StoreCredentials, messaging.StoreCredentials, user_part_info)
+			traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+			err = messaging.SendMessage(ctx, EXCHANGE_STORE_CREDENTIAL, KEY_STORE_CREDENTIAL, user_part_info)
 			if err != nil {
-				log.Printf("error: SendMessage StoreCredentials %v", err)
+				tools.LogError(traceId, fullName, err)
 			}
 		}(user_part_info, ctx)
 	}
@@ -114,7 +111,7 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 
 	go func(user_info *generated.UserLogin, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err := messaging.SendMessage(ctx, messaging.StoreUser, messaging.StoreUser, user_info)
+		err := messaging.SendMessage(ctx, EXCHANGE_STORE_USER, KEY_STORE_USER, user_info)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

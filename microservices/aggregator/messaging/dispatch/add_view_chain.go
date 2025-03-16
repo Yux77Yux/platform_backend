@@ -10,24 +10,33 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/aggregator/messaging"
+	tools "github.com/Yux77Yux/platform_backend/microservices/aggregator/tools"
 )
 
-func InitialAddViewChain() *AddViewChain {
+func InitialAddViewChain() ChainInterface {
 	_chain := &AddViewChain{
 		Head:       &AddViewListener{prev: nil},
 		Tail:       &AddViewListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*common.UserAction, EXE_CHANNEL_COUNT),
-		listenerPool: sync.Pool{
+		pool: sync.Pool{
 			New: func() any {
-				return &AddViewListener{
-					timeoutDuration: 10 * time.Second,
-					updateInterval:  3 * time.Second,
-				}
+				slice := make([]*common.UserAction, 0, MAX_BATCH_SIZE)
+				return &slice
 			},
 		},
 	}
+
+	_chain.listenerPool = sync.Pool{
+		New: func() any {
+			return &AddViewListener{
+				timeoutDuration: 10 * time.Second,
+				updateInterval:  3 * time.Second,
+				chain:           _chain,
+			}
+		},
+	}
+
 	_chain.Head.next = _chain.Tail
 	_chain.Tail.prev = _chain.Head
 	go _chain.ExecuteBatch()
@@ -40,8 +49,24 @@ type AddViewChain struct {
 	Tail         *AddViewListener
 	Count        int32 // 监听者数量
 	nodeMux      sync.Mutex
+	cond         sync.Cond
 	exeChannel   chan *[]*common.UserAction
 	listenerPool sync.Pool
+	pool         sync.Pool
+}
+
+func (chain *AddViewChain) GetPoolObj() any {
+	return chain.pool.Get()
+}
+
+func (chain *AddViewChain) Close(signal chan any) {
+	chain.nodeMux.Lock()
+	for atomic.LoadInt32(&chain.Count) > 0 {
+		chain.cond.Wait() // 等待 Count 变成 0
+	}
+	chain.nodeMux.Unlock()
+
+	close(signal)
 }
 
 func (chain *AddViewChain) ExecuteBatch() {
@@ -51,15 +76,20 @@ func (chain *AddViewChain) ExecuteBatch() {
 			anyViews := &common.AnyUserAction{
 				Actions: views,
 			}
-			// 插入数据库
-			err := messaging.SendMessage(context.Background(), AddView, AddView, anyViews)
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+			err := messaging.SendMessage(ctx,
+				EXCHANGE_UPDATE_CREATION_ACTION_COUNT,
+				KEY_UPDATE_CREATION_ACTION_COUNT,
+				anyViews)
+			cancel()
 			if err != nil {
-				log.Printf("error: SendMessage AddView error")
+				tools.LogError("", "ExecuteBatch SendMessage", err)
 			}
 
 			// 放回对象池
 			*AddViewsPtr = views[:0]
-			insertPool.Put(AddViewsPtr)
+			chain.pool.Put(AddViewsPtr)
 		}(AddViewsPtr)
 	}
 }

@@ -7,9 +7,6 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
-	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
-	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"

@@ -10,8 +10,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
-	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
-	"github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
+	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
 
 func InitialViewCacheChain() *ViewCacheChain {
@@ -20,13 +19,20 @@ func InitialViewCacheChain() *ViewCacheChain {
 		Tail:       &ViewListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.OperateInteraction, EXE_CHANNEL_COUNT),
-		listenerPool: sync.Pool{
+		pool: sync.Pool{
 			New: func() any {
-				return &ViewListener{
-					timeoutDuration: 10 * time.Second,
-					updateInterval:  3 * time.Second,
-				}
+				slice := make([]*generated.OperateInteraction, 0, MAX_BATCH_SIZE)
+				return &slice
 			},
+		},
+	}
+
+	_chain.listenerPool = sync.Pool{
+		New: func() any {
+			return &ViewListener{
+				timeoutDuration: 10 * time.Second,
+				updateInterval:  3 * time.Second,
+			}
 		},
 	}
 	_chain.Head.next = _chain.Tail
@@ -43,6 +49,22 @@ type ViewCacheChain struct {
 	nodeMux      sync.Mutex
 	exeChannel   chan *[]*generated.OperateInteraction
 	listenerPool sync.Pool
+	pool         sync.Pool
+	cond         sync.Cond
+}
+
+func (chain *ViewCacheChain) Close(signal chan any) {
+	chain.nodeMux.Lock()
+	for atomic.LoadInt32(&chain.Count) > 0 {
+		chain.cond.Wait() // 等待 Count 变成 0
+	}
+	chain.nodeMux.Unlock()
+
+	close(signal)
+}
+
+func (chain *ViewCacheChain) GetPoolObj() any {
+	return chain.pool.Get()
 }
 
 func (chain *ViewCacheChain) ExecuteBatch() {
@@ -59,7 +81,7 @@ func (chain *ViewCacheChain) ExecuteBatch() {
 
 			// 放回对象池
 			*interactionsPtr = interactions[:0]
-			interactionsPool.Put(interactionsPtr)
+			chain.pool.Put(interactionsPtr)
 		}(interactionsPtr)
 	}
 }

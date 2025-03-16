@@ -10,15 +10,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
-
-/*
-	这里的链表不太符合高并发特点的设计，问题在于持有锁时间会很长
-	改进的办法是使用堆建立，或者使用HASH对节点进行映射
-	先留着，以后再建堆
-*/
 
 func InitialUserStatusChain() *UserStatusChain {
 	_chain := &UserStatusChain{
@@ -26,13 +19,20 @@ func InitialUserStatusChain() *UserStatusChain {
 		Tail:       &UserStatusListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.UserUpdateStatus, EXE_CHANNEL_COUNT),
-		listenerPool: sync.Pool{
+		pool: sync.Pool{
 			New: func() any {
-				return &UserStatusListener{
-					timeoutDuration: 10 * time.Second,
-					updateInterval:  3 * time.Second,
-				}
+				slice := make([]*generated.UserUpdateStatus, 0, MAX_BATCH_SIZE)
+				return &slice
 			},
+		},
+	}
+	_chain.listenerPool = sync.Pool{
+		New: func() any {
+			return &UserStatusListener{
+				chain:           _chain,
+				timeoutDuration: 10 * time.Second,
+				updateInterval:  3 * time.Second,
+			}
 		},
 	}
 	_chain.Head.next = _chain.Tail
@@ -49,6 +49,22 @@ type UserStatusChain struct {
 	Count        int32 // 监听者数量
 	exeChannel   chan *[]*generated.UserUpdateStatus
 	listenerPool sync.Pool
+	pool         sync.Pool
+	cond         sync.Cond
+}
+
+func (chain *UserStatusChain) Close(signal chan any) {
+	chain.nodeMux.Lock()
+	for atomic.LoadInt32(&chain.Count) > 0 {
+		chain.cond.Wait() // 等待 Count 变成 0
+	}
+	chain.nodeMux.Unlock()
+
+	close(signal)
+}
+
+func (chain *UserStatusChain) GetPoolObj() any {
+	return chain.pool.Get()
 }
 
 func (chain *UserStatusChain) ExecuteBatch() {
@@ -65,7 +81,7 @@ func (chain *UserStatusChain) ExecuteBatch() {
 			}
 
 			*usersPtr = users[:0]
-			userStatusPool.Put(usersPtr)
+			chain.pool.Put(usersPtr)
 		}(usersPtr)
 	}
 }

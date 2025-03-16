@@ -11,6 +11,7 @@ import (
 
 // 监听者结构体
 type UserBioCacheListener struct {
+	chain                ChainInterface
 	exeChannel           chan *[]*generated.UserUpdateBio // 批量发送的通道
 	userUpdateBioChannel chan *generated.UserUpdateBio    // 用于接收的通道
 	count                uint32
@@ -58,7 +59,7 @@ func (listener *UserBioCacheListener) SendBatch() {
 		return
 	}
 
-	userUpdateBioPtr := userBioPool.Get().(*[]*generated.UserUpdateBio)
+	userUpdateBioPtr := listener.chain.GetPoolObj().(*[]*generated.UserUpdateBio)
 	*userUpdateBioPtr = (*userUpdateBioPtr)[:count]
 	userUpdateBio := *userUpdateBioPtr
 	for i := uint32(0); i < count; i++ {
@@ -117,7 +118,7 @@ func (listener *UserBioCacheListener) RestartTimeoutTimer() {
 		if count == 0 {
 			listener.Cleanup()
 			// 超时后销毁监听者
-			userBioCacheChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

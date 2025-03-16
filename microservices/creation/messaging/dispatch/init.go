@@ -15,15 +15,6 @@ const (
 	EXE_CHANNEL_COUNT      = 5
 )
 
-var (
-	updateCountChain *UpdateCountChain
-	updatePool       = sync.Pool{
-		New: func() any {
-			return new(ExeBody)
-		},
-	}
-)
-
 func init() {
 	// 初始化责任链
 	updateCountChain = InitialUpdateCountChain()
@@ -35,4 +26,22 @@ func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 	case UpdateCount:
 		updateCountChain.HandleRequest(copy)
 	}
+}
+
+var (
+	db        SqlMethod
+	messaging MessageQueueMethod
+	cache     CacheMethod
+)
+
+func InitDb(_db SqlMethod) {
+	db = _db
+}
+
+func InitMQ(_messaging MessageQueueMethod) {
+	messaging = _messaging
+}
+
+func InitCache(_cache CacheMethod) {
+	cache = _cache
 }

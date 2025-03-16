@@ -1,23 +1,24 @@
 package dispatch
 
 import (
-	"google.golang.org/protobuf/reflect/protoreflect"
+	"context"
+
+	generated "github.com/Yux77Yux/platform_backend/generated/comment"
+	common "github.com/Yux77Yux/platform_backend/generated/common"
+	pkgDispatch "github.com/Yux77Yux/platform_backend/pkg/dispatch"
 )
 
-type ChainInterface interface {
-	FindListener(protoreflect.ProtoMessage) ListenerInterface
-	DestroyListener(ListenerInterface)
-	CreateListener(protoreflect.ProtoMessage) ListenerInterface
-	HandleRequest(protoreflect.ProtoMessage)
-	ExecuteBatch()
+type CacheMethod interface {
+	UpdateCommentsCount(ctx context.Context, creationId int64, count int64) error
 }
 
-type ListenerInterface interface {
-	GetId() int64
-	StartListening()
-	Dispatch(protoreflect.ProtoMessage)
-	RestartUpdateIntervalTimer()
-	RestartTimeoutTimer()
-	SendBatch()
-	Cleanup()
+type SqlMethod interface {
+	BatchInsert(ctx context.Context, comments []*generated.Comment) (int64, error)
+	BatchUpdateDeleteStatus(ctx context.Context, comments []*common.AfterAuth) (int64, error)
 }
+
+type DispatchInterface = pkgDispatch.DispatchInterface
+
+type ChainInterface = pkgDispatch.ChainInterface
+
+type ListenerInterface = pkgDispatch.ListenerInterface

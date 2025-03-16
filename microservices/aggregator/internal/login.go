@@ -6,7 +6,6 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/aggregator"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	client "github.com/Yux77Yux/platform_backend/microservices/aggregator/client"
-	// tools "github.com/Yux77Yux/platform_backend/microservices/aggregator/tools"
 )
 
 func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginResponse, error) {

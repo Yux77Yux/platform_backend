@@ -12,6 +12,7 @@ import (
 // 监听者结构体
 type DeleteListener struct {
 	creationId     int64
+	chain          ChainInterface
 	exeChannel     chan *[]*common.AfterAuth // 批量发送评论的通道
 	commentChannel chan *common.AfterAuth    // 用于接收评论的通道
 	count          uint32
@@ -61,7 +62,7 @@ func (listener *DeleteListener) SendBatch() {
 		return
 	}
 
-	delCommentsPtr := delCommentsPool.Get().(*[]*common.AfterAuth)
+	delCommentsPtr := listener.chain.GetPoolObj().(*[]*common.AfterAuth)
 	*delCommentsPtr = (*delCommentsPtr)[:count]
 	delComments := *delCommentsPtr
 	for i := uint32(0); i < count; i++ {
@@ -121,7 +122,7 @@ func (listener *DeleteListener) RestartTimeoutTimer() {
 		if count == 0 {
 			listener.Cleanup()
 			// 超时后销毁监听者
-			deleteChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

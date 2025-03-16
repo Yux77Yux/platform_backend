@@ -12,6 +12,7 @@ import (
 // 监听者结构体
 type InsertListener struct {
 	creationId     int64
+	chain          ChainInterface
 	exeChannel     chan *[]*generated.Comment // 批量发送评论的通道
 	commentChannel chan *generated.Comment    // 用于接收评论的通道
 	count          uint32
@@ -61,7 +62,7 @@ func (listener *InsertListener) SendBatch() {
 		return
 	}
 
-	insertCommentsPtr := insertCommentsPool.Get().(*[]*generated.Comment)
+	insertCommentsPtr := listener.chain.GetPoolObj().(*[]*generated.Comment)
 	*insertCommentsPtr = (*insertCommentsPtr)[:count]
 	insertComments := *insertCommentsPtr
 	for i := 0; uint32(i) < count; i++ {
@@ -120,7 +121,7 @@ func (listener *InsertListener) RestartTimeoutTimer() {
 		if count == 0 {
 			listener.Cleanup()
 			// 超时后销毁监听者
-			insertChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 			return
 		}
 		listener.RestartTimeoutTimer() // 重启定时器

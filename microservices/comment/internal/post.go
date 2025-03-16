@@ -5,7 +5,6 @@ import (
 
 	generated "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/comment/messaging"
 	tools "github.com/Yux77Yux/platform_backend/microservices/comment/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
@@ -56,7 +55,7 @@ func PublishComment(ctx context.Context, req *generated.PublishCommentRequest) (
 
 	go func(comment *generated.Comment, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.PublishComment, messaging.PublishComment, comment)
+		err = messaging.SendMessage(ctx, EXCHANGE_PUBLISH_COMMENT, KEY_PUBLISH_COMMENT, comment)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

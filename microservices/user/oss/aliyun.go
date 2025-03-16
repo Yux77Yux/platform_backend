@@ -1,7 +1,6 @@
 package oss
 
 import (
-	"context"
 	"io"
 
 	oss "github.com/Yux77Yux/platform_backend/pkg/oss"
@@ -15,7 +14,7 @@ type OssInterface interface {
 
 var Client OssInterface
 
-func Run(ctx context.Context) {
+func Run() {
 	Client = oss.GetClient("platform-user")
 	Client.CreateBucket()
 }

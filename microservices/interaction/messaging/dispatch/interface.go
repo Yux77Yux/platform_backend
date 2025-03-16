@@ -1,23 +1,25 @@
 package dispatch
 
 import (
-	"google.golang.org/protobuf/reflect/protoreflect"
+	"context"
+
+	"google.golang.org/protobuf/proto"
+
+	pkgDispatch "github.com/Yux77Yux/platform_backend/pkg/dispatch"
 )
 
-type ChainInterface interface {
-	FindListener(protoreflect.ProtoMessage) ListenerInterface
-	DestroyListener(ListenerInterface)
-	CreateListener(protoreflect.ProtoMessage) ListenerInterface
-	HandleRequest(protoreflect.ProtoMessage)
-	ExecuteBatch()
+type DispatchInterface = pkgDispatch.DispatchInterface
+
+type ChainInterface = pkgDispatch.ChainInterface
+
+type ListenerInterface = pkgDispatch.ListenerInterface
+
+type SqlMethod interface {
 }
 
-type ListenerInterface interface {
-	GetId() int64
-	StartListening()
-	Dispatch(protoreflect.ProtoMessage)
-	RestartUpdateIntervalTimer()
-	RestartTimeoutTimer()
-	SendBatch()
-	Cleanup()
+type MessageQueueMethod interface {
+	SendMessage(ctx context.Context, exchange string, routeKey string, req proto.Message) error
+}
+
+type CacheMethod interface {
 }

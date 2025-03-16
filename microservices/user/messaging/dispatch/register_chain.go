@@ -10,15 +10,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
-
-/*
-	这里的链表不太符合高并发特点的设计，问题在于持有锁时间会很长
-	改进的办法是使用堆建立，或者使用HASH对节点进行映射
-	先留着，以后再建堆
-*/
 
 func InitialRegisterChain() *RegisterChain {
 	_chain := &RegisterChain{
@@ -26,13 +19,21 @@ func InitialRegisterChain() *RegisterChain {
 		Tail:       &RegisterListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.UserCredentials, EXE_CHANNEL_COUNT),
-		listenerPool: sync.Pool{
+		pool: sync.Pool{
 			New: func() any {
-				return &RegisterListener{
-					timeoutDuration: 10 * time.Second,
-					updateInterval:  3 * time.Second,
-				}
+				slice := make([]*generated.UserCredentials, 0, MAX_BATCH_SIZE)
+				return &slice
 			},
+		},
+	}
+
+	_chain.listenerPool = sync.Pool{
+		New: func() any {
+			return &RegisterListener{
+				chain:           _chain,
+				timeoutDuration: 10 * time.Second,
+				updateInterval:  3 * time.Second,
+			}
 		},
 	}
 	_chain.Head.next = _chain.Tail
@@ -49,6 +50,22 @@ type RegisterChain struct {
 	Count        int32 // 监听者数量
 	exeChannel   chan *[]*generated.UserCredentials
 	listenerPool sync.Pool
+	pool         sync.Pool
+	cond         sync.Cond
+}
+
+func (chain *RegisterChain) Close(signal chan any) {
+	chain.nodeMux.Lock()
+	for atomic.LoadInt32(&chain.Count) > 0 {
+		chain.cond.Wait() // 等待 Count 变成 0
+	}
+	chain.nodeMux.Unlock()
+
+	close(signal)
+}
+
+func (chain *RegisterChain) GetPoolObj() any {
+	return chain.pool.Get()
 }
 
 func (chain *RegisterChain) ExecuteBatch() {
@@ -66,7 +83,7 @@ func (chain *RegisterChain) ExecuteBatch() {
 
 			// 放回对象池
 			*userCredentialsPtr = userCredentials[:0] // 清空切片内容
-			insertUserCredentialsPool.Put(userCredentialsPtr)
+			chain.pool.Put(userCredentialsPtr)
 		}(userCredentialsPtr)
 	}
 }

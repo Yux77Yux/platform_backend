@@ -11,6 +11,7 @@ import (
 
 // 监听者结构体
 type CancelLikeListener struct {
+	chain        ChainInterface
 	exeChannel   chan *[]*generated.BaseInteraction // 批量发送评论的通道
 	datasChannel chan *generated.BaseInteraction    // 用于接收评论的通道
 	count        uint32
@@ -59,7 +60,7 @@ func (listener *CancelLikeListener) SendBatch() {
 		return
 	}
 
-	datasPtr := baseInteractionsPool.Get().(*[]*generated.BaseInteraction)
+	datasPtr := listener.chain.GetPoolObj().(*[]*generated.BaseInteraction)
 	*datasPtr = (*datasPtr)[:count]
 	insertUsers := *datasPtr
 	for i := 0; uint32(i) < count; i++ {
@@ -116,7 +117,7 @@ func (listener *CancelLikeListener) RestartTimeoutTimer() {
 		if count == 0 {
 			// 超时后销毁监听者
 			listener.Cleanup()
-			cancelLikeCacheChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

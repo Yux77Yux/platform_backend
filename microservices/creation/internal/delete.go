@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
@@ -35,7 +34,7 @@ func DeleteCreation(ctx context.Context, req *generated.DeleteCreationRequest) e
 	}
 	go func(deleteInfo *generated.CreationUpdateStatus, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.DeleteCreation, messaging.DeleteCreation, deleteInfo)
+		err = messaging.SendMessage(ctx, EXCHANGE_DELETE_CREATION, KEY_DELETE_CREATION, deleteInfo)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

@@ -12,9 +12,9 @@ import (
 
 // 监听者结构体
 type UpdateCountListener struct {
+	id         int64
+	chain      ChainInterface
 	exeChannel chan *ExeBody
-
-	id int64
 
 	viewCount int32
 	likeCount int32
@@ -58,20 +58,16 @@ func (listener *UpdateCountListener) Dispatch(data protoreflect.ProtoMessage) {
 
 // 执行批量更新
 func (listener *UpdateCountListener) SendBatch() {
-	datasPtr := updatePool.Get().(*ExeBody)
+	datasPtr := listener.chain.GetPoolObj().(*ExeBody)
 
 	id := atomic.LoadInt64(&listener.id)
 	saveCount := atomic.SwapInt32(&listener.saveCount, 0)
 	likeCount := atomic.SwapInt32(&listener.likeCount, 0)
 	viewCount := atomic.SwapInt32(&listener.viewCount, 0)
 
-	log.Println("info:id")
 	datasPtr.id = id
-	log.Printf("info:saveCount %v", saveCount)
 	datasPtr.newSaveCount = saveCount
-	log.Printf("info:likeCount %v", likeCount)
 	datasPtr.newLikeCount = likeCount
-	log.Printf("info:viewCount %v", viewCount)
 	datasPtr.newViewCount = viewCount
 
 	listener.exeChannel <- datasPtr // 送去批量执行,可能被阻塞
@@ -127,7 +123,7 @@ func (listener *UpdateCountListener) RestartTimeoutTimer() {
 		if likeCount == 0 && saveCount == 0 && viewCount == 0 {
 			// 超时后销毁监听者
 			listener.Cleanup()
-			updateCountChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

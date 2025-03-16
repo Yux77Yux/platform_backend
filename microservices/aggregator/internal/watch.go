@@ -11,7 +11,6 @@ import (
 	creation "github.com/Yux77Yux/platform_backend/generated/creation"
 	interaction "github.com/Yux77Yux/platform_backend/generated/interaction"
 	client "github.com/Yux77Yux/platform_backend/microservices/aggregator/client"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/aggregator/messaging"
 	tools "github.com/Yux77Yux/platform_backend/microservices/aggregator/tools"
 )
 
@@ -106,8 +105,8 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 		err := messaging.SendMessage(
 			ctx,
-			event.Exchange_EXCHANGE_ADD_VIEW.String(),
-			event.RoutingKey_KEY_ADD_VIEW.String(),
+			EXCHANGE_ADD_VIEW,
+			KEY_ADD_VIEW,
 			&common.ViewCreation{
 				Id:   id,
 				Ipv4: ipv4,

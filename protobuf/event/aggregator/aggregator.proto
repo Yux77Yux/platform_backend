@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package event.aggregator;
+
+option go_package = "github.com/Yux77Yux/platform_backend/generated/event/aggregator;";
+
+enum Exchange {
+  EXCHANGE_ADD_VIEW = 0;
+  EXCHANGE_UPDATE_CREATION_ACTION_COUNT = 1;
+}
+
+enum Queue {
+  QUEUE_ADD_VIEW = 0;
+  QUEUE_UPDATE_CREATION_ACTION_COUNT = 1;
+}
+
+enum RoutingKey {
+  KEY_ADD_VIEW = 0;
+  KEY_UPDATE_CREATION_ACTION_COUNT = 1;
+}

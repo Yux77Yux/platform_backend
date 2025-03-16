@@ -1,56 +1,47 @@
-package messaging
-
-import (
-	"context"
-
-	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
-)
-
-const (
-	Register         = messaging.Register
-	StoreUser        = messaging.StoreUser
-	StoreCredentials = messaging.StoreCredentials
-	UpdateUserSpace  = messaging.UpdateUserSpace
-	UpdateUserAvatar = messaging.UpdateUserAvatar
-	UpdateUserBio    = messaging.UpdateUserBio
-	Follow           = messaging.Follow
-
-	// review
-	UpdateUserStatus = messaging.UpdateUserStatus
-	DelReviewer      = messaging.DelReviewer
-)
+package receiver
 
 var (
-	ExchangesConfig = messaging.ExchangesConfig
+	dispatcher DispatchInterface
+	db         SqlMethod
+	messaging  MessageQueueMethod
+	cache      CacheMethod
 )
 
+func InitDb(_db SqlMethod) {
+	db = _db
+}
+
+func InitCache(_cache CacheMethod) {
+	cache = _cache
+}
+
 // 非RPC类型的消息队列的交换机声明
-func Run(ctx context.Context) {
-	messaging.Init()
+func Run(_messaging MessageQueueMethod, _dispatch DispatchInterface) {
+	dispatcher = _dispatch
+	messaging = _messaging
 	for exchange := range ExchangesConfig {
 		switch exchange {
 		// 不同的exchange使用不同函数
-		case Register:
-			go messaging.ListenToQueue(exchange, Register, Register, registerProcessor)
-		case StoreUser:
-			go messaging.ListenToQueue(exchange, StoreUser, StoreUser, storeUserProcessor)
-		case StoreCredentials:
-			go messaging.ListenToQueue(exchange, StoreCredentials, StoreCredentials, storeCredentialsProcessor)
-		case UpdateUserSpace:
-			go messaging.ListenToQueue(exchange, UpdateUserSpace, UpdateUserSpace, updateUserSpaceProcessor)
-		case UpdateUserAvatar:
-			go messaging.ListenToQueue(exchange, UpdateUserAvatar, UpdateUserAvatar, updateUserAvatarProcessor)
-		case UpdateUserBio:
-			go messaging.ListenToQueue(exchange, UpdateUserBio, UpdateUserBio, updateUserBioProcessor)
-		case UpdateUserStatus:
-			go messaging.ListenToQueue(exchange, UpdateUserStatus, UpdateUserStatus, updateUserStatusProcessor)
-		case DelReviewer:
-			go messaging.ListenToQueue(exchange, DelReviewer, DelReviewer, delReviewerProcessor)
-		case Follow:
-			go messaging.ListenToQueue(exchange, Follow, Follow, followProcessor)
+		case EXCHANGE_REGISTER:
+			go messaging.ListenToQueue(exchange, QUEUE_REGISTER, KEY_REGISTER, registerProcessor)
+		case EXCHANGE_STORE_USER:
+			go messaging.ListenToQueue(exchange, QUEUE_STORE_USER, KEY_STORE_USER, storeUserProcessor)
+		case EXCHANGE_STORE_CREDENTIAL:
+			go messaging.ListenToQueue(exchange, QUEUE_STORE_CREDENTIAL, KEY_STORE_CREDENTIAL, storeCredentialsProcessor)
+		case EXCHANGE_UPDATE_USER_SPACE:
+			go messaging.ListenToQueue(exchange, QUEUE_UPDATE_USER_SPACE, KEY_UPDATE_USER_SPACE, updateUserSpaceProcessor)
+		case EXCHANGE_UPDATE_USER_BIO:
+			go messaging.ListenToQueue(exchange, QUEUE_UPDATE_USER_AVATAR, QUEUE_UPDATE_USER_AVATAR, updateUserAvatarProcessor)
+		case EXCHANGE_UPDATE_USER_AVATAR:
+			go messaging.ListenToQueue(exchange, QUEUE_UPDATE_USER_BIO, KEY_UPDATE_USER_BIO, updateUserBioProcessor)
+		case EXCHANGE_FOLLOW:
+			go messaging.ListenToQueue(exchange, QUEUE_UPDATE_USER_STATUS, KEY_UPDATE_USER_STATUS, updateUserStatusProcessor)
+		case EXCHANGE_CANCEL_FOLLOW:
+			go messaging.ListenToQueue(exchange, QUEUE_DEL_REVIEWER, KEY_DEL_REVIEWER, delReviewerProcessor)
+		case EXCHANGE_UPDATE_USER_STATUS:
+			go messaging.ListenToQueue(exchange, QUEUE_FOLLOW, KEY_FOLLOW, followProcessor)
+			// case EXCHANGE_DEL_REVIEWER:
+			// 	go messaging.ListenToQueue(exchange, Follow, Follow, followProcessor)
 		}
 	}
-
-	<-ctx.Done()
-	messaging.Close(ctx)
 }

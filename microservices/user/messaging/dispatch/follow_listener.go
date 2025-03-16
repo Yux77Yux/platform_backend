@@ -11,6 +11,7 @@ import (
 
 // 监听者结构体
 type FollowListener struct {
+	chain        ChainInterface
 	exeChannel   chan *[]*generated.Follow // 批量发送评论的通道
 	usersChannel chan *generated.Follow    // 用于接收评论的通道
 	count        uint32
@@ -59,7 +60,7 @@ func (listener *FollowListener) SendBatch() {
 		return
 	}
 
-	FollowUsersPtr := followPool.Get().(*[]*generated.Follow)
+	FollowUsersPtr := listener.chain.GetPoolObj().(*[]*generated.Follow)
 	*FollowUsersPtr = (*FollowUsersPtr)[:count]
 	FollowUsers := *FollowUsersPtr
 	for i := 0; uint32(i) < count; i++ {
@@ -116,7 +117,7 @@ func (listener *FollowListener) RestartTimeoutTimer() {
 		if count == 0 {
 			// 超时后销毁监听者
 			listener.Cleanup()
-			followChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

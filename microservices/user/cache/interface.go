@@ -3,6 +3,8 @@ package cache
 import (
 	"context"
 
+	common "github.com/Yux77Yux/platform_backend/generated/common"
+	generated "github.com/Yux77Yux/platform_backend/generated/user"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -41,4 +43,26 @@ type CacheInterface interface {
 
 	Pipeline() redis.Pipeliner
 	TxPipeline() redis.Pipeliner
+}
+
+type CacheMethod interface {
+	ExistsUsername(ctx context.Context, username string) (bool, error)
+	ExistsEmail(ctx context.Context, email string) (bool, error)
+	ExistsUserInfo(ctx context.Context, user_id int64) (bool, error)
+	StoreEmail(ctx context.Context, credentials []*generated.UserCredentials) error
+	StoreUsername(ctx context.Context, credentials []*generated.UserCredentials) error
+	StoreUserInfo(ctx context.Context, users []*generated.User) error
+	Follow(ctx context.Context, subs []*generated.Follow) error
+	UpdateUserSpace(ctx context.Context, users []*generated.UserUpdateSpace) error
+	UpdateUserAvatar(ctx context.Context, users []*generated.UserUpdateAvatar) error
+	UpdateUserBio(ctx context.Context, users []*generated.UserUpdateBio) error
+	UpdateUserStatus(ctx context.Context, users []*generated.UserUpdateStatus) error
+	GetUserInfo(ctx context.Context, user_id int64, fields []string) (map[string]string, error)
+	GetUserCredentials(ctx context.Context, userCrdentials *generated.UserCredentials) (*generated.UserCredentials, error)
+	GetUserCards(ctx context.Context, userIds []int64) ([]*common.UserCreationComment, error)
+	GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]int64, error)
+	GetFolloweesByView(ctx context.Context, userId int64, page int32) ([]int64, error)
+	GetFollowers(ctx context.Context, userId int64, page int32) ([]int64, error)
+	CancelFollow(ctx context.Context, follow *generated.Follow) error
+	DelCredentials(ctx context.Context, username string) error
 }

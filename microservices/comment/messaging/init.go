@@ -1,17 +1,6 @@
 package messaging
 
-const (
-	PublishComment = "PublishComment"
-	DeleteComment  = "DeleteComment"
-)
-
-var (
-	connStr         string
-	ExchangesConfig = map[string]string{
-		"PublishComment": "direct",
-		"DeleteComment":  "direct",
-	}
-)
+var connStr string
 
 func InitStr(_str string) {
 	connStr = _str

@@ -10,7 +10,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
-	db "github.com/Yux77Yux/platform_backend/microservices/review/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/review/tools"
 )
 
@@ -20,13 +19,20 @@ func InitialUpdateChain() *UpdateChain {
 		Tail:       &UpdateListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.Review, EXE_CHANNEL_COUNT),
-		listenerPool: sync.Pool{
+		pool: sync.Pool{
 			New: func() any {
-				return &UpdateListener{
-					timeoutDuration: 10 * time.Second,
-					updateInterval:  3 * time.Second,
-				}
+				slice := make([]*generated.Review, 0, MAX_BATCH_SIZE)
+				return &slice
 			},
+		},
+	}
+	_chain.listenerPool = sync.Pool{
+		New: func() any {
+			return &UpdateListener{
+				chain:           _chain,
+				timeoutDuration: 10 * time.Second,
+				updateInterval:  3 * time.Second,
+			}
 		},
 	}
 	_chain.Head.next = _chain.Tail
@@ -43,6 +49,22 @@ type UpdateChain struct {
 	nodeMux      sync.Mutex
 	exeChannel   chan *[]*generated.Review
 	listenerPool sync.Pool
+	pool         sync.Pool
+	cond         sync.Cond
+}
+
+func (chain *UpdateChain) Close(signal chan any) {
+	chain.nodeMux.Lock()
+	for atomic.LoadInt32(&chain.Count) > 0 {
+		chain.cond.Wait() // 等待 Count 变成 0
+	}
+	chain.nodeMux.Unlock()
+
+	close(signal)
+}
+
+func (chain *UpdateChain) GetPoolObj() any {
+	return chain.pool.Get()
 }
 
 func (chain *UpdateChain) ExecuteBatch() {
@@ -60,7 +82,7 @@ func (chain *UpdateChain) ExecuteBatch() {
 
 			// 放回对象池
 			*ReviewsPtr = Reviews[:0]
-			updatePool.Put(ReviewsPtr)
+			chain.pool.Put(ReviewsPtr)
 		}(ReviewsPtr)
 	}
 }

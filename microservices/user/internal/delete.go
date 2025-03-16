@@ -4,7 +4,6 @@ import (
 	"context"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 

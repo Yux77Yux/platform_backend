@@ -1,4 +1,4 @@
-package messaging
+package receiver
 
 // 由于不同的exchange，需要不同的接收者，事实上需要被调度，统一开关
 
@@ -12,9 +12,7 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/user/messaging/dispatch"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
@@ -28,7 +26,7 @@ func storeUserProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 写入缓存
-	go dispatch.HandleRequest(user_info, dispatch.InsertUserCache)
+	go dispatcher.HandleRequest(user_info, dispatch.InsertUserCache)
 
 	return nil
 }
@@ -42,7 +40,7 @@ func storeCredentialsProcessor(ctx context.Context, msg *anypb.Any) error {
 		return fmt.Errorf("storeCredentialsProcessor error: %w", err)
 	}
 
-	go dispatch.HandleRequest(credentials, dispatch.RegisterCache)
+	go dispatcher.HandleRequest(credentials, dispatch.RegisterCache)
 	return nil
 }
 
@@ -76,8 +74,8 @@ func registerProcessor(ctx context.Context, msg *anypb.Any) error {
 		UserCreatedAt: timestamppb.Now(),
 	}
 
-	go dispatch.HandleRequest(user_info, dispatch.InsertUser)
-	go dispatch.HandleRequest(credentials, dispatch.Register)
+	go dispatcher.HandleRequest(user_info, dispatch.InsertUser)
+	go dispatcher.HandleRequest(credentials, dispatch.Register)
 	return nil
 }
 
@@ -90,8 +88,8 @@ func updateUserSpaceProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 更新 数据库用户表
-	go dispatch.HandleRequest(user, dispatch.UpdateUserSpace)
-	go dispatch.HandleRequest(user, dispatch.UpdateUserSpaceCache)
+	go dispatcher.HandleRequest(user, dispatch.UpdateUserSpace)
+	go dispatcher.HandleRequest(user, dispatch.UpdateUserSpaceCache)
 
 	return nil
 }
@@ -105,8 +103,8 @@ func updateUserBioProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 更新 数据库用户表
-	go dispatch.HandleRequest(user, dispatch.UpdateUserBio)
-	go dispatch.HandleRequest(user, dispatch.UpdateUserBioCache)
+	go dispatcher.HandleRequest(user, dispatch.UpdateUserBio)
+	go dispatcher.HandleRequest(user, dispatch.UpdateUserBioCache)
 
 	return nil
 }
@@ -120,8 +118,8 @@ func updateUserAvatarProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 更新 数据库用户表
-	go dispatch.HandleRequest(user, dispatch.UpdateUserAvatar)
-	go dispatch.HandleRequest(user, dispatch.UpdateUserAvatarCache)
+	go dispatcher.HandleRequest(user, dispatch.UpdateUserAvatar)
+	go dispatcher.HandleRequest(user, dispatch.UpdateUserAvatarCache)
 
 	return nil
 }
@@ -167,8 +165,8 @@ func updateUserStatusProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 更新 数据库用户表
-	go dispatch.HandleRequest(updateStatus, dispatch.UpdateUserStatus)
-	go dispatch.HandleRequest(updateStatus, dispatch.UpdateUserStatusCache)
+	go dispatcher.HandleRequest(updateStatus, dispatch.UpdateUserStatus)
+	go dispatcher.HandleRequest(updateStatus, dispatch.UpdateUserStatusCache)
 
 	return nil
 }
@@ -182,8 +180,8 @@ func followProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 更新 数据库用户表
-	go dispatch.HandleRequest(follow, dispatch.Follow)
-	go dispatch.HandleRequest(follow, dispatch.FollowCache)
+	go dispatcher.HandleRequest(follow, dispatch.Follow)
+	go dispatcher.HandleRequest(follow, dispatch.FollowCache)
 
 	return nil
 }

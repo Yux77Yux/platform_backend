@@ -11,6 +11,7 @@ import (
 
 // 监听者结构体
 type UserStatusListener struct {
+	chain                   ChainInterface
 	exeChannel              chan *[]*generated.UserUpdateStatus // 批量发送的通道
 	userUpdateStatusChannel chan *generated.UserUpdateStatus    // 用于接收的通道
 	count                   uint32
@@ -58,7 +59,7 @@ func (listener *UserStatusListener) SendBatch() {
 		return
 	}
 
-	userUpdateStatusPtr := userStatusPool.Get().(*[]*generated.UserUpdateStatus)
+	userUpdateStatusPtr := listener.chain.GetPoolObj().(*[]*generated.UserUpdateStatus)
 	*userUpdateStatusPtr = (*userUpdateStatusPtr)[:count]
 	userUpdateStatus := *userUpdateStatusPtr
 	for i := uint32(0); i < count; i++ {
@@ -117,7 +118,7 @@ func (listener *UserStatusListener) RestartTimeoutTimer() {
 		if count == 0 {
 			listener.Cleanup()
 			// 超时后销毁监听者
-			userStatusChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

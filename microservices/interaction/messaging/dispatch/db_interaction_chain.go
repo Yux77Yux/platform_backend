@@ -11,9 +11,7 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
-	"github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
-	db "github.com/Yux77Yux/platform_backend/microservices/interaction/repository"
-	"github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
+	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
 
 func InitialDbChain() *DbInteractionChain {
@@ -22,13 +20,20 @@ func InitialDbChain() *DbInteractionChain {
 		Tail:       &DbInteractionsListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.OperateInteraction, EXE_CHANNEL_COUNT),
-		listenerPool: sync.Pool{
+		pool: sync.Pool{
 			New: func() any {
-				return &DbInteractionsListener{
-					timeoutDuration: 10 * time.Second,
-					updateInterval:  3 * time.Second,
-				}
+				slice := make([]*generated.OperateInteraction, 0, MAX_BATCH_SIZE)
+				return &slice
 			},
+		},
+	}
+	_chain.listenerPool = sync.Pool{
+		New: func() any {
+			return &DbInteractionsListener{
+				chain:           _chain,
+				timeoutDuration: 10 * time.Second,
+				updateInterval:  3 * time.Second,
+			}
 		},
 	}
 	_chain.Head.next = _chain.Tail
@@ -45,6 +50,22 @@ type DbInteractionChain struct {
 	nodeMux      sync.Mutex
 	exeChannel   chan *[]*generated.OperateInteraction
 	listenerPool sync.Pool
+	pool         sync.Pool
+	cond         sync.Cond
+}
+
+func (chain *DbInteractionChain) Close(signal chan any) {
+	chain.nodeMux.Lock()
+	for atomic.LoadInt32(&chain.Count) > 0 {
+		chain.cond.Wait() // 等待 Count 变成 0
+	}
+	chain.nodeMux.Unlock()
+
+	close(signal)
+}
+
+func (chain *DbInteractionChain) GetPoolObj() any {
+	return chain.pool.Get()
 }
 
 func (chain *DbInteractionChain) ExecuteBatch() {
@@ -89,7 +110,7 @@ func (chain *DbInteractionChain) ExecuteBatch() {
 			}()
 
 			*interactionsPtr = interactions[:0]
-			interactionsPool.Put(interactionsPtr)
+			chain.pool.Put(interactionsPtr)
 		}(interactionsPtr)
 	}
 }

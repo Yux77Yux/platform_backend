@@ -22,7 +22,7 @@ func GetPendingReviews(ctx context.Context, reviewerId int64, reviewType generat
 		typeName = Creation_review
 	}
 
-	news := GetMsgs(typeName, typeName, typeName, LIMIT)
+	news := messaging.GetMsgs(typeName, typeName, typeName, LIMIT)
 
 	length := len(news)
 	reviews := make([]*generated.Review, length)
@@ -46,7 +46,7 @@ func GetPendingReviews(ctx context.Context, reviewerId int64, reviewType generat
 		anyReview := &generated.AnyReview{
 			Reviews: reviews,
 		}
-		err := SendMessage(ctx, BatchUpdate, BatchUpdate, anyReview)
+		err := messaging.SendMessage(ctx, BatchUpdate, BatchUpdate, anyReview)
 		if err != nil {
 			log.Printf("error: BatchUpdate SendMessage %v", err)
 		}

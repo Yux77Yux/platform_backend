@@ -1,24 +1,23 @@
 package main
 
 import (
-	"context"
 	"os"
-	"sync"
 
 	service "github.com/Yux77Yux/platform_backend/microservices/auth/service"
 	tools "github.com/Yux77Yux/platform_backend/microservices/auth/tools"
 )
 
-func Run(ctx context.Context) {
-	var wg sync.WaitGroup
+func Run(signal chan os.Signal) {
+	var (
+		closeServer func(chan any)
+	)
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		service.ServerRun(ctx)
-	}()
+	closeServer = service.ServerRun()
 
-	wg.Wait()
-	tools.LogInfo(tools.GetMainValue(ctx), "main exit")
+	<-signal
+	s_closed_sig := make(chan any, 1)
+	closeServer(s_closed_sig)
+
+	tools.LogInfo("main", "exit")
 	os.Exit(0)
 }

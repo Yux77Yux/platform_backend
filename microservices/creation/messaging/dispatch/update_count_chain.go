@@ -10,7 +10,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
-	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 )
 
 type ExeBody struct {
@@ -24,13 +23,20 @@ func InitialUpdateCountChain() *UpdateCountChain {
 	_chain := &UpdateCountChain{
 		Count:      0,
 		exeChannel: make(chan *ExeBody, EXE_CHANNEL_COUNT),
-		listenerPool: sync.Pool{
+		pool: sync.Pool{
 			New: func() any {
-				return &UpdateCountListener{
-					timeoutDuration: 12 * time.Second,
-					updateInterval:  5 * time.Second,
-				}
+				return new(ExeBody)
 			},
+		},
+	}
+
+	_chain.listenerPool = sync.Pool{
+		New: func() any {
+			return &UpdateCountListener{
+				chain:           _chain,
+				timeoutDuration: 12 * time.Second,
+				updateInterval:  5 * time.Second,
+			}
 		},
 	}
 
@@ -44,6 +50,23 @@ type UpdateCountChain struct {
 	Count        int32 // 监听者数量
 	exeChannel   chan *ExeBody
 	listenerPool sync.Pool
+	pool         sync.Pool
+	cond         sync.Cond
+	nodeMux      sync.Mutex
+}
+
+func (chain *UpdateCountChain) Close(signal chan any) {
+	chain.nodeMux.Lock()
+	for atomic.LoadInt32(&chain.Count) > 0 {
+		chain.cond.Wait() // 等待 Count 变成 0
+	}
+	chain.nodeMux.Unlock()
+
+	close(signal)
+}
+
+func (chain *UpdateCountChain) GetPoolObj() any {
+	return chain.pool.Get()
 }
 
 func (chain *UpdateCountChain) ExecuteBatch() {

@@ -1,9 +1,17 @@
 package internal
 
-type RequestHandlerFunc = func(string) error
+import (
+	"context"
 
-type DispatcherInterface interface {
-	Start()
-	GetChannel() chan RequestHandlerFunc
-	Shutdown()
+	"google.golang.org/protobuf/proto"
+)
+
+type SqlMethod interface {
+}
+
+type MessageQueueMethod interface {
+	SendMessage(ctx context.Context, exchange string, routeKey string, req proto.Message) error
+}
+
+type CacheMethod interface {
 }

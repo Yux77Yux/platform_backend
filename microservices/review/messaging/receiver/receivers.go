@@ -1,4 +1,4 @@
-package messaging
+package receiver
 
 // 由于不同的exchange，需要不同的接收者，事实上需要被调度，统一开关
 
@@ -13,9 +13,7 @@ import (
 	creation "github.com/Yux77Yux/platform_backend/generated/creation"
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
 	user "github.com/Yux77Yux/platform_backend/generated/user"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/review/messaging"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/review/messaging/dispatch"
-	db "github.com/Yux77Yux/platform_backend/microservices/review/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/review/tools"
 )
 

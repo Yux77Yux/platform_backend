@@ -10,8 +10,6 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
-	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/dispatch"
 	recommend "github.com/Yux77Yux/platform_backend/microservices/interaction/recommend"
 )

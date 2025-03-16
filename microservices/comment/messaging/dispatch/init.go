@@ -10,46 +10,42 @@ import (
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 )
 
-const (
-	Insert = "Insert"
-	Delete = "Delete"
-
-	LISTENER_CHANNEL_COUNT = 120
-	MAX_BATCH_SIZE         = 50
-	EXE_CHANNEL_COUNT      = 5
-)
-
-var (
-	deleteChain     *DeleteChain
-	delCommentsPool = sync.Pool{
-		New: func() any {
-			slice := make([]*common.AfterAuth, 0, MAX_BATCH_SIZE)
-			return &slice
-		},
-	}
-
-	insertChain        *InsertChain
-	insertCommentsPool = sync.Pool{
-		New: func() any {
-			slice := make([]*generated.Comment, 0, MAX_BATCH_SIZE)
-			return &slice
-		},
-	}
-)
-
-func init() {
-	// 初始化责任链
-	insertChain = InitialInsertChain()
-	deleteChain = InitialDeleteChain()
+type Dispatch struct {
+	chainMap map[string]ChainInterface
 }
 
-func HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
+func (d *Dispatch) HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 	copy := proto.Clone(msg)
+	d.chainMap[typeName].HandleRequest(copy)
+}
 
-	switch typeName {
-	case Insert:
-		insertChain.HandleRequest(copy)
-	case Delete:
-		deleteChain.HandleRequest(copy)
+func (d *Dispatch) Close() {
+	for _, chain := range d.chainMap {
+		s := make(chan any, 1)
+		chain.Close(s)
+		<-s
 	}
+}
+
+var (
+	db    SqlMethod
+	cache CacheMethod
+)
+
+func InitDb(_db SqlMethod) {
+	db = _db
+}
+
+func InitCache(_cache CacheMethod) {
+	cache = _cache
+}
+
+func Run() DispatchInterface {
+	chainMap := make(map[string]ChainInterface)
+	chainMap[]
+	_dispatch := &Dispatch{
+		chainMap: chainMap,
+	}
+
+	return _dispatch
 }

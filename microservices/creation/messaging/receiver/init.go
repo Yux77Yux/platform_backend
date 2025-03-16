@@ -6,6 +6,24 @@ import (
 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 )
 
+var (
+	db        SqlMethod
+	messaging MessageQueueMethod
+	cache     CacheMethod
+)
+
+func InitDb(_db SqlMethod) {
+	db = _db
+}
+
+func InitMQ(_messaging MessageQueueMethod) {
+	messaging = _messaging
+}
+
+func InitCache(_cache CacheMethod) {
+	cache = _cache
+}
+
 const (
 	UpdateDbCreation    = messaging.UpdateDbCreation
 	StoreCreationInfo   = messaging.StoreCreationInfo

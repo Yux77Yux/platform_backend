@@ -1,21 +1,7 @@
 package repository
 
 import (
-	"context"
-	"database/sql"
+	pkgDb "github.com/Yux77Yux/platform_backend/pkg/database"
 )
 
-type SqlMethods interface {
-	Close() error
-
-	QueryRow(query string, args ...interface{}) *sql.Row
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-
-	BeginTransaction() (*sql.Tx, error)
-	CommitTransaction(tx *sql.Tx) error
-	RollbackTransaction(tx *sql.Tx) error
-}
+type SqlInterface = pkgDb.SqlInterface

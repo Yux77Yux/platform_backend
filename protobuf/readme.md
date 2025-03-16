@@ -1,7 +1,12 @@
 protoc -I protobuf --go_out=./generated --go-grpc_out=./generated `
           protobuf/google/api/*.proto `
           protobuf/common/*.proto `
-          protobuf/common/event/*.proto `
+          protobuf/event/aggregator/*.proto `
+          protobuf/event/user/*.proto `
+          protobuf/event/creation/*.proto `
+          protobuf/event/interaction/*.proto `
+          protobuf/event/review/*.proto `
+          protobuf/event/comment/*.proto `
           protobuf/aggregator/*.proto `
           protobuf/aggregator/messages/*.proto `
           protobuf/aggregator/methods/*.proto `
@@ -34,7 +39,12 @@ protoc -I protobuf `
        --descriptor_set_out=./deploy/docker/envoy/descriptor.pb `
           protobuf/google/api/*.proto `
           protobuf/common/*.proto `
-          protobuf/common/event/*.proto `
+          protobuf/event/aggregator/*.proto `
+          protobuf/event/user/*.proto `
+          protobuf/event/creation/*.proto `
+          protobuf/event/interaction/*.proto `
+          protobuf/event/review/*.proto `
+          protobuf/event/comment/*.proto `
           protobuf/aggregator/*.proto `
           protobuf/aggregator/messages/*.proto `
           protobuf/aggregator/methods/*.proto `

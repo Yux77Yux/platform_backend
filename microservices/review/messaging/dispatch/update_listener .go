@@ -11,6 +11,7 @@ import (
 
 // 监听者结构体
 type UpdateListener struct {
+	chain        ChainInterface
 	exeChannel   chan *[]*generated.Review // 批量发送评论的通道
 	datasChannel chan *generated.Review    // 用于接收评论的通道
 	count        uint32
@@ -59,7 +60,7 @@ func (listener *UpdateListener) SendBatch() {
 		return
 	}
 
-	datasPtr := updatePool.Get().(*[]*generated.Review)
+	datasPtr := listener.chain.GetPoolObj().(*[]*generated.Review)
 	*datasPtr = (*datasPtr)[:count]
 	UpdateUsers := *datasPtr
 	for i := 0; uint32(i) < count; i++ {
@@ -116,7 +117,7 @@ func (listener *UpdateListener) RestartTimeoutTimer() {
 		if count == 0 {
 			// 超时后销毁监听者
 			listener.Cleanup()
-			updateChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

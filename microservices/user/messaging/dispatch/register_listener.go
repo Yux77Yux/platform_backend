@@ -11,6 +11,7 @@ import (
 
 // 监听者结构体
 type RegisterListener struct {
+	chain                  ChainInterface
 	exeChannel             chan *[]*generated.UserCredentials // 批量发送的通道
 	userCredentialsChannel chan *generated.UserCredentials    // 用于接收的通道
 	count                  uint32
@@ -57,7 +58,7 @@ func (listener *RegisterListener) SendBatch() {
 	if count == 0 {
 		return
 	}
-	insertUserCredentialsPtr := insertUserCredentialsPool.Get().(*[]*generated.UserCredentials)
+	insertUserCredentialsPtr := listener.chain.GetPoolObj().(*[]*generated.UserCredentials)
 	*insertUserCredentialsPtr = (*insertUserCredentialsPtr)[:count]
 	insertUserCredentials := *insertUserCredentialsPtr
 	for i := uint32(0); i < count; i++ {
@@ -113,7 +114,7 @@ func (listener *RegisterListener) RestartTimeoutTimer() {
 		if count == 0 {
 			listener.Cleanup()
 			// 超时后销毁监听者
-			registerChain.DestroyListener(listener)
+			listener.chain.DestroyListener(listener)
 		} else {
 			listener.RestartTimeoutTimer() // 重启定时器
 		}

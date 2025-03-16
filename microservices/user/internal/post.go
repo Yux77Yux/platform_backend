@@ -6,9 +6,6 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
@@ -59,7 +56,7 @@ func addCredential(ctx context.Context, user_credentials *generated.UserCredenti
 	// 邮箱通过
 	if emailExist {
 		existErr := fmt.Errorf("error: Sorry, that email you've entered is unavailable. Please pick a different one")
-		exist, err := cache.ExistsUsername(ctx, username)
+		exist, err := cache.ExistsEmail(ctx, email)
 		if err != nil {
 			traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 			go tools.LogError(traceId, fullName, err)
@@ -83,7 +80,7 @@ func addCredential(ctx context.Context, user_credentials *generated.UserCredenti
 	// 通过则异步发送
 	go func(user_credentials *generated.UserCredentials, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.Register, messaging.Register, user_credentials)
+		err = messaging.SendMessage(ctx, EXCHANGE_REGISTER, KEY_REGISTER, user_credentials)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}
@@ -190,7 +187,7 @@ func Follow(ctx context.Context, req *generated.FollowRequest) (*generated.Follo
 
 	go func(follow *generated.Follow, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.Follow, messaging.Follow, follow)
+		err = messaging.SendMessage(ctx, EXCHANGE_FOLLOW, KEY_FOLLOW, follow)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

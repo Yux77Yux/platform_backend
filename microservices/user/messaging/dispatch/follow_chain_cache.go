@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
+	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 )
 
 func InitialFollowCacheChain() *FollowCacheChain {
@@ -19,13 +19,20 @@ func InitialFollowCacheChain() *FollowCacheChain {
 		Tail:       &FollowCacheListener{next: nil},
 		Count:      0,
 		exeChannel: make(chan *[]*generated.Follow, EXE_CHANNEL_COUNT),
-		listenerPool: sync.Pool{
+		pool: sync.Pool{
 			New: func() any {
-				return &FollowCacheListener{
-					timeoutDuration: 10 * time.Second,
-					updateInterval:  3 * time.Second,
-				}
+				slice := make([]*generated.Follow, 0, MAX_BATCH_SIZE)
+				return &slice
 			},
+		},
+	}
+	_chain.listenerPool = sync.Pool{
+		New: func() any {
+			return &FollowCacheListener{
+				timeoutDuration: 10 * time.Second,
+				updateInterval:  3 * time.Second,
+				chain:           _chain,
+			}
 		},
 	}
 	_chain.Head.next = _chain.Tail
@@ -43,6 +50,22 @@ type FollowCacheChain struct {
 	nodeMux      sync.Mutex
 	exeChannel   chan *[]*generated.Follow
 	listenerPool sync.Pool
+	pool         sync.Pool
+	cond         sync.Cond
+}
+
+func (chain *FollowCacheChain) Close(signal chan any) {
+	chain.nodeMux.Lock()
+	for atomic.LoadInt32(&chain.Count) > 0 {
+		chain.cond.Wait() // 等待 Count 变成 0
+	}
+	chain.nodeMux.Unlock()
+
+	close(signal)
+}
+
+func (chain *FollowCacheChain) GetPoolObj() any {
+	return chain.pool.Get()
 }
 
 func (chain *FollowCacheChain) ExecuteBatch() {
@@ -55,12 +78,13 @@ func (chain *FollowCacheChain) ExecuteBatch() {
 			err := cache.Follow(ctx, FollowUsers)
 			cancel()
 			if err != nil {
-				log.Printf("error: Follow error %v", err)
+				tools.LogError("", "cache Follow", err)
+				return
 			}
 
 			// 放回对象池
 			*FollowUsersPtr = FollowUsers[:0]
-			followPool.Put(FollowUsersPtr)
+			chain.pool.Put(FollowUsersPtr)
 		}(FollowUsersPtr)
 	}
 }

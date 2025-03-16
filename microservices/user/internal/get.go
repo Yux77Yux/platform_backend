@@ -5,9 +5,6 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/user"
-	cache "github.com/Yux77Yux/platform_backend/microservices/user/cache"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/user/messaging"
-	db "github.com/Yux77Yux/platform_backend/microservices/user/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/user/tools"
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
@@ -62,7 +59,7 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 	user_info.UserDefault.UserId = user_id
 	go func(user_info *generated.User, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err := messaging.SendMessage(ctx, messaging.StoreUser, messaging.StoreUser, user_info)
+		err := messaging.SendMessage(ctx, EXCHANGE_STORE_USER, KEY_STORE_USER, user_info)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

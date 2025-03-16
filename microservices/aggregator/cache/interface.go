@@ -4,7 +4,14 @@ import (
 	"context"
 
 	"github.com/go-redis/redis/v8"
+
+	common "github.com/Yux77Yux/platform_backend/generated/common"
 )
+
+type CacheMethod interface {
+	AddIpInSet(ctx context.Context, req *common.ViewCreation) error
+	ExistIpInSet(ctx context.Context, req *common.ViewCreation) (bool, error)
+}
 
 type CacheInterface interface {
 	Open(connStr string, password string) error

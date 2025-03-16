@@ -5,7 +5,7 @@ import (
 	"database/sql"
 )
 
-type SqlMethods interface {
+type SqlInterface interface {
 	Close() error
 
 	QueryRow(query string, args ...interface{}) *sql.Row

@@ -1,16 +1,17 @@
 package cache
 
 import (
-	"context"
 	"log"
+
+	dispatch "github.com/Yux77Yux/platform_backend/microservices/comment/messaging/dispatch"
+	tools "github.com/Yux77Yux/platform_backend/microservices/comment/tools"
 
 	pkgCache "github.com/Yux77Yux/platform_backend/pkg/cache"
 )
 
 var (
-	addr        string
-	password    string
-	CacheClient CacheInterface
+	addr     string
+	password string
 )
 
 func InitStr(Addr, Password string) {
@@ -18,10 +19,7 @@ func InitStr(Addr, Password string) {
 }
 
 func GetCacheClient() CacheInterface {
-	if CacheClient != nil {
-		return CacheClient
-	}
-	CacheClient = &pkgCache.RedisClient{}
+	CacheClient := &pkgCache.RedisClient{}
 	err := CacheClient.Open(addr, password)
 	if err != nil {
 		log.Printf("error: failed to connect the cache client: %v", err)
@@ -31,8 +29,18 @@ func GetCacheClient() CacheInterface {
 	return CacheClient
 }
 
-func Run(ctx context.Context) error {
-	CacheClient = GetCacheClient()
-	<-ctx.Done()
-	return CacheClient.Close()
+func Run() func() {
+	client := GetCacheClient()
+	cache := &CacheMethodStruct{
+		CacheClient: client,
+	}
+
+	dispatch.InitCache(cache)
+
+	return func() {
+		err := cache.CacheClient.Close()
+		if err != nil {
+			tools.LogError("", "Cache Close", err)
+		}
+	}
 }

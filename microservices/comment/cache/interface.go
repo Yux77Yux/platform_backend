@@ -4,6 +4,10 @@ import (
 	"context"
 )
 
+type CacheMethod interface {
+	UpdateCommentsCount(ctx context.Context, creationId int64, count int64) error
+}
+
 type CacheInterface interface {
 	Open(connStr string, password string) error
 	Close() error
