@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"log"
 	"sync/atomic"
 	"time"
 
@@ -60,7 +61,11 @@ func (listener *InsertListener) SendBatch() {
 		return
 	}
 
-	datasPtr := listener.chain.GetPoolObj().(*[]*generated.NewReview)
+	obj := listener.chain.GetPoolObj()
+	datasPtr, ok := obj.(*[]*generated.NewReview)
+	if !ok {
+		log.Fatalf("unexpected type from sync.Pool: %T", obj)
+	}
 	*datasPtr = (*datasPtr)[:count]
 	insertUsers := *datasPtr
 	for i := 0; uint32(i) < count; i++ {

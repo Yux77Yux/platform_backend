@@ -1,7 +1,6 @@
 package dispatch
 
 import (
-	"log"
 	"sync/atomic"
 	"time"
 
@@ -38,10 +37,6 @@ func (listener *RegisterCacheListener) StartListening() {
 
 // 分发至通道
 func (listener *RegisterCacheListener) Dispatch(data protoreflect.ProtoMessage) {
-	log.Printf("RegisterCacheListener exeChannel %v", listener.exeChannel)
-	log.Printf("RegisterCacheListener exeChannel count %v", len(listener.exeChannel))
-	log.Printf("RegisterCacheListener userCredentialsChannel %v", listener.userCredentialsChannel)
-	log.Printf("RegisterCacheListener userCredentialsChannel count %v", len(listener.userCredentialsChannel))
 	// 长度加1
 	count := atomic.AddUint32(&listener.count, 1)
 
@@ -64,7 +59,6 @@ func (listener *RegisterCacheListener) SendBatch() {
 		return
 	}
 
-	log.Printf("RegisterCacheListener SendBatch %d", count)
 	insertUserCredentialsPtr := listener.chain.GetPoolObj().(*[]*generated.UserCredentials)
 	*insertUserCredentialsPtr = (*insertUserCredentialsPtr)[:count]
 	insertUserCredentials := *insertUserCredentialsPtr

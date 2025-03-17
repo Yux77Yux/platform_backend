@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"time"
@@ -134,7 +135,6 @@ func (c *SqlMethodStruct) GetTarget(ctx context.Context, id int64) (int64, *gene
 		SELECT target_id,target_type
 		FROM db_review_1.Review
 		WHERE id = ? `
-
 	var (
 		targetId   int64
 		targetType string
@@ -175,8 +175,7 @@ func (c *SqlMethodStruct) PostReviews(ctx context.Context, reviews []*generated.
 
 	query := fmt.Sprintf(`
 		INSERT INTO db_review_1.Review(id,target_id,target_type,detail)
-		VALUES %s
-		ON DUPLICATE KEY UPDATE id = id;`, strings.Join(sqlStr, ","))
+		VALUES %s ;`, strings.Join(sqlStr, ","))
 
 	_, err := c.db.ExecContext(
 		ctx,
@@ -190,37 +189,38 @@ func (c *SqlMethodStruct) PostReviews(ctx context.Context, reviews []*generated.
 // UPDATE
 func (c *SqlMethodStruct) UpdateReviews(ctx context.Context, reviews []*generated.Review) error {
 	const (
-		QM          = "?"
-		QQM         = "WHEN id = ? THEN ?"
-		FieldsCount = 2 * 3
+		QM  = "(?,?)"
+		QQM = "WHEN id = ? THEN ?"
 	)
 	length := len(reviews)
 	if length <= 0 {
 		return nil
 	}
-
+	step := length * 2
+	initialStatus := generated.ReviewStatus_PENDING.String()
 	QMS := make([]string, length)
 	sqlStr := make([]string, length)
-	values := make([]any, length*7)
+	values := make([]any, length*8)
 	for i, review := range reviews {
 		QMS[i] = QM
 		sqlStr[i] = QQM
 		id := review.GetNew().GetId()
 
-		values[i*2+0] = id
+		values[i*2] = id
 		values[i*2+1] = review.GetStatus().String()
 
-		values[length*2+i*2+0] = id
-		values[length*2+i*2+1] = nil
+		values[step+i*2] = id
+		values[step+i*2+1] = nil
 		msg := review.GetRemark()
 		if msg != "" {
 			values[length+i*2+1] = msg
 		}
 
-		values[length*4+i*2+0] = id
-		values[length*4+i*2+1] = review.GetReviewerId()
+		values[step*2+i*2] = id
+		values[step*2+i*2+1] = review.GetReviewerId()
 
-		values[length*6+i] = id
+		values[step*3+i*2] = id
+		values[step*3+i*2+1] = initialStatus
 	}
 
 	join := strings.Join(sqlStr, " ")
@@ -236,7 +236,7 @@ func (c *SqlMethodStruct) UpdateReviews(ctx context.Context, reviews []*generate
 			reviewer_id = CASE 
 				%s
 			END
-		WHERE id IN (%s)`,
+		WHERE (id,status) IN (%s)`,
 		join,
 		join,
 		join,
@@ -258,7 +258,8 @@ func (c *SqlMethodStruct) UpdateReview(ctx context.Context, review *generated.Re
 			status = ?,
 			remark =?,
 			reviewer_id = ?
-		WHERE id = ?`
+		WHERE id = ?
+		AND status = 'PENDING'`
 
 	var (
 		status      = review.GetStatus().String()

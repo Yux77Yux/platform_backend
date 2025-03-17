@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -63,36 +64,15 @@ func GetPublishVideoInit() {
 		}
 	}()
 
-	// 已经发布的
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		filename := "E:/xuexi/platform/platform_backend/scripts/result/pending_video_ok.jsonl"
-
-		f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
-		if err != nil {
-			log.Fatalf("无法创建临时文件 %s: %v", filename, err)
-		}
-
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			var p CreationInfo_OK
-			if err := json.Unmarshal(scanner.Bytes(), &p); err != nil {
-				log.Fatalf("error: json %s", err.Error())
-			}
-			PendingVideoStatusOkMap[p.CreationId] = &p
-		}
-	}()
-
 	wg.Wait()
 }
 func TestPublishVideo(t *testing.T) {
 	GetPublishVideoInit()
-	log.Printf("init OKOK")
-	totalRequests := len(GetVideosOkMapIdInDb)
+	totalRequests := int32(0)
 	errCh := make(chan *CreationInfo_ER, totalRequests)
 	okCh := make(chan *CreationInfo_OK, totalRequests)
-	concurrencyLimit := int32(5)
+	concurrencyLimit := int32(19)
+	var okWg, errWg sync.WaitGroup
 
 	// 初始化错误通道
 	go func() {
@@ -116,13 +96,14 @@ func TestPublishVideo(t *testing.T) {
 			if _, err := writer.Write(append(b, '\n')); err != nil {
 				log.Fatalf("error writing to file: %s", err.Error())
 			}
+			errWg.Done()
 		}
 	}()
 
 	// 初始化成功通道
 	go func() {
 		path := "E:/xuexi/platform/platform_backend/scripts/result/pending_video_ok.jsonl"
-		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		file, err := os.OpenFile(path, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatalf("file err %s", err.Error())
 		}
@@ -141,6 +122,7 @@ func TestPublishVideo(t *testing.T) {
 			if _, err := writer.Write(append(b, '\n')); err != nil {
 				log.Fatalf("error writing to file: %s", err.Error())
 			}
+			okWg.Done()
 		}
 	}()
 
@@ -149,9 +131,6 @@ func TestPublishVideo(t *testing.T) {
 	startTime := time.Now()                      // 记录整个测试开始时间
 	for _, video := range GetVideosOkMapIdInDb {
 		creationId := video.CreationId
-		if _, exist := PendingVideoStatusOkMap[creationId]; exist {
-			continue
-		}
 
 		wg.Add(1)
 		sem <- struct{}{} // 信号量申请，超出则阻塞
@@ -163,9 +142,11 @@ func TestPublishVideo(t *testing.T) {
 			// 拿accessToken
 			ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 			authorId := video.AuthorId
+			atomic.AddInt32(&totalRequests, 1)
 			response, err := api.Refresh(ctx, LoginOKMapIdInDb[authorId].RefreshToken)
 			cancel()
 			if err != nil {
+				errWg.Add(1)
 				errCh <- &CreationInfo_ER{
 					CreationId: creationId,
 					AuthorId:   authorId,
@@ -177,6 +158,7 @@ func TestPublishVideo(t *testing.T) {
 			status := msg.GetStatus()
 			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
 				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errWg.Add(1)
 				errCh <- &CreationInfo_ER{
 					CreationId: creationId,
 					AuthorId:   authorId,
@@ -189,10 +171,12 @@ func TestPublishVideo(t *testing.T) {
 			start := time.Now()
 			_ctx, _cancel := context.WithTimeout(context.Background(), 4*time.Second)
 
+			atomic.AddInt32(&totalRequests, 1)
 			_response, err := api.PublishDraftCreation(_ctx, accessToken, creationId)
 			_cancel()
 			end := time.Now()
 			if err != nil {
+				errWg.Add(1)
 				errCh <- &CreationInfo_ER{
 					CreationId: creationId,
 					AuthorId:   authorId,
@@ -204,6 +188,7 @@ func TestPublishVideo(t *testing.T) {
 			status = msg.GetStatus()
 			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
 				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errWg.Add(1)
 				errCh <- &CreationInfo_ER{
 					CreationId: creationId,
 					AuthorId:   authorId,
@@ -212,6 +197,7 @@ func TestPublishVideo(t *testing.T) {
 				return
 			}
 
+			okWg.Add(1)
 			okCh <- &CreationInfo_OK{
 				CreationId: creationId,
 				AuthorId:   authorId,
@@ -219,8 +205,6 @@ func TestPublishVideo(t *testing.T) {
 				Duration:   math.Round(float64(end.Sub(start).Milliseconds())*100) / 100,
 			}
 		}(video)
-
-		time.Sleep(time.Millisecond * 5)
 	}
 	wg.Wait()
 	endTime := time.Now() // 记录整个测试结束时间
@@ -233,9 +217,43 @@ func TestPublishVideo(t *testing.T) {
 	log.Printf("Total Duration: %.2f seconds\n", totalDuration)
 	log.Printf("Throughput: %.2f requests/second\n", throughput)
 
+	okWg.Wait()
+	errWg.Wait()
 	close(errCh)
 	close(okCh)
 }
+
+/* TestPublishVideo
+2025/03/17 22:37:10 ConcurrencyLimit: 19
+2025/03/17 22:37:10 Total Requests: 916
+2025/03/17 22:37:10 Total Duration: 0.88 seconds
+2025/03/17 22:37:10 Throughput: 1044.43 requests/second
+
+2025/03/17 19:08:10 ConcurrencyLimit: 19
+2025/03/17 19:08:10 Total Requests: 916
+2025/03/17 19:08:10 Total Duration: 1.47 seconds
+2025/03/17 19:08:10 Throughput: 622.75 requests/second
+
+2025/03/17 19:11:42 ConcurrencyLimit: 19
+2025/03/17 19:11:42 Total Requests: 916
+2025/03/17 19:11:42 Total Duration: 1.40 seconds
+2025/03/17 19:11:42 Throughput: 652.25 requests/second
+
+2025/03/17 20:05:19 ConcurrencyLimit: 19
+2025/03/17 20:05:19 Total Requests: 916
+2025/03/17 20:05:19 Total Duration: 1.40 seconds
+2025/03/17 20:05:19 Throughput: 654.75 requests/second
+
+2025/03/17 19:09:07 ConcurrencyLimit: 19
+2025/03/17 19:09:07 Total Requests: 916
+2025/03/17 19:09:07 Total Duration: 1.43 seconds
+2025/03/17 19:09:07 Throughput: 640.65 requests/second
+
+2025/03/17 23:16:24 ConcurrencyLimit: 19
+2025/03/17 23:16:24 Total Requests: 916
+2025/03/17 23:16:24 Total Duration: 0.99 seconds
+2025/03/17 23:16:24 Throughput: 921.80 requests/second
+*/
 
 // 测试用户发布自己的作品
 // 初始化
@@ -267,11 +285,11 @@ func GetDbVideoInit() {
 }
 func TestGetDbVideo(t *testing.T) {
 	GetDbVideoInit()
-	log.Printf("init OKOK")
-	totalRequests := len(LoginOkMap)
+	totalRequests := int32(0)
 	errCh := make(chan *CreationInfo_ER, totalRequests)
 	okCh := make(chan *CreationInfo_OK, totalRequests)
-	concurrencyLimit := int32(3)
+	concurrencyLimit := int32(4)
+	var okWg, errWg sync.WaitGroup
 
 	// 初始化错误通道
 	go func() {
@@ -295,6 +313,7 @@ func TestGetDbVideo(t *testing.T) {
 			if _, err := writer.Write(append(b, '\n')); err != nil {
 				log.Fatalf("error writing to file: %s", err.Error())
 			}
+			errWg.Done()
 		}
 	}()
 
@@ -320,6 +339,7 @@ func TestGetDbVideo(t *testing.T) {
 			if _, err := writer.Write(append(b, '\n')); err != nil {
 				log.Fatalf("error writing to file: %s", err.Error())
 			}
+			okWg.Done()
 		}
 	}()
 
@@ -336,9 +356,11 @@ func TestGetDbVideo(t *testing.T) {
 			}()
 			// 拿accessToken
 			ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+			atomic.AddInt32(&totalRequests, 1)
 			response, err := api.Refresh(ctx, user.RefreshToken)
 			cancel()
 			if err != nil {
+				errWg.Add(1)
 				errCh <- &CreationInfo_ER{
 					AuthorId: user.IdInDb,
 					Error:    err.Error(),
@@ -349,6 +371,7 @@ func TestGetDbVideo(t *testing.T) {
 			status := msg.GetStatus()
 			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
 				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errWg.Add(1)
 				errCh <- &CreationInfo_ER{
 					AuthorId: user.IdInDb,
 					Error:    err.Error(),
@@ -360,10 +383,12 @@ func TestGetDbVideo(t *testing.T) {
 			start := time.Now()
 
 			_ctx, _cancel := context.WithTimeout(context.Background(), 4*time.Second)
+			atomic.AddInt32(&totalRequests, 1)
 			_response, err := api.GetUserCreations(_ctx, accessToken, generated.CreationStatus_DRAFT, 1)
 			_cancel()
 			end := time.Now()
 			if err != nil {
+				errWg.Add(1)
 				errCh <- &CreationInfo_ER{
 					AuthorId: user.IdInDb,
 					Error:    err.Error(),
@@ -374,6 +399,7 @@ func TestGetDbVideo(t *testing.T) {
 			status = msg.GetStatus()
 			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
 				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errWg.Add(1)
 				errCh <- &CreationInfo_ER{
 					AuthorId: user.IdInDb,
 					Error:    err.Error(),
@@ -383,6 +409,7 @@ func TestGetDbVideo(t *testing.T) {
 
 			CreationInfos := _response.GetCreationInfoGroup()
 			for _, info := range CreationInfos {
+				okWg.Add(1)
 				okCh <- &CreationInfo_OK{
 					CreationId: info.Creation.CreationId,
 					AuthorId:   user.IdInDb,
@@ -393,13 +420,15 @@ func TestGetDbVideo(t *testing.T) {
 
 			count := _response.GetCount()
 
-			for i := int32(2); i < count; i++ {
+			for i := int32(2); i <= count; i++ {
 				_ctx, _cancel := context.WithTimeout(context.Background(), 4*time.Second)
 				start := time.Now()
+				atomic.AddInt32(&totalRequests, 1)
 				i_response, err := api.GetUserCreations(_ctx, accessToken, generated.CreationStatus_DRAFT, i)
 				_cancel()
 				end := time.Now()
 				if err != nil {
+					errWg.Add(1)
 					errCh <- &CreationInfo_ER{
 						AuthorId: user.IdInDb,
 						Error:    err.Error(),
@@ -410,6 +439,7 @@ func TestGetDbVideo(t *testing.T) {
 				status = msg.GetStatus()
 				if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
 					err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+					errWg.Add(1)
 					errCh <- &CreationInfo_ER{
 						AuthorId: user.IdInDb,
 						Error:    err.Error(),
@@ -419,6 +449,7 @@ func TestGetDbVideo(t *testing.T) {
 
 				CreationInfos := i_response.GetCreationInfoGroup()
 				for _, info := range CreationInfos {
+					okWg.Add(1)
 					okCh <- &CreationInfo_OK{
 						CreationId: info.Creation.CreationId,
 						AuthorId:   user.IdInDb,
@@ -428,8 +459,6 @@ func TestGetDbVideo(t *testing.T) {
 				}
 			}
 		}(user)
-
-		time.Sleep(time.Millisecond * 5)
 	}
 	wg.Wait()
 	endTime := time.Now() // 记录整个测试结束时间
@@ -442,9 +471,19 @@ func TestGetDbVideo(t *testing.T) {
 	log.Printf("Total Duration: %.2f seconds\n", totalDuration)
 	log.Printf("Throughput: %.2f requests/second\n", throughput)
 
+	okWg.Wait()
+	errWg.Wait()
+	time.Sleep(2 * time.Second)
 	close(errCh)
 	close(okCh)
 }
+
+/* TestGetDbVideo
+2025/03/17 18:35:15 ConcurrencyLimit: 4
+2025/03/17 18:35:15 Total Requests: 717
+2025/03/17 18:35:15 Total Duration: 3.67 seconds
+2025/03/17 18:35:15 Throughput: 195.58 requests/second
+*/
 
 // 上传视频前初始化
 func UplodaVideoInit() {
@@ -515,11 +554,11 @@ func UplodaVideoInit() {
 }
 func TestUplodaVideo(t *testing.T) {
 	UplodaVideoInit()
-	log.Printf("init OKOK")
 	totalRequests := len(Videos)
 	errCh := make(chan *Creation_ER, totalRequests)
 	okCh := make(chan *Creation_OK, totalRequests)
 	concurrencyLimit := int32(3)
+	var okWg, errWg sync.WaitGroup
 
 	// 初始化错误通道
 	go func() {
@@ -543,6 +582,7 @@ func TestUplodaVideo(t *testing.T) {
 			if _, err := writer.Write(append(b, '\n')); err != nil {
 				log.Fatalf("error writing to file: %s", err.Error())
 			}
+			errWg.Done()
 		}
 	}()
 
@@ -568,6 +608,7 @@ func TestUplodaVideo(t *testing.T) {
 			if _, err := writer.Write(append(b, '\n')); err != nil {
 				log.Fatalf("error writing to file: %s", err.Error())
 			}
+			okWg.Done()
 		}
 	}()
 
@@ -591,6 +632,7 @@ func TestUplodaVideo(t *testing.T) {
 			response, err := api.Refresh(ctx, LoginOkMap[video.Uid].RefreshToken)
 			cancel()
 			if err != nil {
+				errWg.Add(1)
 				errCh <- &Creation_ER{
 					Creation: video,
 					Error:    err.Error(),
@@ -601,6 +643,7 @@ func TestUplodaVideo(t *testing.T) {
 			status := msg.GetStatus()
 			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
 				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errWg.Add(1)
 				errCh <- &Creation_ER{
 					Creation: video,
 					Error:    err.Error(),
@@ -615,6 +658,7 @@ func TestUplodaVideo(t *testing.T) {
 			_cancel()
 			end := time.Now()
 			if err != nil {
+				errWg.Add(1)
 				errCh <- &Creation_ER{
 					Creation: video,
 					Error:    err.Error(),
@@ -625,6 +669,7 @@ func TestUplodaVideo(t *testing.T) {
 			status = msg.GetStatus()
 			if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
 				err := fmt.Errorf("code %s error %s", msg.GetCode(), msg.GetDetails())
+				errWg.Add(1)
 				errCh <- &Creation_ER{
 					Creation: video,
 					Error:    err.Error(),
@@ -632,16 +677,15 @@ func TestUplodaVideo(t *testing.T) {
 				return
 			}
 
+			okWg.Add(1)
 			okCh <- &Creation_OK{
 				Creation:       video,
 				UploadDuration: math.Round(float64(end.Sub(start).Milliseconds())*100) / 100,
 			}
 		}(video)
-
-		time.Sleep(time.Millisecond * 20)
 	}
-	wg.Wait()
 	endTime := time.Now() // 记录整个测试结束时间
+	wg.Wait()
 	totalDuration := endTime.Sub(startTime).Seconds()
 	// 计算吞吐量
 	throughput := float64(totalRequests) / totalDuration
@@ -651,6 +695,15 @@ func TestUplodaVideo(t *testing.T) {
 	log.Printf("Total Duration: %.2f seconds\n", totalDuration)
 	log.Printf("Throughput: %.2f requests/second\n", throughput)
 
+	okWg.Wait()
+	errWg.Wait()
 	close(errCh)
 	close(okCh)
 }
+
+/* TestUplodaVideo
+2025/03/17 17:40:23 ConcurrencyLimit: 3
+2025/03/17 17:40:23 Total Requests: 357
+2025/03/17 17:40:23 Total Duration: 4.06 seconds
+2025/03/17 17:40:23 Throughput: 87.96 requests/second
+*/

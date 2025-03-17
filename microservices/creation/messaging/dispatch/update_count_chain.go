@@ -52,17 +52,19 @@ type UpdateCountChain struct {
 	exeChannel   chan *ExeBody
 	listenerPool sync.Pool
 	pool         sync.Pool
-	cond         sync.Cond
 	nodeMux      sync.Mutex
 }
 
 func (chain *UpdateCountChain) Close(signal chan any) {
+	cond := sync.NewCond(&chain.nodeMux)
+
 	chain.nodeMux.Lock()
 	for atomic.LoadInt32(&chain.Count) > 0 {
-		chain.cond.Wait() // 等待 Count 变成 0
+		cond.Wait() // 等待 Count 变成 0
 	}
 	chain.nodeMux.Unlock()
 
+	// 关闭信号通道
 	close(signal)
 }
 

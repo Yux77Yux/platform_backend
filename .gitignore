@@ -2,5 +2,6 @@
 *.lock
 
 scripts/result/*
+scripts/result1
 scripts/*.jsonl
 scripts/*.json

@@ -4,7 +4,7 @@ var (
 	Videos = make([]*Creation, 0, 500)
 	Users  = make([]*User, 0, 500)
 
-	RegisterOkMap = make(map[string]*User)
+	RegisterOkMap = make(map[string]*Register_OK)
 
 	LoginOkMap        = make(map[string]*Login_OK)
 	UpdateAvatarOkMap = make(map[string]*Id)

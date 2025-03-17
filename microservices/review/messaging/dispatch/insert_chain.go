@@ -29,6 +29,7 @@ func InitialInsertChain() *InsertChain {
 	_chain.listenerPool = sync.Pool{
 		New: func() any {
 			return &InsertListener{
+				chain:           _chain,
 				timeoutDuration: 10 * time.Second,
 				updateInterval:  3 * time.Second,
 			}
@@ -49,13 +50,14 @@ type InsertChain struct {
 	exeChannel   chan *[]*generated.NewReview
 	listenerPool sync.Pool
 	pool         sync.Pool
-	cond         sync.Cond
 }
 
 func (chain *InsertChain) Close(signal chan any) {
+	cond := sync.NewCond(&chain.nodeMux)
+
 	chain.nodeMux.Lock()
 	for atomic.LoadInt32(&chain.Count) > 0 {
-		chain.cond.Wait() // 等待 Count 变成 0
+		cond.Wait() // 等待 Count 变成 0
 	}
 	chain.nodeMux.Unlock()
 

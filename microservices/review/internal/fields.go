@@ -19,6 +19,16 @@ var (
 )
 
 var (
+	QUEUE_COMMENT_REVIEW  = event.Queue_QUEUE_COMMENT_REVIEW.String()
+	QUEUE_USER_REVIEW     = event.Queue_QUEUE_USER_REVIEW.String()
+	QUEUE_CREATION_REVIEW = event.Queue_QUEUE_CREATION_REVIEW.String()
+	QUEUE_NEW_REVIEW      = event.Queue_QUEUE_NEW_REVIEW.String()
+	QUEUE_UPDATE          = event.Queue_QUEUE_UPDATE.String()
+	QUEUE_BATCH_UPDATE    = event.Queue_QUEUE_BATCH_UPDATE.String()
+	QUEUE_PEND_CREATION   = event.Queue_QUEUE_PEND_CREATION.String()
+)
+
+var (
 	KEY_COMMENT_REVIEW         = event.RoutingKey_KEY_COMMENT_REVIEW.String()
 	KEY_USER_REVIEW            = event.RoutingKey_KEY_USER_REVIEW.String()
 	KEY_CREATION_REVIEW        = event.RoutingKey_KEY_CREATION_REVIEW.String()

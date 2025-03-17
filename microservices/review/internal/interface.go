@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 
-	amqp "github.com/rabbitmq/amqp091-go"
 	"google.golang.org/protobuf/proto"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
@@ -16,5 +15,5 @@ type SqlMethod interface {
 
 type MessageQueueMethod interface {
 	SendMessage(ctx context.Context, exchange string, routeKey string, req proto.Message) error
-	GetMsgs(exchange, queueName, routeKey string, count int) []amqp.Delivery
+	GetMsgs(exchange, queueName, routeKey string, count int) [][]byte
 }

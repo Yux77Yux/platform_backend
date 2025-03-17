@@ -31,9 +31,9 @@ func Run(mq MessageQueueMethod, _dispatch DispatchInterface) {
 		switch exchange {
 		// 不同的exchange使用不同函数
 		case EXCHANGE_DELETE_COMMENT:
-			go messaging.ListenToQueue(exchange, QUEUE_DELETE_COMMENT, KEY_DELETE_COMMENT, JoinCommentProcessor)
-		case EXCHANGE_PUBLISH_COMMENT:
 			go messaging.ListenToQueue(exchange, QUEUE_DELETE_COMMENT, KEY_DELETE_COMMENT, DeleteCommentProcessor)
+		case EXCHANGE_PUBLISH_COMMENT:
+			go messaging.ListenToQueue(exchange, QUEUE_PUBLISH_COMMENT, KEY_PUBLISH_COMMENT, JoinCommentProcessor)
 		}
 	}
 }

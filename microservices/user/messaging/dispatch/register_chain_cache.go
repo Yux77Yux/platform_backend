@@ -51,13 +51,14 @@ type RegisterCacheChain struct {
 	exeChannel   chan *[]*generated.UserCredentials
 	listenerPool sync.Pool
 	pool         sync.Pool
-	cond         sync.Cond
 }
 
 func (chain *RegisterCacheChain) Close(signal chan any) {
+	cond := sync.NewCond(&chain.nodeMux)
+
 	chain.nodeMux.Lock()
 	for atomic.LoadInt32(&chain.Count) > 0 {
-		chain.cond.Wait() // 等待 Count 变成 0
+		cond.Wait() // 等待 Count 变成 0
 	}
 	chain.nodeMux.Unlock()
 
@@ -99,8 +100,6 @@ func (chain *RegisterCacheChain) ExecuteBatch() {
 
 // 处理评论请求的函数
 func (chain *RegisterCacheChain) HandleRequest(data protoreflect.ProtoMessage) {
-	log.Printf("RegisterCacheChain exeChannel count: %v", len(chain.exeChannel))
-	log.Printf("RegisterCacheChain exeChannel: %v", chain.exeChannel)
 	listener := chain.FindListener(data)
 	if listener == nil {
 		// 如果没有找到合适的监听者，创建一个新的监听者

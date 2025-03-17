@@ -30,6 +30,7 @@ func InitialViewCacheChain() *ViewCacheChain {
 	_chain.listenerPool = sync.Pool{
 		New: func() any {
 			return &ViewListener{
+				chain:           _chain,
 				timeoutDuration: 10 * time.Second,
 				updateInterval:  3 * time.Second,
 			}
@@ -50,13 +51,14 @@ type ViewCacheChain struct {
 	exeChannel   chan *[]*generated.OperateInteraction
 	listenerPool sync.Pool
 	pool         sync.Pool
-	cond         sync.Cond
 }
 
 func (chain *ViewCacheChain) Close(signal chan any) {
+	cond := sync.NewCond(&chain.nodeMux)
+
 	chain.nodeMux.Lock()
 	for atomic.LoadInt32(&chain.Count) > 0 {
-		chain.cond.Wait() // 等待 Count 变成 0
+		cond.Wait() // 等待 Count 变成 0
 	}
 	chain.nodeMux.Unlock()
 

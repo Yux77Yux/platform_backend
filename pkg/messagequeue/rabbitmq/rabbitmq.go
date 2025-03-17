@@ -7,6 +7,7 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 
@@ -94,6 +95,14 @@ func (r *RabbitMQClient) getChannel() *amqp.Channel {
 		return nil
 	}
 
+	if channel == nil || channel.IsClosed() {
+		channel, err := r.rabbitmqClient.Channel()
+		if err != nil {
+			utils.LogSuperError(err)
+		}
+		return channel
+	}
+
 	return channel
 }
 
@@ -158,27 +167,10 @@ func (r *RabbitMQClient) SendMessage(ctx context.Context, exchange string, route
 }
 
 func (r *RabbitMQClient) PreSendProtoMessage(ctx context.Context, exchange, queueName, routeKey string, body []byte) error {
-	key := fmt.Sprintf("%s_%s_%s", exchange, queueName, routeKey)
-	amqpCh, exist := r.listenCh.Load(key)
-
-	var (
-		ch *amqp.Channel
-		ok bool
-	)
-
-	if exist {
-		// 类型断言
-		ch, ok = amqpCh.(*amqp.Channel)
-		if !ok {
-			return nil
-		}
-	} else {
-		ch = r.getChannel()
-		r.listenCh.Store(key, ch)
-	}
+	ch := r.getChannel()
+	defer r.putChannel(ch)
 
 	if err := ch.ExchangeDeclare(exchange, "direct", true, false, false, false, nil); err != nil {
-		utils.LogSuperError(fmt.Errorf("failed to declare exchange %s : %w", exchange, err))
 		return err
 	}
 
@@ -239,24 +231,13 @@ func (r *RabbitMQClient) PreSendMessage(ctx context.Context, exchange, queueName
 	return r.PreSendProtoMessage(ctx, exchange, queueName, routeKey, body)
 }
 
-func (r *RabbitMQClient) GetMsgs(exchange, queueName, routeKey string, count int) []amqp.Delivery {
-	key := fmt.Sprintf("%s_%s_%s", exchange, queueName, routeKey)
-	amqpCh, exist := r.listenCh.Load(key)
+func (r *RabbitMQClient) GetMsgs(exchange, queueName, routeKey string, count int) [][]byte {
+	ch := r.getChannel()
+	defer r.putChannel(ch)
 
-	var (
-		ch *amqp.Channel
-		ok bool
-	)
-
-	if exist {
-		// 类型断言
-		ch, ok = amqpCh.(*amqp.Channel)
-		if !ok {
-			return nil
-		}
-	} else {
-		ch = r.getChannel()
-		r.listenCh.Store(key, ch)
+	if err := ch.ExchangeDeclare(exchange, "direct", true, false, false, false, nil); err != nil {
+		utils.LogSuperError(fmt.Errorf("failed to declare exchange %s : %w", exchange, err))
+		return nil
 	}
 
 	queue, err := ch.QueueDeclare(queueName, true, false, false, false, nil)
@@ -269,6 +250,12 @@ func (r *RabbitMQClient) GetMsgs(exchange, queueName, routeKey string, count int
 	if err != nil {
 		err = fmt.Errorf("rabbitMQ QueueBind error: %w", err)
 		utils.LogSuperError(err)
+		return nil
+	}
+
+	// 设置预取数量，限制一次只接收 count 条消息
+	if err := ch.Qos(count, 0, false); err != nil {
+		utils.LogSuperError(fmt.Errorf("failed to set QoS: %w", err))
 		return nil
 	}
 
@@ -286,7 +273,7 @@ func (r *RabbitMQClient) GetMsgs(exchange, queueName, routeKey string, count int
 		return nil
 	}
 
-	values := make([]amqp.Delivery, 0, count)
+	values := make([][]byte, 0, count)
 	for i := 0; i < count; i++ {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		select {
@@ -296,7 +283,16 @@ func (r *RabbitMQClient) GetMsgs(exchange, queueName, routeKey string, count int
 				return values
 			}
 			msg.Ack(false)
-			values = append(values, msg)
+
+			var wrap common.Wrapper
+			err := proto.Unmarshal(msg.Body, &wrap)
+			if err != nil {
+				err = fmt.Errorf("error: message processing failed: %w", err)
+				utils.LogError("", "", err)
+			}
+
+			payload := wrap.GetPayload()
+			values = append(values, payload.GetValue())
 			cancel()
 		case <-ctx.Done():
 			cancel()
@@ -363,6 +359,8 @@ func (r *RabbitMQClient) ListenToQueue(exchange, queueName, routeKey string, han
 			payload := wrap.GetPayload()
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
+			ctx = metadata.AppendToOutgoingContext(ctx, "trace-id", traceId)
+			ctx = metadata.AppendToOutgoingContext(ctx, "full-name", fullName)
 			err = handler(ctx, payload)
 			cancel()
 			if err != nil {

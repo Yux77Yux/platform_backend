@@ -39,7 +39,6 @@ func (listener *UpdateListener) StartListening() {
 func (listener *UpdateListener) Dispatch(data protoreflect.ProtoMessage) {
 	// 长度加1
 	count := atomic.AddUint32(&listener.count, 1)
-
 	_data := data.(*generated.Review)
 	// 处理评论的逻辑
 	listener.datasChannel <- _data

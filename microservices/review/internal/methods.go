@@ -12,22 +12,31 @@ import (
 // 这里拿取新的审核请求
 func GetPendingReviews(ctx context.Context, reviewerId int64, reviewType generated.TargetType) ([]*generated.Review, error) {
 	const LIMIT = 8
-	typeName := ""
+	var (
+		exchange string
+		queue    string
+		key      string
+	)
 	switch reviewType {
 	case generated.TargetType_COMMENT:
-		typeName = EXCHANGE_COMMENT_REVIEW
+		exchange = EXCHANGE_COMMENT_REVIEW
+		queue = QUEUE_COMMENT_REVIEW
+		key = KEY_COMMENT_REVIEW
 	case generated.TargetType_USER:
-		typeName = EXCHANGE_USER_REVIEW
+		exchange = EXCHANGE_USER_REVIEW
+		queue = QUEUE_USER_REVIEW
+		key = KEY_USER_REVIEW
 	case generated.TargetType_CREATION:
-		typeName = EXCHANGE_CREATION_REVIEW
+		exchange = EXCHANGE_CREATION_REVIEW
+		queue = QUEUE_CREATION_REVIEW
+		key = KEY_CREATION_REVIEW
 	}
 
-	news := messaging.GetMsgs(typeName, typeName, typeName, LIMIT)
+	news := messaging.GetMsgs(exchange, queue, key, LIMIT)
 
 	length := len(news)
 	reviews := make([]*generated.Review, length)
-	for i, val := range news {
-		body := val.Body
+	for i, body := range news {
 		newReview := new(generated.NewReview)
 		err := proto.Unmarshal(body, newReview)
 		if err != nil {
@@ -42,7 +51,7 @@ func GetPendingReviews(ctx context.Context, reviewerId int64, reviewType generat
 
 		reviews[i] = review
 	}
-	go func() {
+	go func(reviews []*generated.Review) {
 		anyReview := &generated.AnyReview{
 			Reviews: reviews,
 		}
@@ -50,7 +59,7 @@ func GetPendingReviews(ctx context.Context, reviewerId int64, reviewType generat
 		if err != nil {
 			log.Printf("error: BatchUpdate SendMessage %v", err)
 		}
-	}()
+	}(reviews)
 
 	return reviews, nil
 }

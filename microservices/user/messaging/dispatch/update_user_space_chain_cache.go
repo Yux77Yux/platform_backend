@@ -50,13 +50,14 @@ type UserSpaceCacheChain struct {
 	exeChannel   chan *[]*generated.UserUpdateSpace
 	listenerPool sync.Pool
 	pool         sync.Pool
-	cond         sync.Cond
 }
 
 func (chain *UserSpaceCacheChain) Close(signal chan any) {
+	cond := sync.NewCond(&chain.nodeMux)
+
 	chain.nodeMux.Lock()
 	for atomic.LoadInt32(&chain.Count) > 0 {
-		chain.cond.Wait() // 等待 Count 变成 0
+		cond.Wait() // 等待 Count 变成 0
 	}
 	chain.nodeMux.Unlock()
 

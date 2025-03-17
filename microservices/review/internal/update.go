@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"log"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
@@ -40,6 +41,7 @@ func UpdateReview(ctx context.Context, req *generated.UpdateReviewRequest) (*gen
 				Code:    errMap.GrpcCodeToHTTPStatusString(err),
 				Details: err.Error(),
 			}
+			log.Printf("response %v", response)
 			return response, err
 		}
 		response.Msg = &common.ApiResponse{
@@ -47,6 +49,7 @@ func UpdateReview(ctx context.Context, req *generated.UpdateReviewRequest) (*gen
 			Code:    errMap.GrpcCodeToHTTPStatusString(err),
 			Details: err.Error(),
 		}
+		log.Printf("response %v", response)
 		return response, nil
 	}
 

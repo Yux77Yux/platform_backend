@@ -57,7 +57,7 @@ func PendingCreationProcessor(ctx context.Context, msg *anypb.Any) error {
 		Msg:        "状态变更",
 	}
 
-	err = messaging.SendMessage(ctx, EXCHANGE_NEW_REVIEW, QUEUE_NEW_REVIEW, newReview)
+	err = messaging.SendMessage(ctx, EXCHANGE_NEW_REVIEW, KEY_NEW_REVIEW, newReview)
 	return err
 }
 
@@ -68,8 +68,10 @@ func BatchUpdateProcessor(ctx context.Context, msg *anypb.Any) error {
 	if err != nil {
 		return fmt.Errorf("BatchUpdateProcessor error: %w", err)
 	}
-
-	go dispatcher.HandleRequest(req, dispatch.BatchUpdate)
+	reviews := req.GetReviews()
+	for _, review := range reviews {
+		go dispatcher.HandleRequest(review, dispatch.Update)
+	}
 	return nil
 }
 
@@ -85,7 +87,6 @@ func UpdateProcessor(ctx context.Context, msg *anypb.Any) error {
 	if err != nil {
 		return err
 	}
-
 	var reviewErr error
 	switch review.New.GetTargetType() {
 	case generated.TargetType_COMMENT:
@@ -138,8 +139,11 @@ func UpdateCreationReview(ctx context.Context, review *generated.Review) error {
 
 	var err error
 	switch status {
-	case generated.ReviewStatus_REJECTED, generated.ReviewStatus_APPROVED:
+	case generated.ReviewStatus_REJECTED:
 		creationObj.Status = creation.CreationStatus_REJECTED
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_CREATION_STATUS, KEY_UPDATE_CREATION_STATUS, creationObj)
+	case generated.ReviewStatus_APPROVED:
+		creationObj.Status = creation.CreationStatus_PUBLISHED
 		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_CREATION_STATUS, KEY_UPDATE_CREATION_STATUS, creationObj)
 	case generated.ReviewStatus_DELETED:
 		creationObj.Status = creation.CreationStatus_DELETE
@@ -162,8 +166,11 @@ func UpdateUserReview(ctx context.Context, review *generated.Review) error {
 
 	var err error
 	switch status {
-	case generated.ReviewStatus_REJECTED, generated.ReviewStatus_APPROVED:
+	case generated.ReviewStatus_REJECTED:
 		updateUser.UserStatus = user.UserStatus_LIMITED
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_USER_STATUS, KEY_UPDATE_USER_STATUS, updateUser)
+	case generated.ReviewStatus_APPROVED:
+		updateUser.UserStatus = user.UserStatus_INACTIVE
 		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_USER_STATUS, KEY_UPDATE_USER_STATUS, updateUser)
 	}
 

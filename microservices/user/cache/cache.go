@@ -23,7 +23,7 @@ type CacheMethodStruct struct {
 func (c *CacheMethodStruct) ExistsUsername(ctx context.Context, username string) (bool, error) {
 	exist, err := c.CacheClient.ExistsHashField(ctx, "User", "Credentials", username)
 	if err != nil {
-		log.Printf("error: failed to execute cache method: ExistsUsername")
+		log.Printf("error: failed to execute cache method: ExistsUsername %s", err.Error())
 		return false, err
 	}
 

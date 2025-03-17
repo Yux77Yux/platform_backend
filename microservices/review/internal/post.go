@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"strconv"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -38,9 +37,8 @@ func NewReview(ctx context.Context, req *generated.NewReviewRequest) (*generated
 
 	return &generated.NewReviewResponse{
 		Msg: &common.ApiResponse{
-			Code:    "202",
-			Status:  common.ApiResponse_SUCCESS,
-			TraceId: strconv.FormatInt(id, 10),
+			Code:   "202",
+			Status: common.ApiResponse_SUCCESS,
 		},
 	}, nil
 }

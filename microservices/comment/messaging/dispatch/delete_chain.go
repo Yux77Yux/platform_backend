@@ -30,6 +30,7 @@ func InitialDeleteChain() *DeleteChain {
 	_chain.listenerPool = sync.Pool{
 		New: func() any {
 			return &DeleteListener{
+				chain:           _chain,
 				timeoutDuration: 10 * time.Second,
 				updateInterval:  3 * time.Second,
 			}
@@ -50,16 +51,18 @@ type DeleteChain struct {
 	exeChannel   chan *[]*common.AfterAuth
 	listenerPool sync.Pool
 	pool         sync.Pool
-	cond         sync.Cond
 }
 
 func (chain *DeleteChain) Close(signal chan any) {
+	cond := sync.NewCond(&chain.nodeMux)
+
 	chain.nodeMux.Lock()
 	for atomic.LoadInt32(&chain.Count) > 0 {
-		chain.cond.Wait() // 等待 Count 变成 0
+		cond.Wait() // 等待 Count 变成 0
 	}
 	chain.nodeMux.Unlock()
 
+	// 关闭信号通道
 	close(signal)
 }
 

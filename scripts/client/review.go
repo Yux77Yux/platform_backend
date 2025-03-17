@@ -18,7 +18,7 @@ type ReviewClient struct {
 func NewReviewClient() (*ReviewClient, error) {
 	unaryInterceptor := grpc.WithUnaryInterceptor(TraceIDInterceptor)
 	// 建立与服务器的连接
-	conn, err := grpc.NewClient(service_address, grpc.WithTransportCredentials(insecure.NewCredentials()), unaryInterceptor)
+	conn, err := grpc.NewClient(":50050", grpc.WithTransportCredentials(insecure.NewCredentials()), unaryInterceptor)
 	if err != nil {
 		return nil, fmt.Errorf("did not connect: %v", err)
 	}
@@ -54,6 +54,18 @@ func (c *ReviewClient) GetNewReviews(ctx context.Context, req *generated.GetNewR
 	client := generated.NewReviewServiceClient(c.connection)
 
 	response, err := client.GetNewReviews(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("could not greet: %v", err)
+	}
+
+	return response, nil
+}
+
+func (c *ReviewClient) UpdateReview(ctx context.Context, req *generated.UpdateReviewRequest) (*generated.UpdateReviewResponse, error) {
+	// 创建客户端
+	client := generated.NewReviewServiceClient(c.connection)
+
+	response, err := client.UpdateReview(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("could not greet: %v", err)
 	}

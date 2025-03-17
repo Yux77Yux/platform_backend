@@ -3,7 +3,6 @@ package repository
 import (
 	internal "github.com/Yux77Yux/platform_backend/microservices/interaction/internal"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/dispatch"
-	receiver "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging/receiver"
 	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 	pkgDb "github.com/Yux77Yux/platform_backend/pkg/database"
 )
@@ -36,7 +35,6 @@ func Run() func() {
 	}
 
 	internal.InitDb(methods)
-	receiver.InitDb(methods)
 	dispatch.InitDb(methods)
 
 	return func() {

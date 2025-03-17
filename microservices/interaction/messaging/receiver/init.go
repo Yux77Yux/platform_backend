@@ -2,14 +2,9 @@ package receiver
 
 var (
 	dispatcher DispatchInterface
-	db         SqlMethod
 	messaging  MessageQueueMethod
 	cache      CacheMethod
 )
-
-func InitDb(_db SqlMethod) {
-	db = _db
-}
 
 func InitCache(_cache CacheMethod) {
 	cache = _cache
@@ -34,7 +29,7 @@ func Run(_messaging MessageQueueMethod, _dispatch DispatchInterface) {
 		case EXCHANGE_ADD_COLLECTION:
 			go messaging.ListenToQueue(exchange, QUEUE_ADD_COLLECTION, KEY_ADD_COLLECTION, addCollectionProcessor)
 		case EXCHANGE_ADD_LIKE:
-			go messaging.ListenToQueue(exchange, QUEUE_ADD_COLLECTION, KEY_ADD_LIKE, addLikeProcessor)
+			go messaging.ListenToQueue(exchange, QUEUE_ADD_LIKE, KEY_ADD_LIKE, addLikeProcessor)
 		case EXCHANGE_CANCEL_LIKE:
 			go messaging.ListenToQueue(exchange, QUEUE_CANCEL_LIKE, KEY_CANCEL_LIKE, cancelLikeProcessor)
 		case EXCHANGE_BATCH_UPDATE_DB:

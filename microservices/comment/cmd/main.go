@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,10 +20,10 @@ func main() {
 	go Run(signalChan)
 
 	<-signalChan
+	log.Println("开始关闭服务")
+	close(signalChan)
 
-	select {
-	case <-time.After(3 * time.Minute):
-		tools.LogWarning("main", "exit", "timeout reached. Forcing shutdown")
-		os.Exit(1)
-	}
+	<-time.After(3 * time.Minute)
+	tools.LogWarning("main", "exit", "timeout reached. Forcing shutdown")
+	os.Exit(1)
 }
