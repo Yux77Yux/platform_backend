@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net"
@@ -15,28 +14,27 @@ import (
 	middlewares "github.com/Yux77Yux/platform_backend/pkg/middlewares"
 )
 
-func ServerRun(ctx context.Context) {
+func ServerRun() func(chan any) {
 	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(middlewares.LogInterceptor()))
-	reflection.Register(grpcServer) // 启用 gRPC Reflection
+	reflection.Register(grpcServer)
 
 	go InitServer(grpcServer)
 
-	<-ctx.Done()
-	done := make(chan any, 1)
-	go func() {
-		grpcServer.GracefulStop()
-		log.Printf("info: server shutting down")
-		close(done)
-	}()
-	traceId := tools.GetMainValue(ctx)
+	return func(done chan any) {
+		go func() {
+			grpcServer.GracefulStop()
+			log.Printf("info: server shutting down")
+			close(done)
+		}()
 
-	// 等待关闭完成或超时
-	select {
-	case <-done:
-		tools.LogInfo(traceId, "ServerRun stopped gracefully")
-	case <-time.After(time.Minute):
-		grpcServer.Stop()
-		tools.LogWarning(traceId, "ServerRun", "timeout reached. Forcing shutdown")
+		// 等待关闭完成或超时
+		select {
+		case <-done:
+			tools.LogInfo("GrpcServer", "Server stopped gracefully")
+		case <-time.After(2 * time.Minute):
+			grpcServer.Stop()
+			tools.LogWarning("GrpcServer", "Server Stop", "ServerRun timeout reached. Forcing shutdown")
+		}
 	}
 }
 

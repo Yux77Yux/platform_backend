@@ -3,6 +3,7 @@ package messaging
 import (
 	"context"
 
+	internal "github.com/Yux77Yux/platform_backend/microservices/comment/internal"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/comment/messaging/dispatch"
 	receiver "github.com/Yux77Yux/platform_backend/microservices/comment/messaging/receiver"
 
@@ -11,8 +12,10 @@ import (
 
 func Run(ctx context.Context) func() {
 	_client := pkgMQ.GetClient(connStr)
-	_dispatch := dispatch.Run()
 
+	internal.InitMQ(_client)
+
+	_dispatch := dispatch.Run()
 	receiver.Run(_client, _dispatch)
 
 	return func() {

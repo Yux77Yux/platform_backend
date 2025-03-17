@@ -12,10 +12,7 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
-	cache "github.com/Yux77Yux/platform_backend/microservices/creation/cache"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/creation/messaging/dispatch"
-	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
 )
 
 func storeCreationProcessor(ctx context.Context, msg *anypb.Any) error {
@@ -51,7 +48,7 @@ func updateCreationDbProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	reqId := req.GetCreationId()
-	return messaging.SendMessage(ctx, PendingCreation, PendingCreation, &common.CreationId{
+	return messaging.SendMessage(ctx, EXCHANGE_PEND_CREATION, KEY_PEND_CREATION, &common.CreationId{
 		Id: reqId,
 	})
 }
@@ -74,7 +71,7 @@ func updateCreationCacheProcessor(ctx context.Context, msg *anypb.Any) error {
 		return err
 	}
 
-	return messaging.SendMessage(context.Background(), StoreCreationInfo, StoreCreationInfo, creationInfo)
+	return messaging.SendMessage(ctx, EXCHANGE_STORE_CREATION, KEY_STORE_CREATION, creationInfo)
 }
 
 func updateCreationStatusProcessor(ctx context.Context, msg *anypb.Any) error {
@@ -105,7 +102,7 @@ func updateCreationStatusProcessor(ctx context.Context, msg *anypb.Any) error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 		defer cancel()
 		// 更改作品的缓存
-		err = messaging.SendMessage(ctx, UpdateCacheCreation, UpdateCacheCreation, &common.CreationId{
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_CACHE_CREATION, KEY_UPDATE_CACHE_CREATION, &common.CreationId{
 			Id: reqId,
 		})
 		if err != nil {
@@ -127,7 +124,7 @@ func updateCreationStatusProcessor(ctx context.Context, msg *anypb.Any) error {
 
 	// 作者想发布
 	if status == generated.CreationStatus_PENDING {
-		return messaging.SendMessage(context.Background(), PendingCreation, PendingCreation, &common.CreationId{
+		return messaging.SendMessage(ctx, EXCHANGE_PEND_CREATION, KEY_PEND_CREATION, &common.CreationId{
 			Id: reqId,
 		})
 	}
@@ -176,7 +173,7 @@ func addInteractionCount(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	for _, action := range actions {
-		go dispatch.HandleRequest(action, dispatch.UpdateCount)
+		go dispatcher.HandleRequest(action, dispatch.UpdateCount)
 	}
 
 	return nil

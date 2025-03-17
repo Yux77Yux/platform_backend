@@ -75,7 +75,7 @@ func UpdateCreation(ctx context.Context, req *generated.UpdateCreationRequest) (
 
 	go func(UpdateInfo *generated.CreationUpdated, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.UpdateDbCreation, messaging.UpdateDbCreation, UpdateInfo)
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_DB_CREATION, KEY_UPDATE_DB_CREATION, UpdateInfo)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}
@@ -123,7 +123,7 @@ func UpdateCreationStatus(ctx context.Context, req *generated.UpdateCreationStat
 	updateInfo.AuthorId = user_id
 	go func(updateInfo *generated.CreationUpdateStatus, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.UpdateCreationStatus, messaging.UpdateCreationStatus, updateInfo)
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_CREATION_STATUS, KEY_UPDATE_CREATION_STATUS, updateInfo)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

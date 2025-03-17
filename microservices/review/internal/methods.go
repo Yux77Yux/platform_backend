@@ -1,4 +1,4 @@
-package messaging
+package internal
 
 import (
 	"context"
@@ -15,11 +15,11 @@ func GetPendingReviews(ctx context.Context, reviewerId int64, reviewType generat
 	typeName := ""
 	switch reviewType {
 	case generated.TargetType_COMMENT:
-		typeName = Comment_review
+		typeName = EXCHANGE_COMMENT_REVIEW
 	case generated.TargetType_USER:
-		typeName = User_review
+		typeName = EXCHANGE_USER_REVIEW
 	case generated.TargetType_CREATION:
-		typeName = Creation_review
+		typeName = EXCHANGE_CREATION_REVIEW
 	}
 
 	news := messaging.GetMsgs(typeName, typeName, typeName, LIMIT)
@@ -46,7 +46,7 @@ func GetPendingReviews(ctx context.Context, reviewerId int64, reviewType generat
 		anyReview := &generated.AnyReview{
 			Reviews: reviews,
 		}
-		err := messaging.SendMessage(ctx, BatchUpdate, BatchUpdate, anyReview)
+		err := messaging.SendMessage(ctx, EXCHANGE_BATCH_UPDATE, KEY_BATCH_UPDATE, anyReview)
 		if err != nil {
 			log.Printf("error: BatchUpdate SendMessage %v", err)
 		}

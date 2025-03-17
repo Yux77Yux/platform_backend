@@ -36,7 +36,7 @@ func (s *SqlMethodStruct) UserAddInfoInTransaction(ctx context.Context, users []
 		sqlStr[i] = QM
 	}
 
-	query := fmt.Sprintf(`insert into s.db_user_1.User 
+	query := fmt.Sprintf(`insert into db_user_1.User 
 	(id,
 	name,
 	avatar,
@@ -139,7 +139,7 @@ func (s *SqlMethodStruct) UserRegisterInTransaction(ctx context.Context, user_cr
 		sqlStr[i] = QM
 	}
 
-	query := fmt.Sprintf(`INSERT INTO s.db_user_credentials_1.UserCredentials(
+	query := fmt.Sprintf(`INSERT INTO db_user_credentials_1.UserCredentials(
 			id,
 			username,
 			password,
@@ -231,7 +231,7 @@ func (s *SqlMethodStruct) Follow(ctx context.Context, subs []*generated.Follow) 
 	}
 
 	query := fmt.Sprintf(`
-		INSERT INTO s.db_user_1.Follow (follower_id, followee_id)
+		INSERT INTO db_user_1.Follow (follower_id, followee_id)
 		VALUES %s 
 		ON DUPLICATE KEY UPDATE
 		follower_id = follower_id;`, strings.Join(sqlStr, ","))
@@ -255,7 +255,7 @@ func (s *SqlMethodStruct) Exists(ctx context.Context, isEmail bool, usernameOrEm
 	}
 	query := fmt.Sprintf(`
 	SELECT EXISTS(
-		SELECT 1 FROM s.db_user_credentials_1.UserCredentials
+		SELECT 1 FROM db_user_credentials_1.UserCredentials
 		WHERE %s = ?
 	)`, str)
 
@@ -279,9 +279,9 @@ func (s *SqlMethodStruct) UserGetInfoInTransaction(ctx context.Context, id int64
     		u.bday,
     		u.created_at,
     		u.updated_at,
-    		(SELECT COUNT(*) FROM s.db_user_1.Follow WHERE followee_id = u.id) AS followers,
-    		(SELECT COUNT(*) FROM s.db_user_1.Follow WHERE follower_id = u.id) AS followees
-		FROM s.db_user_1.User u
+    		(SELECT COUNT(*) FROM db_user_1.Follow WHERE followee_id = u.id) AS followers,
+    		(SELECT COUNT(*) FROM db_user_1.Follow WHERE follower_id = u.id) AS followees
+		FROM db_user_1.User u
 		WHERE u.id = ?;`
 
 	select {
@@ -353,7 +353,7 @@ func (s *SqlMethodStruct) GetUsers(ctx context.Context, userIds []int64) ([]*com
 			avatar,
 			bio
 		FROM 
-			s.db_user_1.User
+			db_user_1.User
 		WHERE id IN (%s)`, strings.Join(sqlStr, ","))
 
 	rows, err := s.db.QueryContext(ctx, query, values...)
@@ -399,11 +399,11 @@ func (s *SqlMethodStruct) GetFolloweers(ctx context.Context, userId int64, page 
 			avatar,
 			bio
 		FROM 
-			s.db_user_1.User u
+			db_user_1.User u
 		JOIN
 		(
 			SELECT follower_id
-			FROM s.db_user_1.Follow
+			FROM db_user_1.Follow
 			WHERE followee_id = ?
 			ORDER BY created_at,views DESC
 			LIMIT ? 
@@ -453,11 +453,11 @@ func (s *SqlMethodStruct) GetFolloweesByTime(ctx context.Context, userId int64, 
 			avatar,
 			bio
 		FROM 
-			s.db_user_1.User u
+			db_user_1.User u
 		JOIN
 		(
 			SELECT followee_id
-			FROM s.db_user_1.Follow
+			FROM db_user_1.Follow
 			WHERE follower_id = ?
 			ORDER BY created_at,views DESC
 			LIMIT ? 
@@ -508,11 +508,11 @@ func (s *SqlMethodStruct) GetFolloweesByViews(ctx context.Context, userId int64,
 			avatar,
 			bio
 		FROM 
-			s.db_user_1.User u
+			db_user_1.User u
 		JOIN
 		(
 			SELECT followee_id
-			FROM s.db_user_1.Follow
+			FROM db_user_1.Follow
 			WHERE follower_id = ?
 			ORDER BY views,followee_id DESC
 			LIMIT ? 
@@ -566,7 +566,7 @@ func (s *SqlMethodStruct) UserVerifyInTranscation(ctx context.Context, user_cred
 			password,
 			email,
 			role
-		FROM s.db_user_credentials_1.UserCredentials 
+		FROM db_user_credentials_1.UserCredentials 
 		WHERE %s`, identifier)
 
 	var (
@@ -637,7 +637,7 @@ func (s *SqlMethodStruct) UserEmailUpdateInTransaction(ctx context.Context, user
 	}
 
 	query := fmt.Sprintf(`
-		UPDATE s.db_user_credentials_1.UserCredentials
+		UPDATE db_user_credentials_1.UserCredentials
 		SET 
 			email = CASE 
 				%s 
@@ -735,7 +735,7 @@ func (s *SqlMethodStruct) UserUpdateSpaceInTransaction(ctx context.Context, user
 
 	// 拼接最终的 SQL
 	query := fmt.Sprintf(`
-		UPDATE s.db_user_1.User
+		UPDATE db_user_1.User
 		SET 
 			name = CASE 
 				%s
@@ -797,7 +797,7 @@ func (s *SqlMethodStruct) UserUpdateAvatarInTransaction(ctx context.Context, use
 		values[length+i] = id
 	}
 
-	query := fmt.Sprintf(`UPDATE s.db_user_1.User 
+	query := fmt.Sprintf(`UPDATE db_user_1.User 
 		SET 
     		avatar = CASE
 				%s
@@ -843,7 +843,7 @@ func (s *SqlMethodStruct) UserUpdateStatusInTransaction(ctx context.Context, use
 		values[length+i] = id
 	}
 
-	query := fmt.Sprintf(`UPDATE s.db_user_1.User 
+	query := fmt.Sprintf(`UPDATE db_user_1.User 
 		SET 
     		status = CASE
 				%s
@@ -889,7 +889,7 @@ func (s *SqlMethodStruct) UserUpdateBioInTransaction(ctx context.Context, users 
 		values[length+i] = id
 	}
 
-	query := fmt.Sprintf(`UPDATE s.db_user_1.User 
+	query := fmt.Sprintf(`UPDATE db_user_1.User 
 		SET 
     		bio = CASE
 				%s
@@ -913,11 +913,11 @@ func (s *SqlMethodStruct) DelReviewer(ctx context.Context, reviewerId int64) (st
 		SELECT 
 			username,
 			email
-		FROM s.db_user_credentials_1.UserCredentials 
+		FROM db_user_credentials_1.UserCredentials 
 		WHERE id = ?
 		FOR UPDATE`
 	queryUpdate := `
-		UPDATE s.db_user_credentials_1.UserCredentials 
+		UPDATE db_user_credentials_1.UserCredentials 
 		SET role = USER 
 		WHERE id = ?`
 
@@ -977,7 +977,7 @@ func (s *SqlMethodStruct) ViewFollowee(ctx context.Context, subs []*generated.Fo
 	}
 
 	query := fmt.Sprintf(`
-		UPDATE s.db_user_1.Follow 
+		UPDATE db_user_1.Follow 
 		SET views = views + 1
 		WHERE (follower_id,followee_id) 
 		IN 
@@ -996,7 +996,7 @@ func (s *SqlMethodStruct) ViewFollowee(ctx context.Context, subs []*generated.Fo
 // Del
 func (s *SqlMethodStruct) CancelFollow(ctx context.Context, f *generated.Follow) error {
 	query := `
-		DELETE FROM s.db_user_1.Follow 
+		DELETE FROM db_user_1.Follow 
 		WHERE follower_id = ?
 	 	AND followee_id = ?`
 	_, err := s.db.Exec(

@@ -1,7 +1,6 @@
 package dispatch
 
 import (
-	"log"
 	"sync/atomic"
 	"time"
 

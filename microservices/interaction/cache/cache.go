@@ -15,9 +15,13 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 )
 
+type CacheMethodStruct struct {
+	CacheClient CacheInterface
+}
+
 // GET
 
-func ToBaseInteraction(results []redis.Z) ([]*generated.Interaction, error) {
+func (c *CacheMethodStruct) ToBaseInteraction(results []redis.Z) ([]*generated.Interaction, error) {
 	count := len(results)
 	res := make([]*generated.Interaction, count)
 	for i, val := range results {
@@ -37,18 +41,18 @@ func ToBaseInteraction(results []redis.Z) ([]*generated.Interaction, error) {
 }
 
 // 历史记录
-func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
+func (c *CacheMethodStruct) GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
 	const scope = 30
 	start := int64((page - 1) * scope)
 	stop := start + scope
 
 	userIdStr := strconv.FormatInt(userId, 10)
-	results, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Histories", userIdStr, start, stop)
+	results, err := c.CacheClient.RevRangeZSetWithScore(ctx, "User_Histories", userIdStr, start, stop)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := ToBaseInteraction(results)
+	res, err := c.ToBaseInteraction(results)
 	if err != nil {
 		return nil, err
 	}
@@ -60,17 +64,17 @@ func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.I
 }
 
 // 收藏夹
-func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
+func (c *CacheMethodStruct) GetCollections(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
 	const scope = 30
 	start := int64((page - 1) * scope)
 	stop := start + scope
 	userIdStr := strconv.FormatInt(userId, 10)
 
-	results, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Collections", userIdStr, start, stop)
+	results, err := c.CacheClient.RevRangeZSetWithScore(ctx, "User_Collections", userIdStr, start, stop)
 	if err != nil {
 		return nil, err
 	}
-	res, err := ToBaseInteraction(results)
+	res, err := c.ToBaseInteraction(results)
 	if err != nil {
 		return nil, err
 	}
@@ -82,18 +86,18 @@ func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated
 }
 
 // Like
-func GetLikes(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
+func (c *CacheMethodStruct) GetLikes(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
 	const scope = 30
 	start := int64((page - 1) * scope)
 	stop := start + scope
 	userIdStr := strconv.FormatInt(userId, 10)
 
-	result, err := CacheClient.RevRangeZSetWithScore(ctx, "User_Likes", userIdStr, start, stop)
+	result, err := c.CacheClient.RevRangeZSetWithScore(ctx, "User_Likes", userIdStr, start, stop)
 	if err != nil {
 		return nil, fmt.Errorf("error: %w", err)
 	}
 
-	res, err := ToBaseInteraction(result)
+	res, err := c.ToBaseInteraction(result)
 	if err != nil {
 		return nil, fmt.Errorf("error: %w", err)
 	}
@@ -105,9 +109,9 @@ func GetLikes(ctx context.Context, userId int64, page int32) ([]*generated.Inter
 }
 
 // 观看作品的用户
-func GetUsers(ctx context.Context, creationId int64) ([]int64, error) {
+func (c *CacheMethodStruct) GetUsers(ctx context.Context, creationId int64) ([]int64, error) {
 	creationIdStr := strconv.FormatInt(creationId, 10)
-	results, err := CacheClient.RevRangeZSet(ctx, "Item_Histories", creationIdStr, 0, 199)
+	results, err := c.CacheClient.RevRangeZSet(ctx, "Item_Histories", creationIdStr, 0, 199)
 
 	if err != nil {
 		return nil, err
@@ -130,11 +134,11 @@ type ActionResult struct {
 }
 
 // 展示页·点赞收藏情况
-func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction) (*generated.Interaction, error) {
+func (c *CacheMethodStruct) GetInteraction(ctx context.Context, interaction *generated.BaseInteraction) (*generated.Interaction, error) {
 	userId := interaction.GetUserId()
 	creationId := interaction.GetCreationId()
 
-	pipe := CacheClient.Pipeline()
+	pipe := c.CacheClient.Pipeline()
 	isLike := fmt.Sprintf("ZSet_User_Likes_%d", userId)             // 自己是否点赞
 	isCollection := fmt.Sprintf("ZSet_User_Collections_%d", userId) // 自己是否收藏
 
@@ -183,9 +187,9 @@ func GetInteraction(ctx context.Context, interaction *generated.BaseInteraction)
 // CountSet
 // GetMembersSet
 
-func GetRecommendBaseUser(ctx context.Context, id int64) ([]int64, int64, error) {
+func (c *CacheMethodStruct) GetRecommendBaseUser(ctx context.Context, id int64) ([]int64, int64, error) {
 	const popCount = 16
-	pipe := CacheClient.Pipeline()
+	pipe := c.CacheClient.Pipeline()
 
 	sliceCmd := pipe.SPopN(ctx, fmt.Sprintf("Set_RecommendBaseUser_%d", id), popCount)
 	intCmd := pipe.SCard(ctx, fmt.Sprintf("Set_RecommendBaseUser_%d", id))
@@ -216,9 +220,9 @@ func GetRecommendBaseUser(ctx context.Context, id int64) ([]int64, int64, error)
 	return ids, count, nil
 }
 
-func GetRecommendBaseItem(ctx context.Context, id int64) ([]int64, bool, error) {
+func (c *CacheMethodStruct) GetRecommendBaseItem(ctx context.Context, id int64) ([]int64, bool, error) {
 	const popCount = 50
-	pipe := CacheClient.Pipeline()
+	pipe := c.CacheClient.Pipeline()
 
 	sliceCmd := pipe.SRandMemberN(ctx, fmt.Sprintf("Set_RecommendBaseItem_%d", id), popCount)
 	floatCmd := pipe.ZScore(ctx, "ZSet_RecommendBaseItem_Creation", strconv.FormatInt(id, 10))
@@ -257,28 +261,28 @@ func GetRecommendBaseItem(ctx context.Context, id int64) ([]int64, bool, error) 
 // 查看是否过期，是否重新计算
 
 // POST
-func SetRecommendBaseUser(ctx context.Context, id int64, ids []int64) error {
+func (c *CacheMethodStruct) SetRecommendBaseUser(ctx context.Context, id int64, ids []int64) error {
 	count := len(ids)
 	values := make([]any, count)
 	for i, val := range ids {
 		values[i] = val
 	}
 
-	err := CacheClient.AddToSet(ctx, "RecommendBaseUser", strconv.FormatInt(id, 10), values...)
+	err := c.CacheClient.AddToSet(ctx, "RecommendBaseUser", strconv.FormatInt(id, 10), values...)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func SetRecommendBaseItem(ctx context.Context, id int64, ids []int64) error {
+func (c *CacheMethodStruct) SetRecommendBaseItem(ctx context.Context, id int64, ids []int64) error {
 	count := len(ids)
 	values := make([]any, count)
 	for i, val := range ids {
 		values[i] = val
 	}
 
-	pipe := CacheClient.Pipeline()
+	pipe := c.CacheClient.Pipeline()
 	// 作品的相似视频集合
 	pipe.SAdd(ctx, fmt.Sprintf("Set_RecommendBaseItem_%d", id), values...)
 	// 作品的相似视频集合的过期时间
@@ -297,8 +301,8 @@ func SetRecommendBaseItem(ctx context.Context, id int64, ids []int64) error {
 
 // POST & UPDATE
 // 历史记录 更新时间戳
-func UpdateHistories(ctx context.Context, data []*generated.OperateInteraction) error {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) UpdateHistories(ctx context.Context, data []*generated.OperateInteraction) error {
+	pipe := c.CacheClient.Pipeline()
 	for _, option := range data {
 		base := option.GetBase()
 
@@ -329,8 +333,8 @@ func UpdateHistories(ctx context.Context, data []*generated.OperateInteraction) 
 }
 
 // 收藏夹
-func ModifyCollections(ctx context.Context, data []*generated.OperateInteraction) error {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) ModifyCollections(ctx context.Context, data []*generated.OperateInteraction) error {
+	pipe := c.CacheClient.Pipeline()
 	for _, option := range data {
 		base := option.GetBase()
 
@@ -361,8 +365,8 @@ func ModifyCollections(ctx context.Context, data []*generated.OperateInteraction
 }
 
 // 点赞
-func ModifyLike(ctx context.Context, data []*generated.OperateInteraction) error {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) ModifyLike(ctx context.Context, data []*generated.OperateInteraction) error {
+	pipe := c.CacheClient.Pipeline()
 	for _, option := range data {
 		base := option.GetBase()
 
@@ -394,8 +398,8 @@ func ModifyLike(ctx context.Context, data []*generated.OperateInteraction) error
 
 // DELETE
 
-func DelHistories(ctx context.Context, data []*generated.BaseInteraction) error {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) DelHistories(ctx context.Context, data []*generated.BaseInteraction) error {
+	pipe := c.CacheClient.Pipeline()
 	for _, base := range data {
 		userId := base.GetUserId()
 		creationId := base.GetCreationId()
@@ -411,8 +415,8 @@ func DelHistories(ctx context.Context, data []*generated.BaseInteraction) error 
 	return nil
 }
 
-func DelCollections(ctx context.Context, data []*generated.BaseInteraction) error {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) DelCollections(ctx context.Context, data []*generated.BaseInteraction) error {
+	pipe := c.CacheClient.Pipeline()
 	for _, base := range data {
 		userId := base.GetUserId()
 		creationId := base.GetCreationId()
@@ -428,8 +432,8 @@ func DelCollections(ctx context.Context, data []*generated.BaseInteraction) erro
 	return nil
 }
 
-func DelLike(ctx context.Context, data []*generated.BaseInteraction) error {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) DelLike(ctx context.Context, data []*generated.BaseInteraction) error {
+	pipe := c.CacheClient.Pipeline()
 	for _, base := range data {
 		userId := base.GetUserId()
 		creationId := base.GetCreationId()
@@ -447,8 +451,8 @@ func DelLike(ctx context.Context, data []*generated.BaseInteraction) error {
 
 // Scan
 // 拿到别人的历史记录
-func ScanZSetsByHistories(ctx context.Context) ([]string, error) {
-	results, _, err := CacheClient.ScanZSet(ctx, "User_Histories", "*", 0, 2500)
+func (c *CacheMethodStruct) ScanZSetsByHistories(ctx context.Context) ([]string, error) {
+	results, _, err := c.CacheClient.ScanZSet(ctx, "User_Histories", "*", 0, 2500)
 	if err != nil {
 		return nil, err
 	}
@@ -463,8 +467,8 @@ func ScanZSetsByHistories(ctx context.Context) ([]string, error) {
 	return idStrs, nil
 }
 
-func ScanZSetsByCreationId(ctx context.Context) ([]string, error) {
-	results, _, err := CacheClient.ScanZSet(ctx, "Item_Histories", "*", 0, 2500)
+func (c *CacheMethodStruct) ScanZSetsByCreationId(ctx context.Context) ([]string, error) {
+	results, _, err := c.CacheClient.ScanZSet(ctx, "Item_Histories", "*", 0, 2500)
 	if err != nil {
 		return nil, err
 	}
@@ -479,11 +483,11 @@ func ScanZSetsByCreationId(ctx context.Context) ([]string, error) {
 	return idStrs, nil
 }
 
-func GetAllInteractions(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error) {
+func (c *CacheMethodStruct) GetAllInteractions(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error) {
 	const (
 		viewWeight = 1
 	)
-	pipe := CacheClient.Pipeline()
+	pipe := c.CacheClient.Pipeline()
 
 	// 用来存储 pipeline 请求的结果
 	historyCmds := make([]*redis.StringSliceCmd, len(idStrs))
@@ -532,11 +536,11 @@ func GetAllInteractions(ctx context.Context, idStrs []string) (map[int64]map[int
 	return histories, nil
 }
 
-func GetAllItemUsers(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error) {
+func (c *CacheMethodStruct) GetAllItemUsers(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error) {
 	const (
 		viewWeight = 1
 	)
-	pipe := CacheClient.Pipeline()
+	pipe := c.CacheClient.Pipeline()
 
 	// 用来存储 pipeline 请求的结果
 	historyCmds := make([]*redis.StringSliceCmd, len(idStrs))

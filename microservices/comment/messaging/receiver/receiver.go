@@ -19,7 +19,7 @@ func JoinCommentProcessor(_ context.Context, msg *anypb.Any) error {
 		return err
 	}
 	// 传递至责任链
-	dispatch.HandleRequest(req, DispatchInsert)
+	dispatcher.HandleRequest(req, DispatchInsert)
 	return nil
 }
 
@@ -45,6 +45,6 @@ func DeleteCommentProcessor(ctx context.Context, msg *anypb.Any) error {
 	}
 
 	// 发送集中处理
-	dispatch.HandleRequest(req, DispatchDelete)
+	dispatcher.HandleRequest(req, DispatchDelete)
 	return nil
 }

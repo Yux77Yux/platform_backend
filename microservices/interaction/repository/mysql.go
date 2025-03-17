@@ -13,9 +13,13 @@ import (
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
+type SqlMethodStruct struct {
+	db SqlInterface
+}
+
 // GET
 
-func GetActionTag(ctx context.Context, req *generated.BaseInteraction) (*generated.Interaction, error) {
+func (c *SqlMethodStruct) GetActionTag(ctx context.Context, req *generated.BaseInteraction) (*generated.Interaction, error) {
 	query := `
 		SELECT 
 			action_tag
@@ -32,7 +36,7 @@ func GetActionTag(ctx context.Context, req *generated.BaseInteraction) (*generat
 	case <-ctx.Done():
 		return nil, errMap.GetStatusError(ctx.Err())
 	default:
-		err := db.QueryRowContext(
+		err := c.db.QueryRowContext(
 			ctx,
 			query,
 			userId,
@@ -48,7 +52,7 @@ func GetActionTag(ctx context.Context, req *generated.BaseInteraction) (*generat
 	}, nil
 }
 
-func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
+func (c *SqlMethodStruct) GetCollections(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
 	offset := (page - 1) * 30
 	query := `
 		SELECT 
@@ -66,7 +70,7 @@ func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated
 	case <-ctx.Done():
 		return nil, errMap.GetStatusError(ctx.Err())
 	default:
-		rows, err := db.QueryContext(ctx, query, userId, offset)
+		rows, err := c.db.QueryContext(ctx, query, userId, offset)
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +95,7 @@ func GetCollections(ctx context.Context, userId int64, page int32) ([]*generated
 	return interactions, nil
 }
 
-func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
+func (c *SqlMethodStruct) GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
 	offset := (page - 1) * 30
 	query := `
 		SELECT 
@@ -109,7 +113,7 @@ func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.I
 	case <-ctx.Done():
 		return nil, errMap.GetStatusError(ctx.Err())
 	default:
-		rows, err := db.QueryContext(ctx, query, userId, offset)
+		rows, err := c.db.QueryContext(ctx, query, userId, offset)
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +139,7 @@ func GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.I
 }
 
 // 用于推荐系统返回
-func GetOtherUserHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
+func (c *SqlMethodStruct) GetOtherUserHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
 	const limit = 5000
 	offset := (page - 1) * limit
 	query := `
@@ -155,7 +159,7 @@ func GetOtherUserHistories(ctx context.Context, userId int64, page int32) ([]*ge
 	case <-ctx.Done():
 		return nil, errMap.GetStatusError(ctx.Err())
 	default:
-		rows, err := db.QueryContext(ctx, query, userId, userId, offset)
+		rows, err := c.db.QueryContext(ctx, query, userId, userId, offset)
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +187,7 @@ func GetOtherUserHistories(ctx context.Context, userId int64, page int32) ([]*ge
 }
 
 // UPDATE
-func UpdateInteractions(ctx context.Context, req []*generated.OperateInteraction) error {
+func (c *SqlMethodStruct) UpdateInteractions(ctx context.Context, req []*generated.OperateInteraction) error {
 	const (
 		QM = "(?,?,?,?,?)"
 	)
@@ -228,7 +232,7 @@ func UpdateInteractions(ctx context.Context, req []*generated.OperateInteraction
 	case <-ctx.Done():
 		return errMap.GetStatusError(ctx.Err())
 	default:
-		_, err := db.ExecContext(
+		_, err := c.db.ExecContext(
 			ctx,
 			query,
 			values...,

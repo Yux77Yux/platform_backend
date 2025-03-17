@@ -77,6 +77,7 @@ func (chain *LikeCacheChain) ExecuteBatch() {
 			cancel()
 			if err != nil {
 				tools.LogError("", "cache ModifyLike", err)
+				return
 			}
 
 			// 放回对象池

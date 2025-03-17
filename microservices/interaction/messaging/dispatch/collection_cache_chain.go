@@ -77,6 +77,7 @@ func (chain *CollectionCacheChain) ExecuteBatch() {
 			cancel()
 			if err != nil {
 				tools.LogError("", "cache ModifyCollections", err)
+				return
 			}
 
 			*interactionsPtr = interactions[:0]

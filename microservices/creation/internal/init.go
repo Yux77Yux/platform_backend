@@ -1,15 +1,5 @@
 package internal
 
-import (
-	event "github.com/Yux77Yux/platform_backend/generated/event/creation"
-)
-
-var (
-	EXCHANGE_DELETE_CREATION = event.Exchange_EXCHANGE_DELETE_CREATION.String()
-
-	KEY_DELETE_CREATION = event.RoutingKey_KEY_DELETE_CREATION.String()
-)
-
 var (
 	db        SqlMethod
 	messaging MessageQueueMethod

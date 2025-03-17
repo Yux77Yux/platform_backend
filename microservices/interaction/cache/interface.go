@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/go-redis/redis/v8"
+
+	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
 )
 
 type CacheInterface interface {
@@ -45,4 +47,27 @@ type CacheInterface interface {
 	DelHashField(ctx context.Context, kind string, unique string, fields ...string) (int64, error)
 
 	Pipeline() redis.Pipeliner
+}
+
+type CacheMethod interface {
+	ToBaseInteraction(results []redis.Z) ([]*generated.Interaction, error)
+	GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error)
+	GetCollections(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error)
+	GetLikes(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error)
+	GetUsers(ctx context.Context, creationId int64) ([]int64, error)
+	GetInteraction(ctx context.Context, interaction *generated.BaseInteraction) (*generated.Interaction, error)
+	GetRecommendBaseUser(ctx context.Context, id int64) ([]int64, int64, error)
+	GetRecommendBaseItem(ctx context.Context, id int64) ([]int64, bool, error)
+	SetRecommendBaseUser(ctx context.Context, id int64, ids []int64) error
+	SetRecommendBaseItem(ctx context.Context, id int64, ids []int64) error
+	UpdateHistories(ctx context.Context, data []*generated.OperateInteraction) error
+	ModifyCollections(ctx context.Context, data []*generated.OperateInteraction) error
+	ModifyLike(ctx context.Context, data []*generated.OperateInteraction) error
+	DelHistories(ctx context.Context, data []*generated.BaseInteraction) error
+	DelCollections(ctx context.Context, data []*generated.BaseInteraction) error
+	DelLike(ctx context.Context, data []*generated.BaseInteraction) error
+	ScanZSetsByHistories(ctx context.Context) ([]string, error)
+	ScanZSetsByCreationId(ctx context.Context) ([]string, error)
+	GetAllInteractions(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error)
+	GetAllItemUsers(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error)
 }

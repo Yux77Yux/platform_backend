@@ -1,19 +1,19 @@
 package internal
 
 var (
-	cache     CacheMethod
-	db        DataBaseMethod
+	db        SqlMethod
 	messaging MessageQueueMethod
+	cache     CacheMethod
 )
 
-func InitCache(_cache CacheMethod) {
-	cache = _cache
-}
-
-func InitDb(_db DataBaseMethod) {
+func InitDb(_db SqlMethod) {
 	db = _db
 }
 
-func InitMQ(messaging MessageQueueMethod) {
+func InitMQ(_messaging MessageQueueMethod) {
 	messaging = _messaging
+}
+
+func InitCache(_cache CacheMethod) {
+	cache = _cache
 }

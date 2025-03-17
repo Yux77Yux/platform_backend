@@ -2,15 +2,21 @@ package receiver
 
 import (
 	"context"
-	"google.golang.org/protobuf/proto"
+
+	"google.golang.org/protobuf/reflect/protoreflect"
+
+	generated "github.com/Yux77Yux/platform_backend/generated/review"
+	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue/rabbitmq"
 )
 
+type HandlerFunc = pkgMQ.HandlerFunc
+
 type SqlMethod interface {
+	UpdateReview(ctx context.Context, review *generated.Review) error
 }
 
-type MessageQueueMethod interface {
-	SendMessage(ctx context.Context, exchange string, routeKey string, req proto.Message) error
-}
+type MessageQueueMethod = pkgMQ.MessageQueueMethod
 
-type CacheMethod interface {
+type DispatchInterface interface {
+	HandleRequest(msg protoreflect.ProtoMessage, typeName string)
 }

@@ -7,7 +7,6 @@ import (
 	generated "github.com/Yux77Yux/platform_backend/generated/aggregator"
 	comment "github.com/Yux77Yux/platform_backend/generated/comment"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
-	event "github.com/Yux77Yux/platform_backend/generated/common/event"
 	creation "github.com/Yux77Yux/platform_backend/generated/creation"
 	interaction "github.com/Yux77Yux/platform_backend/generated/interaction"
 	client "github.com/Yux77Yux/platform_backend/microservices/aggregator/client"

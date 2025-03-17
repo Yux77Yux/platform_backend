@@ -5,8 +5,6 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/review/messaging"
-	db "github.com/Yux77Yux/platform_backend/microservices/review/repository"
 	tools "github.com/Yux77Yux/platform_backend/microservices/review/tools"
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
@@ -58,7 +56,7 @@ func UpdateReview(ctx context.Context, req *generated.UpdateReviewRequest) (*gen
 
 	go func(review *generated.Review, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.Update, messaging.Update, review)
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE, KEY_UPDATE, review)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

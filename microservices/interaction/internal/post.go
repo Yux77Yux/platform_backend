@@ -43,7 +43,7 @@ func PostInteraction(ctx context.Context, req *generated.PostInteractionRequest)
 
 	go func(operateInteraction *generated.OperateInteraction, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.AddView, messaging.AddView, operateInteraction)
+		err = messaging.SendMessage(ctx, EXCHANGE_ADD_VIEW, KEY_ADD_VIEW, operateInteraction)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

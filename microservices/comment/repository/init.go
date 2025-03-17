@@ -20,15 +20,13 @@ func InitStr(or, wr string) {
 	readWriteStr = wr
 }
 
-func GetDB() (SqlMethod, error) {
+func GetDB() (SqlInterface, error) {
 	_db, err := pkgDb.InitDb(onlyReadStr, readWriteStr)
 	if err != nil {
 		return nil, err
 	}
 
-	return &SqlMethodStruct{
-		db: _db,
-	}, nil
+	return _db, nil
 }
 
 func Run() func() {
@@ -36,10 +34,12 @@ func Run() func() {
 	if err != nil {
 		tools.LogSuperError(err)
 	}
-
-	dispatch.InitDb(db)
-	receiver.InitDb(db)
-	internal.InitDb(db)
+	methods := &SqlMethodStruct{
+		db: db,
+	}
+	dispatch.InitDb(methods)
+	receiver.InitDb(methods)
+	internal.InitDb(methods)
 
 	return func() {
 		if err := db.Close(); err != nil {

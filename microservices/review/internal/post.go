@@ -8,7 +8,6 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/review"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/review/messaging"
 	tools "github.com/Yux77Yux/platform_backend/microservices/review/tools"
 )
 
@@ -31,7 +30,7 @@ func NewReview(ctx context.Context, req *generated.NewReviewRequest) (*generated
 
 	go func(review *generated.NewReview, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err := messaging.SendMessage(ctx, messaging.New_review, messaging.New_review, review)
+		err := messaging.SendMessage(ctx, EXCHANGE_NEW_REVIEW, KEY_NEW_REVIEW, review)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

@@ -7,10 +7,7 @@ import (
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/interaction"
-	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
-	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
 	tools "github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
-
 	auth "github.com/Yux77Yux/platform_backend/pkg/auth"
 )
 
@@ -49,7 +46,7 @@ func ClickCollection(ctx context.Context, req *generated.UpdateInteractionReques
 
 	go func(operateInteraction *generated.OperateInteraction, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.AddCollection, messaging.AddCollection, operateInteraction)
+		err = messaging.SendMessage(ctx, EXCHANGE_ADD_COLLECTION, KEY_ADD_COLLECTION, operateInteraction)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}
@@ -97,7 +94,7 @@ func ClickLike(ctx context.Context, req *generated.UpdateInteractionRequest) (*g
 
 	go func(operateInteraction *generated.OperateInteraction, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.AddLike, messaging.AddLike, operateInteraction)
+		err = messaging.SendMessage(ctx, EXCHANGE_ADD_LIKE, KEY_ADD_LIKE, operateInteraction)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}
@@ -161,7 +158,7 @@ func CancelCollections(ctx context.Context, req *generated.UpdateInteractionsReq
 		anyOperateInteraction := &generated.AnyOperateInteraction{
 			OperateInteractions: operateInteractions,
 		}
-		err = messaging.SendMessage(ctx, messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
+		err = messaging.SendMessage(ctx, EXCHANGE_BATCH_UPDATE_DB, KEY_BATCH_UPDATE_DB, anyOperateInteraction)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}
@@ -219,7 +216,7 @@ func DelHistories(ctx context.Context, req *generated.UpdateInteractionsRequest)
 		anyOperateInteraction := &generated.AnyOperateInteraction{
 			OperateInteractions: operateInteractions,
 		}
-		err = messaging.SendMessage(ctx, messaging.BatchUpdateDb, messaging.BatchUpdateDb, anyOperateInteraction)
+		err = messaging.SendMessage(ctx, EXCHANGE_BATCH_UPDATE_DB, KEY_BATCH_UPDATE_DB, anyOperateInteraction)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}
@@ -262,7 +259,7 @@ func CancelLike(ctx context.Context, req *generated.UpdateInteractionRequest) (*
 	}
 	go func(interaction *generated.OperateInteraction, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.CancelLike, messaging.CancelLike, interaction)
+		err = messaging.SendMessage(ctx, EXCHANGE_CANCEL_LIKE, KEY_CANCEL_LIKE, interaction)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

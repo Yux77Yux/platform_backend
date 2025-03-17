@@ -29,16 +29,3 @@ var (
 	KEY_UPDATE_USER_STATUS = event.RoutingKey_KEY_UPDATE_USER_STATUS.String()
 	KEY_DEL_REVIEWER       = event.RoutingKey_KEY_DEL_REVIEWER.String()
 )
-
-var (
-	QUEUE_REGISTER           = event.Queue_QUEUE_REGISTER.String()
-	QUEUE_STORE_USER         = event.Queue_QUEUE_STORE_USER.String()
-	QUEUE_STORE_CREDENTIAL   = event.Queue_QUEUE_STORE_CREDENTIAL.String()
-	QUEUE_UPDATE_USER_SPACE  = event.Queue_QUEUE_UPDATE_USER_SPACE.String()
-	QUEUE_UPDATE_USER_BIO    = event.Queue_QUEUE_UPDATE_USER_BIO.String()
-	QUEUE_UPDATE_USER_AVATAR = event.Queue_QUEUE_UPDATE_USER_AVATAR.String()
-	QUEUE_FOLLOW             = event.Queue_QUEUE_FOLLOW.String()
-	QUEUE_CANCEL_FOLLOW      = event.Queue_QUEUE_CANCEL_FOLLOW.String()
-	QUEUE_UPDATE_USER_STATUS = event.Queue_QUEUE_UPDATE_USER_STATUS.String()
-	QUEUE_DEL_REVIEWER       = event.Queue_QUEUE_DEL_REVIEWER.String()
-)

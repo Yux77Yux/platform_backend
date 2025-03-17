@@ -3,8 +3,7 @@ package messaging
 import (
 	"context"
 
-	"google.golang.org/protobuf/proto"
-
+	internal "github.com/Yux77Yux/platform_backend/microservices/creation/internal"
 	dispatch "github.com/Yux77Yux/platform_backend/microservices/creation/messaging/dispatch"
 	receiver "github.com/Yux77Yux/platform_backend/microservices/creation/messaging/receiver"
 	pkgMQ "github.com/Yux77Yux/platform_backend/pkg/messagequeue/rabbitmq"
@@ -12,6 +11,7 @@ import (
 
 func Run(ctx context.Context) func() {
 	_client := pkgMQ.GetClient(connStr)
+	internal.InitMQ(_client)
 	_dispatch := dispatch.Run()
 
 	receiver.Run(_client, _dispatch)

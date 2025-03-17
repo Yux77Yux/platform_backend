@@ -2,9 +2,8 @@ package recommend
 
 import (
 	"context"
-	"log"
 
-	cache "github.com/Yux77Yux/platform_backend/microservices/interaction/cache"
+	"github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
 
 // 行为数据类型
@@ -24,7 +23,7 @@ func GetUserBehavior(userID int64) *Behavior {
 	ctx := context.Background()
 	history, err := cache.GetHistories(ctx, userID, 1)
 	if err != nil {
-		log.Printf("GetHistories err %v", err)
+		tools.LogError("", "recommend GetUserBehavior", err)
 	}
 
 	userWeight := make(map[int64]float64)
@@ -51,14 +50,14 @@ func GetUserBehavior(userID int64) *Behavior {
 func GetOtherUsers(ctx context.Context) ([]*Behavior, error) {
 	others, err := cache.ScanZSetsByHistories(ctx)
 	if err != nil {
-		log.Printf("ScanZSetsByHistories err %v", err)
+		tools.LogError("", "recommend GetOtherUsers", err)
 		return nil, err
 	}
 	length := len(others)
 
 	otherMap, err := cache.GetAllInteractions(ctx, others)
 	if err != nil {
-		log.Printf("GetAllInteractions err %v", err)
+		tools.LogError("", "recommend GetOtherUsers", err)
 		return nil, err
 	}
 	behaviorSlice := make([]*Behavior, 0, length)
@@ -87,7 +86,7 @@ func GetCreationViewer(ctx context.Context, creationId int64) *Behavior {
 
 	itemUsers, err := cache.GetUsers(ctx, creationId)
 	if err != nil {
-		log.Printf("GetHistories err %v", err)
+		tools.LogError("", "recommend GetCreationViewer", err)
 	}
 
 	itemWeight := make(map[int64]float64)
@@ -113,14 +112,12 @@ func GetCreationViewer(ctx context.Context, creationId int64) *Behavior {
 func GetOtherCreationViewer(ctx context.Context) ([]*Behavior, error) {
 	others, err := cache.ScanZSetsByCreationId(ctx)
 	if err != nil {
-		log.Printf("ScanZSetsByCreationId err %v", err)
 		return nil, err
 	}
 	length := len(others)
 
 	otherMap, err := cache.GetAllItemUsers(ctx, others)
 	if err != nil {
-		log.Printf("GetAllItemUsers err %v", err)
 		return nil, err
 	}
 	behaviorSlice := make([]*Behavior, 0, length)

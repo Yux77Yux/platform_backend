@@ -17,8 +17,12 @@ import (
 	errMap "github.com/Yux77Yux/platform_backend/pkg/error"
 )
 
+type SqlMethodStruct struct {
+	db SqlInterface
+}
+
 // POST
-func CreationAddInTransaction(ctx context.Context, creation *generated.Creation) error {
+func (c *SqlMethodStruct) CreationAddInTransaction(ctx context.Context, creation *generated.Creation) error {
 	queryCreation := `insert into db_creation_1.Creation 
 	(id,
 	author_id,
@@ -38,7 +42,7 @@ func CreationAddInTransaction(ctx context.Context, creation *generated.Creation)
 	)
 	values(?)`
 
-	tx, err := db.BeginTransaction()
+	tx, err := c.db.BeginTransaction()
 	if err != nil {
 		return err
 	}
@@ -47,10 +51,10 @@ func CreationAddInTransaction(ctx context.Context, creation *generated.Creation)
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("transaction failed because %v", r)
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
+			if errSecond := c.db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)
 			}
-			tools.LogError("", "db recover", err)
+			tools.LogError("", "c.db recover", err)
 		}
 	}()
 
@@ -69,7 +73,7 @@ func CreationAddInTransaction(ctx context.Context, creation *generated.Creation)
 
 	select {
 	case <-ctx.Done():
-		if err := db.RollbackTransaction(tx); err != nil {
+		if err := c.db.RollbackTransaction(tx); err != nil {
 			return err
 		}
 		return errMap.GetStatusError(err)
@@ -89,8 +93,8 @@ func CreationAddInTransaction(ctx context.Context, creation *generated.Creation)
 			upload_time,
 		)
 		if err != nil {
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				tools.LogError("", "db roolback", errSecond)
+			if errSecond := c.db.RollbackTransaction(tx); errSecond != nil {
+				tools.LogError("", "c.db roolback", errSecond)
 			}
 
 			return err
@@ -101,14 +105,14 @@ func CreationAddInTransaction(ctx context.Context, creation *generated.Creation)
 			id,
 		)
 		if err != nil {
-			if errSecond := db.RollbackTransaction(tx); errSecond != nil {
-				tools.LogError("", "db roolback", errSecond)
+			if errSecond := c.db.RollbackTransaction(tx); errSecond != nil {
+				tools.LogError("", "c.db roolback", errSecond)
 			}
 
 			return err
 		}
 
-		if err = db.CommitTransaction(tx); err != nil {
+		if err = c.db.CommitTransaction(tx); err != nil {
 			return err
 		}
 	}
@@ -119,7 +123,7 @@ func CreationAddInTransaction(ctx context.Context, creation *generated.Creation)
 // GET
 
 // 详细页
-func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.CreationInfo, error) {
+func (c *SqlMethodStruct) GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.CreationInfo, error) {
 	queryCreation :=
 		`SELECT
 		author_id,
@@ -175,7 +179,7 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		// 查作品信息
-		err := db.QueryRowContext(
+		err := c.db.QueryRowContext(
 			ctx,
 			queryCreation,
 			creationId,
@@ -196,7 +200,7 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 		}
 
 		// 查 统计数
-		err = db.QueryRowContext(
+		err = c.db.QueryRowContext(
 			ctx,
 			queryCreationEngagement,
 			creationId,
@@ -212,7 +216,7 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 		}
 
 		// 查 分区
-		err = db.QueryRowContext(
+		err = c.db.QueryRowContext(
 			ctx,
 			queryCategory,
 			category_id,
@@ -261,7 +265,7 @@ func GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.C
 }
 
 // 返回作者ID
-func GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, error) {
+func (c *SqlMethodStruct) GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, error) {
 	queryCreation := `
 		SELECT author_id
 		FROM db_creation_1.Creation 
@@ -276,7 +280,7 @@ func GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, err
 		return -1, errMap.GetStatusError(ctx.Err())
 	default:
 		// 查作品信息
-		err := db.QueryRowContext(
+		err := c.db.QueryRowContext(
 			ctx,
 			queryCreation,
 			creationId,
@@ -292,7 +296,7 @@ func GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, err
 }
 
 // Card型
-func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsRequest) ([]*generated.CreationInfo, int32, error) {
+func (c *SqlMethodStruct) GetUserCreations(ctx context.Context, req *generated.GetUserCreationsRequest) ([]*generated.CreationInfo, int32, error) {
 	const LIMIT = 10
 	authorId := req.GetUserId()
 	page := req.GetPage()
@@ -333,7 +337,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 	default:
 		if page <= 1 {
 			var num int32
-			err := db.QueryRowContext(
+			err := c.db.QueryRowContext(
 				ctx,
 				queryCount,
 				authorId,
@@ -348,7 +352,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 			count = int32(math.Ceil(float64(num) / float64(LIMIT)))
 		}
 
-		rows, err := db.QueryContext(
+		rows, err := c.db.QueryContext(
 			ctx,
 			query,
 			authorId,
@@ -419,7 +423,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 		WHERE creation_id IN (%s)`, strings.Join(sqlStr, ","))
 
 		// 查 统计数
-		rows, err = db.QueryContext(
+		rows, err = c.db.QueryContext(
 			ctx,
 			queryCardEngagement,
 			creationIds...,
@@ -462,7 +466,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 	return creationInfos, count, nil
 }
 
-func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generated.CreationInfo, error) {
+func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generated.CreationInfo, error) {
 	count := len(ids)
 	if count <= 0 {
 		return nil, nil
@@ -508,7 +512,7 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 	case <-ctx.Done():
 		return nil, errMap.GetStatusError(ctx.Err())
 	default:
-		rows, err := db.QueryContext(
+		rows, err := c.db.QueryContext(
 			ctx,
 			query,
 			values...,
@@ -568,7 +572,7 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 		}
 
 		// 查 统计数
-		rows, err = db.QueryContext(
+		rows, err = c.db.QueryContext(
 			ctx,
 			queryCardEngagement,
 			valuesC...,
@@ -619,7 +623,7 @@ func GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generate
 }
 
 // DELETE
-func DeleteCreationInTransaction(ctx context.Context, id int64) error {
+func (c *SqlMethodStruct) DeleteCreationInTransaction(ctx context.Context, id int64) error {
 	query := `DELETE FROM db_creation_1.Creation 
 		WHERE id = ?`
 
@@ -627,7 +631,7 @@ func DeleteCreationInTransaction(ctx context.Context, id int64) error {
 	case <-ctx.Done():
 		return errMap.GetStatusError(ctx.Err())
 	default:
-		_, err := db.ExecContext(
+		_, err := c.db.ExecContext(
 			ctx,
 			query,
 			id,
@@ -641,7 +645,7 @@ func DeleteCreationInTransaction(ctx context.Context, id int64) error {
 }
 
 // UPDATE
-func UpdateViewsInTransaction(ctx context.Context, creationId int64, changingNum int) error {
+func (c *SqlMethodStruct) UpdateViewsInTransaction(ctx context.Context, creationId int64, changingNum int) error {
 	query := `
 	UPDATE db_creation_engagment_1.CreationEngagement
 	SET views = views + ?
@@ -651,7 +655,7 @@ func UpdateViewsInTransaction(ctx context.Context, creationId int64, changingNum
 	case <-ctx.Done():
 		return errMap.GetStatusError(ctx.Err())
 	default:
-		_, err := db.ExecContext(
+		_, err := c.db.ExecContext(
 			ctx,
 			query,
 			changingNum,
@@ -665,7 +669,7 @@ func UpdateViewsInTransaction(ctx context.Context, creationId int64, changingNum
 	return nil
 }
 
-func UpdateLikesInTransaction(ctx context.Context, creationId int64, changingNum int) error {
+func (c *SqlMethodStruct) UpdateLikesInTransaction(ctx context.Context, creationId int64, changingNum int) error {
 	query := `
 	UPDATE db_creation_engagment_1.CreationEngagement
 	SET likes = likes + ?
@@ -675,7 +679,7 @@ func UpdateLikesInTransaction(ctx context.Context, creationId int64, changingNum
 	case <-ctx.Done():
 		return errMap.GetStatusError(ctx.Err())
 	default:
-		_, err := db.ExecContext(
+		_, err := c.db.ExecContext(
 			ctx,
 			query,
 			changingNum,
@@ -689,7 +693,7 @@ func UpdateLikesInTransaction(ctx context.Context, creationId int64, changingNum
 	return nil
 }
 
-func UpdateSavesInTransaction(ctx context.Context, creationId int64, changingNum int) error {
+func (c *SqlMethodStruct) UpdateSavesInTransaction(ctx context.Context, creationId int64, changingNum int) error {
 	query := `
 	UPDATE db_creation_engagment_1.CreationEngagement
 	SET saves = saves + ?
@@ -699,7 +703,7 @@ func UpdateSavesInTransaction(ctx context.Context, creationId int64, changingNum
 	case <-ctx.Done():
 		return errMap.GetStatusError(ctx.Err())
 	default:
-		_, err := db.ExecContext(
+		_, err := c.db.ExecContext(
 			ctx,
 			query,
 			changingNum,
@@ -713,7 +717,7 @@ func UpdateSavesInTransaction(ctx context.Context, creationId int64, changingNum
 	return nil
 }
 
-func UpdateCreationInTransaction(ctx context.Context, creation *generated.CreationUpdated) error {
+func (c *SqlMethodStruct) UpdateCreationInTransaction(ctx context.Context, creation *generated.CreationUpdated) error {
 	var (
 		thumbnail = creation.GetThumbnail()
 		title     = creation.GetTitle()
@@ -772,7 +776,7 @@ func UpdateCreationInTransaction(ctx context.Context, creation *generated.Creati
 		WHERE 
 			id = ? 
 		%s`, strings.Join(sqlStr, ","), AND)
-	affected, err := db.ExecContext(ctx, query, values...)
+	affected, err := c.db.ExecContext(ctx, query, values...)
 	if err != nil {
 		return err
 	}
@@ -786,7 +790,7 @@ func UpdateCreationInTransaction(ctx context.Context, creation *generated.Creati
 	return nil
 }
 
-func UpdateCreationStatusInTransaction(ctx context.Context, creation *generated.CreationUpdateStatus) error {
+func (c *SqlMethodStruct) UpdateCreationStatusInTransaction(ctx context.Context, creation *generated.CreationUpdateStatus) error {
 	var (
 		creationId = creation.GetCreationId()
 		status     = creation.GetStatus()
@@ -809,7 +813,7 @@ func UpdateCreationStatusInTransaction(ctx context.Context, creation *generated.
 		WHERE 
 			id = ? 
 		%s`, AND)
-	affected, err := db.ExecContext(ctx, query, values...)
+	affected, err := c.db.ExecContext(ctx, query, values...)
 	if err != nil {
 		return err
 	}
@@ -823,7 +827,7 @@ func UpdateCreationStatusInTransaction(ctx context.Context, creation *generated.
 	return nil
 }
 
-func PublishCreationInTransaction(ctx context.Context, creationId int64, publishTime *timestamppb.Timestamp) error {
+func (c *SqlMethodStruct) PublishCreationInTransaction(ctx context.Context, creationId int64, publishTime *timestamppb.Timestamp) error {
 	query := `
 		UPDATE db_creation_engagment_1.CreationEngagement
 		SET publish_time = CASE 
@@ -831,7 +835,7 @@ func PublishCreationInTransaction(ctx context.Context, creationId int64, publish
     		ELSE publish_time 
 		END
 		WHERE id = ?`
-	_, err := db.ExecContext(
+	_, err := c.db.ExecContext(
 		ctx,
 		query,
 		publishTime.AsTime(),
@@ -844,7 +848,7 @@ func PublishCreationInTransaction(ctx context.Context, creationId int64, publish
 	return nil
 }
 
-func UpdateCreationCount(ctx context.Context, creationId int64, saveCount, likeCount, viewCount int32) error {
+func (c *SqlMethodStruct) UpdateCreationCount(ctx context.Context, creationId int64, saveCount, likeCount, viewCount int32) error {
 	const (
 		saveSql = "saves = saves + ?"
 		likeSql = "likes = likes + ?"
@@ -877,7 +881,7 @@ func UpdateCreationCount(ctx context.Context, creationId int64, saveCount, likeC
 		WHERE creation_id = ?
 	`, strings.Join(sqlStr, ","))
 
-	_, err := db.ExecContext(
+	_, err := c.db.ExecContext(
 		ctx,
 		query,
 		values...,

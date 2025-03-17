@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type MessageQueueInterface interface {
+type MessageQueueMethod interface {
 	Close(ctx context.Context)
 	SendProtoMessage(ctx context.Context, exchange string, routeKey string, body []byte) error
 	SendMessage(ctx context.Context, exchange string, routeKey string, req proto.Message) error

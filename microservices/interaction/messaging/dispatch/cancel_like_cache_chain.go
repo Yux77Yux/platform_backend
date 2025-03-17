@@ -77,6 +77,7 @@ func (chain *CancelLikeCacheChain) ExecuteBatch() {
 			cancel()
 			if err != nil {
 				tools.LogError("", "cache DelLike", err)
+				return
 			}
 
 			// 放回对象池

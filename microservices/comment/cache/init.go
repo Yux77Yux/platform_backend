@@ -38,7 +38,7 @@ func Run() func() {
 	dispatch.InitCache(cache)
 
 	return func() {
-		err := cache.CacheClient.Close()
+		err := client.Close()
 		if err != nil {
 			tools.LogError("", "Cache Close", err)
 		}

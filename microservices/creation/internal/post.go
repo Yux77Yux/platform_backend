@@ -113,7 +113,7 @@ func UploadCreation(ctx context.Context, req *generated.UploadCreationRequest) (
 	if status == generated.CreationStatus_PENDING {
 		go func(creationId int64, ctx context.Context) {
 			traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-			err = messaging.SendMessage(ctx, messaging.PendingCreation, messaging.PendingCreation, &common.CreationId{
+			err = messaging.SendMessage(ctx, EXCHANGE_PEND_CREATION, KEY_PEND_CREATION, &common.CreationId{
 				Id: creationId,
 			})
 			if err != nil {

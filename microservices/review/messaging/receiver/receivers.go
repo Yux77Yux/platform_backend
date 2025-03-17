@@ -24,15 +24,15 @@ func NewReviewProcessor(ctx context.Context, msg *anypb.Any) error {
 		return fmt.Errorf("NewReviewProcessor error: %w", err)
 	}
 
-	go dispatch.HandleRequest(req, dispatch.Insert)
+	go dispatcher.HandleRequest(req, dispatch.Insert)
 
 	switch req.GetTargetType() {
 	case generated.TargetType_COMMENT:
-		err = messaging.PreSendMessage(ctx, Comment_review, Comment_review, Comment_review, req)
+		err = messaging.PreSendMessage(ctx, EXCHANGE_COMMENT_REVIEW, QUEUE_COMMENT_REVIEW, KEY_COMMENT_REVIEW, req)
 	case generated.TargetType_USER:
-		err = messaging.PreSendMessage(ctx, User_review, User_review, User_review, req)
+		err = messaging.PreSendMessage(ctx, EXCHANGE_USER_REVIEW, QUEUE_USER_REVIEW, KEY_USER_REVIEW, req)
 	case generated.TargetType_CREATION:
-		err = messaging.PreSendMessage(ctx, Creation_review, Creation_review, Creation_review, req)
+		err = messaging.PreSendMessage(ctx, EXCHANGE_CREATION_REVIEW, QUEUE_CREATION_REVIEW, KEY_CREATION_REVIEW, req)
 	}
 
 	return err
@@ -57,7 +57,7 @@ func PendingCreationProcessor(ctx context.Context, msg *anypb.Any) error {
 		Msg:        "状态变更",
 	}
 
-	err = messaging.SendMessage(ctx, New_review, New_review, newReview)
+	err = messaging.SendMessage(ctx, EXCHANGE_NEW_REVIEW, QUEUE_NEW_REVIEW, newReview)
 	return err
 }
 
@@ -69,7 +69,7 @@ func BatchUpdateProcessor(ctx context.Context, msg *anypb.Any) error {
 		return fmt.Errorf("BatchUpdateProcessor error: %w", err)
 	}
 
-	go dispatch.HandleRequest(req, dispatch.BatchUpdate)
+	go dispatcher.HandleRequest(req, dispatch.BatchUpdate)
 	return nil
 }
 
@@ -78,12 +78,12 @@ func UpdateProcessor(ctx context.Context, msg *anypb.Any) error {
 
 	err := msg.UnmarshalTo(review)
 	if err != nil {
-		return fmt.Errorf("UpdateProcessor error: %w", err)
+		return err
 	}
 
 	err = db.UpdateReview(ctx, review)
 	if err != nil {
-		return fmt.Errorf("error: db UpdateReview %w", err)
+		return err
 	}
 
 	var reviewErr error
@@ -118,7 +118,7 @@ func UpdateCommentReview(ctx context.Context, review *generated.Review) error {
 	var err error
 	switch status {
 	case generated.ReviewStatus_REJECTED, generated.ReviewStatus_DELETED:
-		err = messaging.SendMessage(ctx, COMMENT_REJECTED, COMMENT_REJECTED, commentObj)
+		err = messaging.SendMessage(ctx, EXCHANGE_DELETE_COMMENT, KEY_DELETE_COMMENT, commentObj)
 	}
 
 	return err
@@ -138,15 +138,12 @@ func UpdateCreationReview(ctx context.Context, review *generated.Review) error {
 
 	var err error
 	switch status {
-	case generated.ReviewStatus_REJECTED:
+	case generated.ReviewStatus_REJECTED, generated.ReviewStatus_APPROVED:
 		creationObj.Status = creation.CreationStatus_REJECTED
-		err = messaging.SendMessage(ctx, CREATION_REJECTED, CREATION_REJECTED, creationObj)
-	case generated.ReviewStatus_APPROVED:
-		creationObj.Status = creation.CreationStatus_PUBLISHED
-		err = messaging.SendMessage(ctx, CREATION_APPROVE, CREATION_APPROVE, creationObj)
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_CREATION_STATUS, KEY_UPDATE_CREATION_STATUS, creationObj)
 	case generated.ReviewStatus_DELETED:
 		creationObj.Status = creation.CreationStatus_DELETE
-		err = messaging.SendMessage(ctx, CREATION_DELETED, CREATION_DELETED, creationObj)
+		err = messaging.SendMessage(ctx, EXCHANGE_DELETE_CREATION, KEY_DELETE_CREATION, creationObj)
 	}
 
 	return err
@@ -165,12 +162,9 @@ func UpdateUserReview(ctx context.Context, review *generated.Review) error {
 
 	var err error
 	switch status {
-	case generated.ReviewStatus_REJECTED:
+	case generated.ReviewStatus_REJECTED, generated.ReviewStatus_APPROVED:
 		updateUser.UserStatus = user.UserStatus_LIMITED
-		err = messaging.SendMessage(ctx, USER_REJECTED, USER_REJECTED, updateUser)
-	case generated.ReviewStatus_APPROVED:
-		updateUser.UserStatus = user.UserStatus_INACTIVE
-		err = messaging.SendMessage(ctx, USER_APPROVE, USER_APPROVE, updateUser)
+		err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_USER_STATUS, KEY_UPDATE_USER_STATUS, updateUser)
 	}
 
 	return err

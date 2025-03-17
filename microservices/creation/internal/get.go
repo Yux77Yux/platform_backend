@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"log"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
@@ -50,7 +49,7 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 		if status == generated.CreationStatus_PUBLISHED {
 			go func(creation *generated.CreationInfo, ctx context.Context) {
 				traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-				err := messaging.SendMessage(ctx, messaging.StoreCreationInfo, messaging.StoreCreationInfo, creation)
+				err := messaging.SendMessage(ctx, EXCHANGE_STORE_CREATION, KEY_STORE_CREATION, creation)
 				if err != nil {
 					tools.LogError(traceId, fullName, err)
 				}
@@ -215,7 +214,6 @@ func GetSpaceCreations(ctx context.Context, req *generated.GetSpaceCreationsRequ
 
 	ids, count, err := cache.GetSpaceCreationList(ctx, id, page, typeStr)
 	if err != nil {
-		log.Printf("error: cache GetSpaceCreationList %v", err)
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
 			Code:    "500",

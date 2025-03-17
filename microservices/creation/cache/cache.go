@@ -3,26 +3,30 @@ package cache
 import (
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"strconv"
 
-	"github.com/Yux77Yux/platform_backend/generated/common"
-	generated "github.com/Yux77Yux/platform_backend/generated/creation"
-	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 	"github.com/go-redis/redis/v8"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	common "github.com/Yux77Yux/platform_backend/generated/common"
+	generated "github.com/Yux77Yux/platform_backend/generated/creation"
+	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 )
 
+type CacheMethodStruct struct {
+	CacheClient CacheInterface
+}
+
 // POST
-func CreationAddInCache(ctx context.Context, creationInfo *generated.CreationInfo) error {
+func (c *CacheMethodStruct) CreationAddInCache(ctx context.Context, creationInfo *generated.CreationInfo) error {
 	creation := creationInfo.GetCreation()
 
 	id := strconv.FormatInt(creation.GetCreationId(), 10)
 
 	categoryId := creation.GetBaseInfo().GetCategoryId()
 
-	return CacheClient.SetFieldsHash(ctx, "CreationInfo", id,
+	return c.CacheClient.SetFieldsHash(ctx, "CreationInfo", id,
 		"author_id", creation.GetBaseInfo().GetAuthorId(),
 		"src", creation.GetBaseInfo().GetSrc(),
 		"thumbnail", creation.GetBaseInfo().GetThumbnail(),
@@ -43,10 +47,10 @@ func CreationAddInCache(ctx context.Context, creationInfo *generated.CreationInf
 	)
 }
 
-func AddSpaceCreations(ctx context.Context, authorId, creationId int64, publishTime *timestamppb.Timestamp) error {
+func (c *CacheMethodStruct) AddSpaceCreations(ctx context.Context, authorId, creationId int64, publishTime *timestamppb.Timestamp) error {
 	timeScore := float64(publishTime.Seconds)
 
-	pipeline := CacheClient.TxPipeline()
+	pipeline := c.CacheClient.TxPipeline()
 	pipeline.ZAddNX(ctx, fmt.Sprintf("ZSet_Space_ByPublished_Time_%d", authorId), &redis.Z{
 		Score:  timeScore,
 		Member: creationId,
@@ -80,16 +84,16 @@ func AddSpaceCreations(ctx context.Context, authorId, creationId int64, publishT
 }
 
 // GET
-func GetCreationInfoFields(ctx context.Context, creation_id int64, fields []string) (map[string]string, error) {
+func (c *CacheMethodStruct) GetCreationInfoFields(ctx context.Context, creation_id int64, fields []string) (map[string]string, error) {
 	var (
 		creationInfo map[string]string
 		err          error
 	)
 	if len(fields) == 0 || fields == nil {
-		creationInfo, err = CacheClient.GetAllHash(ctx, "CreationInfo", strconv.FormatInt(creation_id, 10))
+		creationInfo, err = c.CacheClient.GetAllHash(ctx, "CreationInfo", strconv.FormatInt(creation_id, 10))
 	} else {
 		var values []interface{}
-		values, err = CacheClient.GetAnyHash(ctx, "CreationInfo", strconv.FormatInt(creation_id, 10), fields...)
+		values, err = c.CacheClient.GetAnyHash(ctx, "CreationInfo", strconv.FormatInt(creation_id, 10), fields...)
 		// 构造结果 map
 		creationInfo = make(map[string]string, len(fields))
 
@@ -118,10 +122,10 @@ func GetCreationInfoFields(ctx context.Context, creation_id int64, fields []stri
 }
 
 // 视频展示页的Redis缓存
-func GetCreationInfo(ctx context.Context, creation_id int64) (*generated.CreationInfo, error) {
-	results, err := GetCreationInfoFields(ctx, creation_id, nil)
+func (c *CacheMethodStruct) GetCreationInfo(ctx context.Context, creation_id int64) (*generated.CreationInfo, error) {
+	results, err := c.GetCreationInfoFields(ctx, creation_id, nil)
 	if err != nil {
-		log.Printf("error: GetCreationInfo GetCreationInfoFields %v", err)
+		tools.LogError("", "cache GetCreationInfo", err)
 		return nil, err
 	}
 	creationInfo, err := tools.MapCreationInfoByString(results)
@@ -136,13 +140,13 @@ func GetCreationInfo(ctx context.Context, creation_id int64) (*generated.Creatio
 	return creationInfo, nil
 }
 
-func parseIntField(value string, bitSize int) (int64, error) {
+func (c *CacheMethodStruct) parseIntField(value string, bitSize int) (int64, error) {
 	if value == "" {
 		return 0, fmt.Errorf("数值字段为空")
 	}
 	return strconv.ParseInt(value, 10, bitSize)
 }
-func mapToCreationInfo(results map[string]string, creation_id int64) (*generated.CreationInfo, error) {
+func (c *CacheMethodStruct) mapToCreationInfo(results map[string]string, creation_id int64) (*generated.CreationInfo, error) {
 	requiredKeys := []string{
 		"author_id", "src", "thumbnail", "title", "bio",
 		"duration", "views",
@@ -165,22 +169,22 @@ func mapToCreationInfo(results map[string]string, creation_id int64) (*generated
 		viewsStr    = results["views"]
 	)
 
-	authorId, err := parseIntField(authorIdStr, 64)
+	authorId, err := c.parseIntField(authorIdStr, 64)
 	if err != nil {
-		log.Printf("error: GetCreationInfo authorIdStr ParseInt %v", err)
+		tools.LogError("", "cache parseIntField", err)
 		return nil, err
 	}
 
 	durationInt, err := strconv.Atoi(durationStr)
 	if err != nil {
-		log.Printf("error: GetCreationInfo durationStr Atoi %v", err)
+		tools.LogError("", "cache GetCreationInfo", err)
 		return nil, err
 	}
 	duration := int32(durationInt)
 
 	viewsInt, err := strconv.Atoi(viewsStr)
 	if err != nil {
-		log.Printf("error: GetCreationInfo viewsStr Atoi %v", err)
+		tools.LogError("", "cache GetCreationInfo", err)
 		return nil, err
 	}
 	views := int32(viewsInt)
@@ -206,10 +210,10 @@ func mapToCreationInfo(results map[string]string, creation_id int64) (*generated
 	return creationInfo, nil
 }
 
-func GetSimilarCreationList(ctx context.Context, creation_id int64) ([]int64, error) {
-	strs, err := CacheClient.RevRangeZSet(ctx, "SimilarCreation", strconv.FormatInt(creation_id, 10), 0, 149)
+func (c *CacheMethodStruct) GetSimilarCreationList(ctx context.Context, creation_id int64) ([]int64, error) {
+	strs, err := c.CacheClient.RevRangeZSet(ctx, "SimilarCreation", strconv.FormatInt(creation_id, 10), 0, 149)
 	if err != nil {
-		log.Printf("error: GetSpaceCreationList RevRangeZSet %v", err)
+		tools.LogError("", "cache GetSpaceCreationList", err)
 		return nil, err
 	}
 
@@ -230,12 +234,12 @@ func GetSimilarCreationList(ctx context.Context, creation_id int64) ([]int64, er
 	return ids, nil
 }
 
-func GetSpaceCreationList(ctx context.Context, user_id int64, page int32, typeStr string) ([]int64, int32, error) {
+func (c *CacheMethodStruct) GetSpaceCreationList(ctx context.Context, user_id int64, page int32, typeStr string) ([]int64, int32, error) {
 	const LIMIT = 25
 	start := int64((page - 1) * LIMIT)
 	stop := start + 24
 
-	pipe := CacheClient.Pipeline()
+	pipe := c.CacheClient.Pipeline()
 
 	strsCmd := pipe.ZRevRange(ctx, fmt.Sprintf("ZSet_Space_%s_%d", typeStr, user_id), start, stop)
 	countCmd := pipe.ZCard(ctx, fmt.Sprintf("ZSet_Space_%s_%d", typeStr, user_id))
@@ -273,10 +277,10 @@ func GetSpaceCreationList(ctx context.Context, user_id int64, page int32, typeSt
 	return ids, pagesNum, nil
 }
 
-func GetHistoryCreationList(ctx context.Context, user_id int64) ([]int64, error) {
-	strs, err := CacheClient.RevRangeZSet(ctx, "Histories", strconv.FormatInt(user_id, 10), 0, 149)
+func (c *CacheMethodStruct) GetHistoryCreationList(ctx context.Context, user_id int64) ([]int64, error) {
+	strs, err := c.CacheClient.RevRangeZSet(ctx, "Histories", strconv.FormatInt(user_id, 10), 0, 149)
 	if err != nil {
-		log.Printf("error: GetHistoryCreationList RevRangeZSet %v", err)
+		tools.LogError("", "cache GetHistoryCreationList", err)
 		return nil, err
 	}
 
@@ -297,10 +301,10 @@ func GetHistoryCreationList(ctx context.Context, user_id int64) ([]int64, error)
 	return ids, nil
 }
 
-func GetCollectionCreationList(ctx context.Context, user_id int64) ([]int64, error) {
-	strs, err := CacheClient.RevRangeZSet(ctx, "Collections", strconv.FormatInt(user_id, 10), 0, 149)
+func (c *CacheMethodStruct) GetCollectionCreationList(ctx context.Context, user_id int64) ([]int64, error) {
+	strs, err := c.CacheClient.RevRangeZSet(ctx, "Collections", strconv.FormatInt(user_id, 10), 0, 149)
 	if err != nil {
-		log.Printf("error: GetCollectionCreationList RevRangeZSet %v", err)
+		tools.LogError("", "cache GetCollectionCreationList", err)
 		return nil, err
 	}
 
@@ -322,8 +326,8 @@ func GetCollectionCreationList(ctx context.Context, user_id int64) ([]int64, err
 }
 
 // Collections,History
-func GetCreationList(ctx context.Context, creationIds []int64) ([]*generated.CreationInfo, []int64, error) {
-	pipe := CacheClient.Pipeline()
+func (c *CacheMethodStruct) GetCreationList(ctx context.Context, creationIds []int64) ([]*generated.CreationInfo, []int64, error) {
+	pipe := c.CacheClient.Pipeline()
 
 	length := len(creationIds)
 	infos := make([]*generated.CreationInfo, 0, length)
@@ -348,7 +352,7 @@ func GetCreationList(ctx context.Context, creationIds []int64) ([]*generated.Cre
 			continue
 		}
 
-		creationInfo, err := mapToCreationInfo(results, id)
+		creationInfo, err := c.mapToCreationInfo(results, id)
 		if err != nil {
 			notCaches = append(notCaches, id)
 			continue
@@ -360,7 +364,7 @@ func GetCreationList(ctx context.Context, creationIds []int64) ([]*generated.Cre
 }
 
 // UPDATE
-func UpdateCreation(ctx context.Context, creation *generated.CreationUpdated) error {
+func (c *CacheMethodStruct) UpdateCreation(ctx context.Context, creation *generated.CreationUpdated) error {
 	var (
 		creationId = creation.GetCreationId()
 		thumbnail  = creation.GetThumbnail()
@@ -390,11 +394,11 @@ func UpdateCreation(ctx context.Context, creation *generated.CreationUpdated) er
 		return nil
 	}
 
-	err := CacheClient.SetFieldsHash(ctx, "CreationInfo", strconv.FormatInt(creationId, 10), values...)
+	err := c.CacheClient.SetFieldsHash(ctx, "CreationInfo", strconv.FormatInt(creationId, 10), values...)
 	return err
 }
 
-func UpdateCreationStatus(ctx context.Context, creation *generated.CreationUpdateStatus) error {
+func (c *CacheMethodStruct) UpdateCreationStatus(ctx context.Context, creation *generated.CreationUpdateStatus) error {
 	var (
 		creationId = creation.GetCreationId()
 		status     = creation.GetStatus()
@@ -403,14 +407,14 @@ func UpdateCreationStatus(ctx context.Context, creation *generated.CreationUpdat
 	values := make([]any, 0, 2)
 	values = append(values, "status", status.String())
 
-	err := CacheClient.SetFieldsHash(ctx, "CreationInfo", strconv.FormatInt(creationId, 10), values...)
+	err := c.CacheClient.SetFieldsHash(ctx, "CreationInfo", strconv.FormatInt(creationId, 10), values...)
 	return err
 }
 
-func getAuthorIdMap(ctx context.Context, creationIds []int64) (map[int64]string, error) {
+func (c *CacheMethodStruct) getAuthorIdMap(ctx context.Context, creationIds []int64) (map[int64]string, error) {
 	authorMap := make(map[int64]string) // 获取作者id
 
-	pipeline := CacheClient.Pipeline()
+	pipeline := c.CacheClient.Pipeline()
 	strCmds := make([]*redis.StringCmd, len(creationIds))
 	for i, creationId := range creationIds {
 		key := fmt.Sprintf("Hash_CreationInfo_%d", creationId) // 作品表的
@@ -429,10 +433,8 @@ func getAuthorIdMap(ctx context.Context, creationIds []int64) (map[int64]string,
 		}
 		authorId, err := cmd.Result()
 		if err == redis.Nil {
-			log.Printf("warning: author_id not found for action index %d", i)
 			continue
 		} else if err != nil {
-			log.Printf("error: failed to get author_id for action index %d: %v", i, err)
 			continue
 		}
 		creationId := creationIds[i]
@@ -442,7 +444,7 @@ func getAuthorIdMap(ctx context.Context, creationIds []int64) (map[int64]string,
 	return authorMap, nil
 }
 
-func UpdateCreationCount(ctx context.Context, actions []*common.UserAction) error {
+func (c *CacheMethodStruct) UpdateCreationCount(ctx context.Context, actions []*common.UserAction) error {
 	// 通过redis获取authorId，如果作品不存在redis，说明作品未发布所以未缓存至Redis（作品未设置过期）
 	length := len(actions)
 	creationIds := make([]int64, length)
@@ -454,19 +456,18 @@ func UpdateCreationCount(ctx context.Context, actions []*common.UserAction) erro
 		creationIds[i] = creationIdBody.GetId()
 	}
 
-	authorIdMap, err := getAuthorIdMap(ctx, creationIds)
+	authorIdMap, err := c.getAuthorIdMap(ctx, creationIds)
 	if err != nil {
 		return err
 	}
 
-	pipeline := CacheClient.Pipeline()
+	pipeline := c.CacheClient.Pipeline()
 	for i, action := range actions {
 		creationId := creationIds[i]
 
 		key := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
 		authorIdStr := authorIdMap[creationId]
 		if authorIdStr == "" {
-			log.Printf("waring: authorId is not exist")
 			continue
 		}
 		spaceByViewsKey := fmt.Sprintf("ZSet_Space_ByViews_%s", authorIdStr)
@@ -506,7 +507,7 @@ func UpdateCreationCount(ctx context.Context, actions []*common.UserAction) erro
 				Member: creationId,
 			})
 		default:
-			log.Printf("warning: unknown action: %v", operate)
+			tools.LogWarning("", "UpdateCreationCount", "unknown action")
 			continue
 		}
 	}
@@ -521,7 +522,7 @@ func UpdateCreationCount(ctx context.Context, actions []*common.UserAction) erro
 	// 检查每个命令的执行结果（如果需要）
 	for _, res := range results {
 		if res.Err() != nil {
-			log.Printf("Redis pipeline error: %v", res.Err())
+			tools.LogError("", "cache pipeline", err)
 		}
 	}
 

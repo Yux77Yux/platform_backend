@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
+	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 )
 
 type ExeBody struct {
@@ -71,21 +72,22 @@ func (chain *UpdateCountChain) GetPoolObj() any {
 
 func (chain *UpdateCountChain) ExecuteBatch() {
 	for UpdateCountsPtr := range chain.exeChannel {
-		log.Println("收到")
 		go func(UpdateCountsPtr *ExeBody) {
-			log.Println("数据库")
 			counts := UpdateCountsPtr
 
 			// 插入数据库
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			err := db.UpdateCreationCount(
-				context.Background(),
+				ctx,
 				counts.id,
 				counts.newSaveCount,
 				counts.newLikeCount,
 				counts.newViewCount,
 			)
+			cancel()
 			if err != nil {
-				log.Printf("error: UpdateCreationCount %v", err)
+				tools.LogError("", "db UpdateCreationCount", err)
+				return
 				// 死信，没做
 			}
 		}(UpdateCountsPtr)

@@ -14,11 +14,9 @@ type ChainInterface = pkgDispatch.ChainInterface
 type ListenerInterface = pkgDispatch.ListenerInterface
 
 type SqlMethod interface {
+	UpdateCreationCount(ctx context.Context, creationId int64, saveCount, likeCount, viewCount int32) error
 }
 
 type MessageQueueMethod interface {
 	SendMessage(ctx context.Context, exchange string, routeKey string, req proto.Message) error
-}
-
-type CacheMethod interface {
 }

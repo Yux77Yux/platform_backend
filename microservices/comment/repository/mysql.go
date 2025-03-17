@@ -32,7 +32,7 @@ func (m *SqlMethodStruct) BatchInsert(ctx context.Context, comments []*generated
 	}
 	var (
 		queryComment = fmt.Sprintf(`
-				INSERT INTO m.db_comment_1.Comment (
+				INSERT INTO db_comment_1.Comment (
 					root,
 					parent,
 					dialog,
@@ -41,13 +41,13 @@ func (m *SqlMethodStruct) BatchInsert(ctx context.Context, comments []*generated
 					created_at)
 				VALUES%s`, strings.Join(queryCommentCount, ","))
 		queryContent = fmt.Sprintf(`
-				INSERT INTO m.db_comment_1.CommentContent (
+				INSERT INTO db_comment_1.CommentContent (
 					comment_id,
 					content,
 					media)
 				VALUES%s`, strings.Join(queryContentCount, ","))
 		queryArea = `
-		INSERT INTO m.db_comment_area_1.CommentArea (creation_id, total_comments)
+		INSERT INTO db_comment_area_1.CommentArea (creation_id, total_comments)
 		VALUES (?,?)
 		ON DUPLICATE KEY UPDATE total_comments = total_comments + VALUES(total_comments)`
 		CommentValues = make([]interface{}, 0, count*6)
@@ -73,7 +73,7 @@ func (m *SqlMethodStruct) BatchInsert(ctx context.Context, comments []*generated
 	}
 
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func(m *SqlMethodStruct) {
+	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("transaction failed because %v", r)
 			if errSecond := m.db.RollbackTransaction(tx); errSecond != nil {
@@ -179,7 +179,7 @@ func (m *SqlMethodStruct) GetCreationIdInTransaction(ctx context.Context, commen
 				creation_id,
 				user_id
 			FROM
-				m.db_comment_1.Comment
+				db_comment_1.Comment
 			WHERE
 				id = ?`
 	)
@@ -216,7 +216,7 @@ func (m *SqlMethodStruct) GetInitialTopCommentsInTransaction(ctx context.Context
 		LIMIT            = TOP_LIMIT
 		queryTopComments = `
 			SELECT count(*) 
-			FROM m.db_comment_1.Comment 
+			FROM db_comment_1.Comment 
 			WHERE creation_id = ? 
 			AND root = 0 
 			AND status = 'PUBLISHED'`
@@ -226,7 +226,7 @@ func (m *SqlMethodStruct) GetInitialTopCommentsInTransaction(ctx context.Context
 				total_comments,
 				areas_status
 			FROM
-				m.db_comment_area_1.CommentArea
+				db_comment_area_1.CommentArea
 			WHERE
 				creation_id = ?`
 	)
@@ -242,11 +242,11 @@ func (m *SqlMethodStruct) GetInitialTopCommentsInTransaction(ctx context.Context
     			c.created_at,
     			cc.content,
     			cc.media,
-				(SELECT count(*) FROM m.db_comment_1.Comment b WHERE b.root = c.id AND b.status = 'PUBLISHED') AS subCount
+				(SELECT count(*) FROM db_comment_1.Comment b WHERE b.root = c.id AND b.status = 'PUBLISHED') AS subCount
 			FROM 
-    			m.db_comment_1.Comment c
+    			db_comment_1.Comment c
 			LEFT JOIN 
-    			m.db_comment_1.CommentContent cc 
+    			db_comment_1.CommentContent cc 
 			ON 
 				c.id = cc.comment_id
 			WHERE 
@@ -360,11 +360,11 @@ func (m *SqlMethodStruct) GetTopCommentsInTransaction(ctx context.Context, creat
     			c.created_at,
     			cc.content,
     			cc.media,
-				(SELECT count(*) FROM m.db_comment_1.Comment b WHERE b.root = c.id AND b.status = 'PUBLISHED') AS subCount
+				(SELECT count(*) FROM db_comment_1.Comment b WHERE b.root = c.id AND b.status = 'PUBLISHED') AS subCount
 			FROM 
-    			m.db_comment_1.Comment c
+    			db_comment_1.Comment c
 			LEFT JOIN 
-    			m.db_comment_1.CommentContent cc 
+    			db_comment_1.CommentContent cc 
 			ON 
 				c.id = cc.comment_id
 			WHERE 
@@ -446,11 +446,11 @@ func (m *SqlMethodStruct) GetSecondCommentsInTransaction(ctx context.Context, cr
     			c.created_at,
     			cc.content,
     			cc.media,
-				(SELECT b.user_id FROM m.db_comment_1.Comment b WHERE b.id = c.parent AND b.status = 'PUBLISHED') AS reply_user_id
+				(SELECT b.user_id FROM db_comment_1.Comment b WHERE b.id = c.parent AND b.status = 'PUBLISHED') AS reply_user_id
 			FROM 
-    			m.db_comment_1.Comment c
+    			db_comment_1.Comment c
 			LEFT JOIN 
-    			m.db_comment_1.CommentContent cc 
+    			db_comment_1.CommentContent cc 
 			ON 
 				c.id = cc.comment_id
 			WHERE 
@@ -534,9 +534,9 @@ func (m *SqlMethodStruct) GetReplyCommentsInTransaction(ctx context.Context, use
     			cc.content,
     			cc.media
 			FROM 
-    			m.db_comment_1.Comment c
+    			db_comment_1.Comment c
 			LEFT JOIN 
-    			m.db_comment_1.CommentContent cc 
+    			db_comment_1.CommentContent cc 
 			ON
 				c.id = cc.comment_id
 			WHERE 
@@ -612,7 +612,7 @@ func (m *SqlMethodStruct) GetCommentInfo(ctx context.Context, comments []*common
 				SELECT 
 					id,
 					creation_id
-				FROM m.db_comment_1.CommentContent
+				FROM db_comment_1.CommentContent
 				WHERE id 
 				IN (%s)`, strings.Join(queryCount, ","))
 		values = make([]interface{}, 0, count)
@@ -683,9 +683,9 @@ func (m *SqlMethodStruct) GetComments(ctx context.Context, ids []int32) ([]*gene
     			cc.content,
     			cc.media
 			FROM 
-    			m.db_comment_1.Comment c
+    			db_comment_1.Comment c
 			LEFT JOIN 
-    			m.db_comment_1.CommentContent cc 
+    			db_comment_1.CommentContent cc 
 			ON
 				c.id = cc.comment_id
 			WHERE c.id IN (%s)`, strings.Join(sqlStr, ","))
@@ -752,14 +752,14 @@ func (m *SqlMethodStruct) BatchUpdateDeleteStatus(ctx context.Context, comments 
 	join := strings.Join(queryCount, ",")
 	var (
 		queryComment = fmt.Sprintf(`
-				UPDATE m.db_comment_1.Comment 
+				UPDATE db_comment_1.Comment 
 				SET status = "DELETED"
 				WHERE id 
 				IN (%s)
 				OR root 
 				IN (%s)`, join, join)
 		queryArea = `
-				UPDATE m.db_comment_area_1.CommentArea 
+				UPDATE db_comment_area_1.CommentArea 
 				SET
 					total_comments = total_comments - ?
 				WHERE creation_id = ?`
@@ -779,7 +779,7 @@ func (m *SqlMethodStruct) BatchUpdateDeleteStatus(ctx context.Context, comments 
 	}
 
 	// 在发生 panic 时自动回滚事务，以确保数据库的状态不会因为程序异常而不一致
-	defer func(m *SqlMethodStruct) {
+	defer func() {
 		if r := recover(); r != nil {
 			if errSecond := m.db.RollbackTransaction(tx); errSecond != nil {
 				err = fmt.Errorf("%w and %w", err, errSecond)

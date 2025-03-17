@@ -13,9 +13,12 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+type SqlMethodStruct struct {
+	db SqlInterface
+}
+
 // GET
-func GetReviews(
-	ctx context.Context,
+func (c *SqlMethodStruct) GetReviews(ctx context.Context,
 	reviewId int64,
 	reviewType generated.TargetType,
 	status generated.ReviewStatus,
@@ -60,7 +63,7 @@ func GetReviews(
 			target_type = ?
 		AND 
 			status = ?`
-		err := db.QueryRowContext(
+		err := c.db.QueryRowContext(
 			ctx,
 			queryCount,
 			reviewId,
@@ -77,7 +80,7 @@ func GetReviews(
 		count = int32(math.Ceil(float64(num) / float64(Limit)))
 	}
 
-	rows, err := db.QueryContext(
+	rows, err := c.db.QueryContext(
 		ctx,
 		query,
 		reviewId,
@@ -126,7 +129,7 @@ func GetReviews(
 	return reviews, count, nil
 }
 
-func GetTarget(ctx context.Context, id int64) (int64, *generated.TargetType, error) {
+func (c *SqlMethodStruct) GetTarget(ctx context.Context, id int64) (int64, *generated.TargetType, error) {
 	query := `
 		SELECT target_id,target_type
 		FROM db_review_1.Review
@@ -137,7 +140,7 @@ func GetTarget(ctx context.Context, id int64) (int64, *generated.TargetType, err
 		targetType string
 	)
 
-	err := db.QueryRow(query, id).Scan(&targetId, &targetType)
+	err := c.db.QueryRow(query, id).Scan(&targetId, &targetType)
 	if err != nil {
 		return -1, nil, errMap.MapMySQLErrorToStatus(err)
 	}
@@ -146,7 +149,7 @@ func GetTarget(ctx context.Context, id int64) (int64, *generated.TargetType, err
 }
 
 // POST
-func PostReviews(ctx context.Context, reviews []*generated.NewReview) error {
+func (c *SqlMethodStruct) PostReviews(ctx context.Context, reviews []*generated.NewReview) error {
 	const (
 		QM          = "(?,?,?,?)"
 		FieldsCount = 4
@@ -175,7 +178,7 @@ func PostReviews(ctx context.Context, reviews []*generated.NewReview) error {
 		VALUES %s
 		ON DUPLICATE KEY UPDATE id = id;`, strings.Join(sqlStr, ","))
 
-	_, err := db.ExecContext(
+	_, err := c.db.ExecContext(
 		ctx,
 		query,
 		values...,
@@ -185,7 +188,7 @@ func PostReviews(ctx context.Context, reviews []*generated.NewReview) error {
 }
 
 // UPDATE
-func UpdateReviews(ctx context.Context, reviews []*generated.Review) error {
+func (c *SqlMethodStruct) UpdateReviews(ctx context.Context, reviews []*generated.Review) error {
 	const (
 		QM          = "?"
 		QQM         = "WHEN id = ? THEN ?"
@@ -239,7 +242,7 @@ func UpdateReviews(ctx context.Context, reviews []*generated.Review) error {
 		join,
 		strings.Join(QMS, ","))
 
-	_, err := db.ExecContext(
+	_, err := c.db.ExecContext(
 		ctx,
 		query,
 		values...,
@@ -248,7 +251,7 @@ func UpdateReviews(ctx context.Context, reviews []*generated.Review) error {
 	return err
 }
 
-func UpdateReview(ctx context.Context, review *generated.Review) error {
+func (c *SqlMethodStruct) UpdateReview(ctx context.Context, review *generated.Review) error {
 	query := `
 		UPDATE db_review_1.Review 
 		SET 
@@ -264,7 +267,7 @@ func UpdateReview(ctx context.Context, review *generated.Review) error {
 		id          = review.GetNew().GetId()
 	)
 
-	_, err := db.ExecContext(
+	_, err := c.db.ExecContext(
 		ctx,
 		query,
 		status,

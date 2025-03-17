@@ -43,7 +43,7 @@ func GetNewReviews(ctx context.Context, req *generated.GetNewReviewsRequest) (*g
 	response := new(generated.GetReviewsResponse)
 
 	reviewerId := req.GetReviewerId()
-	reviews, err := messaging.GetPendingReviews(ctx, reviewerId, req.GetType())
+	reviews, err := GetPendingReviews(ctx, reviewerId, req.GetType())
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Code:    "500",

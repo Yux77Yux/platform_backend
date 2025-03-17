@@ -10,6 +10,11 @@ var (
 )
 
 var (
+	QUEUE_PUBLISH_COMMENT = event.Queue_QUEUE_PUBLISH_COMMENT.String()
+	QUEUE_DELETE_COMMENT  = event.Queue_QUEUE_DELETE_COMMENT.String()
+)
+
+var (
 	KEY_PUBLISH_COMMENT = event.RoutingKey_KEY_PUBLISH_COMMENT.String()
 	KEY_DELETE_COMMENT  = event.RoutingKey_KEY_DELETE_COMMENT.String()
 )

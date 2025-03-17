@@ -44,7 +44,7 @@ func GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequ
 
 	go func(newInteraction *generated.OperateInteraction, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.AddView, messaging.AddView, newInteraction)
+		err = messaging.SendMessage(ctx, EXCHANGE_ADD_VIEW, KEY_ADD_VIEW, newInteraction)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}
@@ -186,7 +186,7 @@ func GetRecommendBaseUser(ctx context.Context, req *generated.GetRecommendReques
 	go func(count, userId int64, ctx context.Context) {
 		if count <= 17 {
 			traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-			err = messaging.SendMessage(ctx, messaging.ComputeUser, messaging.ComputeUser, &common.UserDefault{
+			err = messaging.SendMessage(ctx, EXCHANGE_COMPUTE_USER, KEY_COMPUTE_USER, &common.UserDefault{
 				UserId: userId,
 			})
 			if err != nil {
@@ -218,7 +218,7 @@ func GetRecommendBaseCreation(ctx context.Context, req *generated.GetRecommendRe
 
 	go func(reset bool, id int64, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, messaging.ComputeSimilarCreation, messaging.ComputeSimilarCreation, &common.CreationId{
+		err = messaging.SendMessage(ctx, EXCHANGE_COMPUTE_CREATION, KEY_COMPUTE_CREATION, &common.CreationId{
 			Id: id,
 		})
 		if err != nil {

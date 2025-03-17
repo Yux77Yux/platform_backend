@@ -1,74 +1,44 @@
 package receiver
 
-import (
-	"context"
-
-	messaging "github.com/Yux77Yux/platform_backend/microservices/interaction/messaging"
-)
-
-const (
-	ComputeSimilarCreation = messaging.ComputeSimilarCreation
-	ComputeUser            = messaging.ComputeUser
-
-	BatchUpdateDb = messaging.BatchUpdateDb
-	UpdateDb      = messaging.UpdateDb
-	AddCollection = messaging.AddCollection
-	AddLike       = messaging.AddLike
-	AddView       = messaging.AddView
-	CancelLike    = messaging.CancelLike
-
-	// Creation
-	UPDATE_CREATION_ACTION_COUNT = messaging.UPDATE_CREATION_ACTION_COUNT
-)
-
 var (
-	ExchangesConfig = messaging.ExchangesConfig
-)
-
-// 非RPC类型的消息队列的交换机声明
-func Run(ctx context.Context) {
-	messaging.Init()
-	for exchange := range ExchangesConfig {
-		switch exchange {
-		// 不同的exchange使用不同函数
-		case ComputeSimilarCreation:
-			go messaging.ListenToQueue(exchange, ComputeSimilarCreation, ComputeSimilarCreation, computeSimilarProcessor)
-		case ComputeUser:
-			go messaging.ListenToQueue(exchange, ComputeUser, ComputeUser, computeUserProcessor)
-
-		case UpdateDb:
-			go messaging.ListenToQueue(exchange, UpdateDb, UpdateDb, updateDbInteraction)
-		case AddView:
-			go messaging.ListenToQueue(exchange, AddView, AddView, addViewProcessor)
-		case AddCollection:
-			go messaging.ListenToQueue(exchange, AddCollection, AddCollection, addCollectionProcessor)
-		case AddLike:
-			go messaging.ListenToQueue(exchange, AddLike, AddLike, addLikeProcessor)
-		case CancelLike:
-			go messaging.ListenToQueue(exchange, CancelLike, CancelLike, cancelLikeProcessor)
-		case BatchUpdateDb:
-			go messaging.ListenToQueue(exchange, BatchUpdateDb, BatchUpdateDb, batchUpdateDbProcessor)
-		}
-	}
-
-	<-ctx.Done()
-	messaging.Close(ctx)
-}
-
-var (
-	db        SqlMethod
-	messaging MessageQueueMethod
-	cache     CacheMethod
+	dispatcher DispatchInterface
+	db         SqlMethod
+	messaging  MessageQueueMethod
+	cache      CacheMethod
 )
 
 func InitDb(_db SqlMethod) {
 	db = _db
 }
 
-func InitMQ(_messaging MessageQueueMethod) {
-	messaging = _messaging
-}
-
 func InitCache(_cache CacheMethod) {
 	cache = _cache
+}
+
+// 非RPC类型的消息队列的交换机声明
+func Run(_messaging MessageQueueMethod, _dispatch DispatchInterface) {
+	dispatcher = _dispatch
+	messaging = _messaging
+
+	for exchange := range ExchangesConfig {
+		switch exchange {
+		// 不同的exchange使用不同函数
+		case EXCHANGE_COMPUTE_CREATION:
+			go messaging.ListenToQueue(exchange, QUEUE_COMPUTE_CREATION, KEY_COMPUTE_CREATION, computeSimilarProcessor)
+		case EXCHANGE_COMPUTE_USER:
+			go messaging.ListenToQueue(exchange, QUEUE_COMPUTE_USER, KEY_COMPUTE_USER, computeUserProcessor)
+		case EXCHANGE_UPDATE_DB:
+			go messaging.ListenToQueue(exchange, QUEUE_UPDATE_DB, KEY_UPDATE_DB, updateDbInteraction)
+		case EXCHANGE_ADD_VIEW:
+			go messaging.ListenToQueue(exchange, QUEUE_ADD_VIEW, KEY_ADD_VIEW, addViewProcessor)
+		case EXCHANGE_ADD_COLLECTION:
+			go messaging.ListenToQueue(exchange, QUEUE_ADD_COLLECTION, KEY_ADD_COLLECTION, addCollectionProcessor)
+		case EXCHANGE_ADD_LIKE:
+			go messaging.ListenToQueue(exchange, QUEUE_ADD_COLLECTION, KEY_ADD_LIKE, addLikeProcessor)
+		case EXCHANGE_CANCEL_LIKE:
+			go messaging.ListenToQueue(exchange, QUEUE_CANCEL_LIKE, KEY_CANCEL_LIKE, cancelLikeProcessor)
+		case EXCHANGE_BATCH_UPDATE_DB:
+			go messaging.ListenToQueue(exchange, QUEUE_BATCH_UPDATE_DB, KEY_BATCH_UPDATE_DB, batchUpdateDbProcessor)
+		}
+	}
 }

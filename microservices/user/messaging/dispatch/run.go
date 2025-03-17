@@ -5,6 +5,10 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+type Dispatch struct {
+	chainMap map[string]ChainInterface
+}
+
 func (d *Dispatch) HandleRequest(msg protoreflect.ProtoMessage, typeName string) {
 	copy := proto.Clone(msg)
 	d.chainMap[typeName].HandleRequest(copy)

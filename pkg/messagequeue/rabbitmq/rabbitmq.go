@@ -23,7 +23,7 @@ var (
 	_client *RabbitMQClient
 )
 
-func GetClient(str string) MessageQueueInterface {
+func GetClient(str string) MessageQueueMethod {
 	if _client != nil {
 		return _client
 	}

@@ -31,7 +31,6 @@ func computeSimilarProcessor(ctx context.Context, msg *anypb.Any) error {
 
 	err = cache.SetRecommendBaseItem(ctx, id, results)
 	if err != nil {
-		log.Printf("error: cache SetRecommendBaseItem %v", err)
 		return err
 	}
 	return nil
@@ -53,7 +52,6 @@ func computeUserProcessor(ctx context.Context, msg *anypb.Any) error {
 
 	err = cache.SetRecommendBaseUser(ctx, id, results)
 	if err != nil {
-		log.Printf("error: cache SetRecommendBaseUser %v", err)
 		return err
 	}
 	return nil
@@ -66,7 +64,7 @@ func updateDbInteraction(ctx context.Context, msg *anypb.Any) error {
 		return err
 	}
 
-	go dispatch.HandleRequest(req, dispatch.DbInteraction)
+	go dispatcher.HandleRequest(req, dispatch.DbInteraction)
 	return nil
 }
 
@@ -77,10 +75,9 @@ func addViewProcessor(ctx context.Context, msg *anypb.Any) error {
 		return err
 	}
 
-	go dispatch.HandleRequest(req, dispatch.ViewCache)
-	err = messaging.SendMessage(context.Background(), messaging.UpdateDb, messaging.UpdateDb, req)
+	go dispatcher.HandleRequest(req, dispatch.ViewCache)
+	err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_DB, KEY_UPDATE_DB, req)
 	if err != nil {
-		log.Printf("error: SendMessage %v", err)
 		return err
 	}
 	return nil
@@ -93,10 +90,9 @@ func addCollectionProcessor(ctx context.Context, msg *anypb.Any) error {
 		return err
 	}
 
-	go dispatch.HandleRequest(req, dispatch.CollectionCache)
-	err = messaging.SendMessage(context.Background(), messaging.UpdateDb, messaging.UpdateDb, req)
+	go dispatcher.HandleRequest(req, dispatch.CollectionCache)
+	err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_DB, KEY_UPDATE_DB, req)
 	if err != nil {
-		log.Printf("error: SendMessage %v", err)
 		return err
 	}
 	return nil
@@ -109,10 +105,9 @@ func addLikeProcessor(ctx context.Context, msg *anypb.Any) error {
 		return err
 	}
 
-	go dispatch.HandleRequest(req, dispatch.LikeCache)
-	err = messaging.SendMessage(context.Background(), messaging.UpdateDb, messaging.UpdateDb, req)
+	go dispatcher.HandleRequest(req, dispatch.LikeCache)
+	err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_DB, KEY_UPDATE_DB, req)
 	if err != nil {
-		log.Printf("error: SendMessage %v", err)
 		return err
 	}
 	return nil
@@ -125,10 +120,9 @@ func cancelLikeProcessor(ctx context.Context, msg *anypb.Any) error {
 		return err
 	}
 
-	go dispatch.HandleRequest(req.GetBase(), dispatch.CancelLikeCache)
-	err = messaging.SendMessage(context.Background(), messaging.UpdateDb, messaging.UpdateDb, req)
+	go dispatcher.HandleRequest(req.GetBase(), dispatch.CancelLikeCache)
+	err = messaging.SendMessage(ctx, EXCHANGE_UPDATE_DB, KEY_UPDATE_DB, req)
 	if err != nil {
-		log.Printf("error: SendMessage %v", err)
 		return err
 	}
 	return nil
@@ -140,6 +134,6 @@ func batchUpdateDbProcessor(ctx context.Context, msg *anypb.Any) error {
 	if err != nil {
 		return err
 	}
-	go dispatch.HandleRequest(req, dispatch.DbBatchInteraction)
+	go dispatcher.HandleRequest(req, dispatch.DbBatchInteraction)
 	return nil
 }
