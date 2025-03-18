@@ -42,6 +42,7 @@ service CreationService {
     };
   }
 
+  rpc SearchCreation(creation.methods.SearchCreationRequest) returns (creation.methods.GetCreationListResponse);
   rpc GetCreationList(creation.methods.GetCreationListRequest) returns (creation.methods.GetCreationListResponse);
   rpc GetPublicCreationList(creation.methods.GetCreationListRequest) returns (creation.methods.GetCreationListResponse);
 

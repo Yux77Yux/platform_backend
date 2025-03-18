@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"math"
 	"strings"
 	"time"
@@ -135,6 +134,7 @@ func (c *SqlMethodStruct) GetTarget(ctx context.Context, id int64) (int64, *gene
 		SELECT target_id,target_type
 		FROM db_review_1.Review
 		WHERE id = ? `
+
 	var (
 		targetId   int64
 		targetType string
@@ -247,7 +247,6 @@ func (c *SqlMethodStruct) UpdateReviews(ctx context.Context, reviews []*generate
 		query,
 		values...,
 	)
-
 	return err
 }
 

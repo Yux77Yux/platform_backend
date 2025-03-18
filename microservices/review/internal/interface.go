@@ -15,5 +15,5 @@ type SqlMethod interface {
 
 type MessageQueueMethod interface {
 	SendMessage(ctx context.Context, exchange string, routeKey string, req proto.Message) error
-	GetMsgs(exchange, queueName, routeKey string, count int) [][]byte
+	GetMsgs(ctx context.Context, exchange, queueName, routeKey string, count int) [][]byte
 }

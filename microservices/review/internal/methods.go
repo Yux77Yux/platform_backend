@@ -32,11 +32,11 @@ func GetPendingReviews(ctx context.Context, reviewerId int64, reviewType generat
 		key = KEY_CREATION_REVIEW
 	}
 
-	news := messaging.GetMsgs(exchange, queue, key, LIMIT)
+	news := messaging.GetMsgs(ctx, exchange, queue, key, LIMIT)
 
 	length := len(news)
-	reviews := make([]*generated.Review, length)
-	for i, body := range news {
+	reviews := make([]*generated.Review, 0, length)
+	for _, body := range news {
 		newReview := new(generated.NewReview)
 		err := proto.Unmarshal(body, newReview)
 		if err != nil {
@@ -49,7 +49,7 @@ func GetPendingReviews(ctx context.Context, reviewerId int64, reviewType generat
 			UpdatedAt:  newReview.GetCreatedAt(),
 		}
 
-		reviews[i] = review
+		reviews = append(reviews, review)
 	}
 	go func(reviews []*generated.Review) {
 		anyReview := &generated.AnyReview{

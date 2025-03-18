@@ -30,3 +30,6 @@ func (s *Server) GetPublicCreationList(ctx context.Context, req *generated.GetCr
 func (s *Server) GetSpaceCreations(ctx context.Context, req *generated.GetSpaceCreationsRequest) (*generated.GetCreationListResponse, error) {
 	return internal.GetSpaceCreations(ctx, req)
 }
+func (s *Server) SearchCreation(ctx context.Context, req *generated.SearchCreationRequest) (*generated.GetCreationListResponse, error) {
+	return internal.SearchCreation(ctx, req)
+}

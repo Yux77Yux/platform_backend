@@ -87,11 +87,9 @@ func TestGetAndUpdateNewReviews(t *testing.T) {
 		msg := r_response.GetMsg()
 		status := msg.GetStatus()
 		if status != common.ApiResponse_SUCCESS && status != common.ApiResponse_PENDING {
-			log.Printf("GetReviews %s", msg.GetDetails())
 			return
 		}
 
-		log.Printf("11111 %d", len(newReviews))
 		if len(newReviews) <= 0 {
 			break
 		}
@@ -140,3 +138,10 @@ func TestGetAndUpdateNewReviews(t *testing.T) {
 
 	close(okCh)
 }
+
+/* TestGetAndUpdateNewReviews
+2025/03/19 00:53:48 ConcurrencyLimit: 1
+2025/03/19 00:53:48 Total Requests: 518
+2025/03/19 00:53:48 Total Duration: 4.75 seconds
+2025/03/19 00:53:48 Throughput: 188.73 requests/second
+*/

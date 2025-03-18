@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	AggregatorService_Search_FullMethodName                = "/aggregator.AggregatorService/Search"
 	AggregatorService_Login_FullMethodName                 = "/aggregator.AggregatorService/Login"
 	AggregatorService_WatchCreation_FullMethodName         = "/aggregator.AggregatorService/WatchCreation"
 	AggregatorService_SimilarCreations_FullMethodName      = "/aggregator.AggregatorService/SimilarCreations"
@@ -40,6 +41,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AggregatorServiceClient interface {
+	Search(ctx context.Context, in *SearchCreationsRequest, opts ...grpc.CallOption) (*SearchCreationsResponse, error)
 	// User OK
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	// WatchCreation OK
@@ -71,6 +73,16 @@ type aggregatorServiceClient struct {
 
 func NewAggregatorServiceClient(cc grpc.ClientConnInterface) AggregatorServiceClient {
 	return &aggregatorServiceClient{cc}
+}
+
+func (c *aggregatorServiceClient) Search(ctx context.Context, in *SearchCreationsRequest, opts ...grpc.CallOption) (*SearchCreationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SearchCreationsResponse)
+	err := c.cc.Invoke(ctx, AggregatorService_Search_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *aggregatorServiceClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
@@ -227,6 +239,7 @@ func (c *aggregatorServiceClient) History(ctx context.Context, in *HistoryReques
 // All implementations must embed UnimplementedAggregatorServiceServer
 // for forward compatibility.
 type AggregatorServiceServer interface {
+	Search(context.Context, *SearchCreationsRequest) (*SearchCreationsResponse, error)
 	// User OK
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	// WatchCreation OK
@@ -260,6 +273,9 @@ type AggregatorServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAggregatorServiceServer struct{}
 
+func (UnimplementedAggregatorServiceServer) Search(context.Context, *SearchCreationsRequest) (*SearchCreationsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Search not implemented")
+}
 func (UnimplementedAggregatorServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
@@ -324,6 +340,24 @@ func RegisterAggregatorServiceServer(s grpc.ServiceRegistrar, srv AggregatorServ
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&AggregatorService_ServiceDesc, srv)
+}
+
+func _AggregatorService_Search_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchCreationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServiceServer).Search(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AggregatorService_Search_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServiceServer).Search(ctx, req.(*SearchCreationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _AggregatorService_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -603,6 +637,10 @@ var AggregatorService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "aggregator.AggregatorService",
 	HandlerType: (*AggregatorServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Search",
+			Handler:    _AggregatorService_Search_Handler,
+		},
 		{
 			MethodName: "Login",
 			Handler:    _AggregatorService_Login_Handler,

@@ -25,6 +25,7 @@ const (
 	CreationService_GetCreationPrivate_FullMethodName    = "/creation.CreationService/GetCreationPrivate"
 	CreationService_GetSpaceCreations_FullMethodName     = "/creation.CreationService/GetSpaceCreations"
 	CreationService_GetUserCreations_FullMethodName      = "/creation.CreationService/GetUserCreations"
+	CreationService_SearchCreation_FullMethodName        = "/creation.CreationService/SearchCreation"
 	CreationService_GetCreationList_FullMethodName       = "/creation.CreationService/GetCreationList"
 	CreationService_GetPublicCreationList_FullMethodName = "/creation.CreationService/GetPublicCreationList"
 	CreationService_DeleteCreation_FullMethodName        = "/creation.CreationService/DeleteCreation"
@@ -43,6 +44,7 @@ type CreationServiceClient interface {
 	GetCreationPrivate(ctx context.Context, in *GetCreationPrivateRequest, opts ...grpc.CallOption) (*GetCreationResponse, error)
 	GetSpaceCreations(ctx context.Context, in *GetSpaceCreationsRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
 	GetUserCreations(ctx context.Context, in *GetUserCreationsRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
+	SearchCreation(ctx context.Context, in *SearchCreationRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
 	GetCreationList(ctx context.Context, in *GetCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
 	GetPublicCreationList(ctx context.Context, in *GetCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error)
 	// DELETE
@@ -110,6 +112,16 @@ func (c *creationServiceClient) GetUserCreations(ctx context.Context, in *GetUse
 	return out, nil
 }
 
+func (c *creationServiceClient) SearchCreation(ctx context.Context, in *SearchCreationRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCreationListResponse)
+	err := c.cc.Invoke(ctx, CreationService_SearchCreation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *creationServiceClient) GetCreationList(ctx context.Context, in *GetCreationListRequest, opts ...grpc.CallOption) (*GetCreationListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCreationListResponse)
@@ -171,6 +183,7 @@ type CreationServiceServer interface {
 	GetCreationPrivate(context.Context, *GetCreationPrivateRequest) (*GetCreationResponse, error)
 	GetSpaceCreations(context.Context, *GetSpaceCreationsRequest) (*GetCreationListResponse, error)
 	GetUserCreations(context.Context, *GetUserCreationsRequest) (*GetCreationListResponse, error)
+	SearchCreation(context.Context, *SearchCreationRequest) (*GetCreationListResponse, error)
 	GetCreationList(context.Context, *GetCreationListRequest) (*GetCreationListResponse, error)
 	GetPublicCreationList(context.Context, *GetCreationListRequest) (*GetCreationListResponse, error)
 	// DELETE
@@ -202,6 +215,9 @@ func (UnimplementedCreationServiceServer) GetSpaceCreations(context.Context, *Ge
 }
 func (UnimplementedCreationServiceServer) GetUserCreations(context.Context, *GetUserCreationsRequest) (*GetCreationListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserCreations not implemented")
+}
+func (UnimplementedCreationServiceServer) SearchCreation(context.Context, *SearchCreationRequest) (*GetCreationListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchCreation not implemented")
 }
 func (UnimplementedCreationServiceServer) GetCreationList(context.Context, *GetCreationListRequest) (*GetCreationListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCreationList not implemented")
@@ -329,6 +345,24 @@ func _CreationService_GetUserCreations_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CreationService_SearchCreation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchCreationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CreationServiceServer).SearchCreation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CreationService_SearchCreation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CreationServiceServer).SearchCreation(ctx, req.(*SearchCreationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CreationService_GetCreationList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetCreationListRequest)
 	if err := dec(in); err != nil {
@@ -445,6 +479,10 @@ var CreationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserCreations",
 			Handler:    _CreationService_GetUserCreations_Handler,
+		},
+		{
+			MethodName: "SearchCreation",
+			Handler:    _CreationService_SearchCreation_Handler,
 		},
 		{
 			MethodName: "GetCreationList",

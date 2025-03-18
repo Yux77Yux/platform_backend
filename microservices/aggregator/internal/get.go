@@ -462,3 +462,106 @@ func getUserMap(ctx context.Context, creationIds []int64) (map[int64]*common.Use
 
 	return userMap, creationInfos, nil
 }
+
+func Search(ctx context.Context, req *generated.SearchCreationsRequest) (*generated.SearchCreationsResponse, error) {
+	response := new(generated.SearchCreationsResponse)
+
+	creation_client, err := client.GetCreationClient()
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Code:    "500",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	creationResponse, err := creation_client.SearchCreation(ctx, &creation.SearchCreationRequest{
+		Title: req.GetTitle(),
+		Page:  req.GetPage(),
+	})
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Code:    "500",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
+	msg := creationResponse.GetMsg()
+	status := msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
+		response.Msg = &common.ApiResponse{
+			Code:    msg.GetCode(),
+			Status:  common.ApiResponse_ERROR,
+			Details: msg.GetDetails(),
+		}
+		return response, nil
+	}
+
+	creationInfos := creationResponse.GetCreationInfoGroup()
+	userIdMap := make(map[int64]bool)
+	for _, info := range creationInfos {
+		userIdMap[info.GetCreation().GetBaseInfo().GetAuthorId()] = true
+	}
+	userIds := make([]int64, 0, len(userIdMap))
+	for id := range userIdMap {
+		userIds = append(userIds, id)
+	}
+
+	user_client, err := client.GetUserClient()
+	if err != nil {
+		err = fmt.Errorf("error: user client %w", err)
+		return nil, err
+	}
+	userResponse, err := user_client.GetUsers(ctx, userIds)
+	if err != nil {
+		return nil, err
+	}
+
+	msg = userResponse.GetMsg()
+	code := msg.GetCode()
+	status = msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
+		if code[0] == '5' {
+			return nil, fmt.Errorf("error: %s", msg.GetDetails())
+		}
+		return nil, nil
+	}
+
+	users := userResponse.GetUsers()
+	if len(users) <= 0 {
+		return nil, nil
+	}
+	limit := len(users)
+	userMap := make(map[int64]*common.UserDefault, limit)
+	for _, user := range users {
+		userMap[user.GetUserDefault().GetUserId()] = user.GetUserDefault()
+	}
+
+	length := len(creationInfos)
+	cards := make([]*generated.CreationCard, length)
+	for i := 0; i < length; i++ {
+		info := creationInfos[i]
+		creation := info.GetCreation()
+		authorId := creation.GetBaseInfo().GetAuthorId()
+		CreationEngagement := info.GetCreationEngagement()
+		card := &generated.CreationCard{
+			Creation:           creation,
+			CreationEngagement: CreationEngagement,
+			TimeAt:             CreationEngagement.GetPublishTime(),
+		}
+		if user, exists := userMap[authorId]; exists {
+			card.User = user
+		}
+		cards[i] = card
+	}
+
+	response.Cards = cards
+	response.Count = creationResponse.GetCount()
+	response.Msg = &common.ApiResponse{
+		Code:   "200",
+		Status: common.ApiResponse_SUCCESS,
+	}
+	return response, nil
+}

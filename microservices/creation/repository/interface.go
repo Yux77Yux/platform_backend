@@ -24,4 +24,5 @@ type SqlMethod interface {
 	UpdateCreationStatusInTransaction(ctx context.Context, creation *generated.CreationUpdateStatus) error
 	PublishCreationInTransaction(ctx context.Context, creationId int64, publishTime *timestamppb.Timestamp) error
 	UpdateCreationCount(ctx context.Context, creationId int64, saveCount, likeCount, viewCount int32) error
+	SearchCreations(ctx context.Context, title string, page int32) ([]*generated.CreationInfo, int32, error)
 }

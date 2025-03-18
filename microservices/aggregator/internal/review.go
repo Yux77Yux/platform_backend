@@ -237,9 +237,7 @@ func getCreationReviewCards(ctx context.Context, reviews []*review.Review) ([]*g
 	creationMap := make(map[int64]*creation.Creation)
 	for _, review := range reviews {
 		id := review.GetNew().GetTargetId()
-		creationMap[id] = &creation.Creation{
-			CreationId: id,
-		}
+		creationMap[id] = &creation.Creation{}
 	}
 	length := len(creationMap)
 	if length <= 0 {
@@ -267,7 +265,7 @@ func getCreationReviewCards(ctx context.Context, reviews []*review.Review) ([]*g
 	status := msg.GetStatus()
 	if status != common.ApiResponse_SUCCESS {
 		if code[0] == '5' {
-			return nil, fmt.Errorf("error: creationResponse %s", msg.GetDetails())
+			return nil, fmt.Errorf(msg.GetDetails())
 		}
 		return nil, nil
 	}
@@ -277,20 +275,22 @@ func getCreationReviewCards(ctx context.Context, reviews []*review.Review) ([]*g
 		return nil, nil
 	}
 	for _, info := range infos {
-		id := info.GetCreation().GetCreationId()
-		creationMap[id] = info.GetCreation()
+		creation := info.GetCreation()
+		id := creation.GetCreationId()
+		creationMap[id] = creation
 	}
 
-	cards := make([]*generated.GetCreationReviewsResponse_CreationReview, len(reviews))
-	for i, review := range reviews {
+	cards := make([]*generated.GetCreationReviewsResponse_CreationReview, 0, len(reviews))
+	for _, review := range reviews {
 		id := review.GetNew().GetTargetId()
 
 		card := &generated.GetCreationReviewsResponse_CreationReview{
 			Review:   review,
 			Creation: creationMap[id],
 		}
-		cards[i] = card
+		cards = append(cards, card)
 	}
+
 	return cards, nil
 }
 

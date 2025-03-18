@@ -12,6 +12,12 @@ import "aggregator/methods/login.proto";
 import "aggregator/methods/watch.proto";
 
 service AggregatorService {
+  rpc Search(aggregator.methods.SearchCreationsRequest) returns (aggregator.methods.SearchCreationsResponse) {
+    option (google.api.http) = {
+      get: "/api/search/videos/{title}/{page}"
+    };
+  }
+
   // User OK
   rpc Login(aggregator.methods.LoginRequest) returns (aggregator.methods.LoginResponse) {
     option (google.api.http) = {

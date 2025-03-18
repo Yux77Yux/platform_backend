@@ -231,9 +231,9 @@ func (r *RabbitMQClient) PreSendMessage(ctx context.Context, exchange, queueName
 	return r.PreSendProtoMessage(ctx, exchange, queueName, routeKey, body)
 }
 
-func (r *RabbitMQClient) GetMsgs(exchange, queueName, routeKey string, count int) [][]byte {
+func (r *RabbitMQClient) GetMsgs(ctx context.Context, exchange, queueName, routeKey string, count int) [][]byte {
 	ch := r.getChannel()
-	defer r.putChannel(ch)
+	consumerTag := utils.GetMetadataValue(ctx, "trace-id")
 
 	if err := ch.ExchangeDeclare(exchange, "direct", true, false, false, false, nil); err != nil {
 		utils.LogSuperError(fmt.Errorf("failed to declare exchange %s : %w", exchange, err))
@@ -258,20 +258,21 @@ func (r *RabbitMQClient) GetMsgs(exchange, queueName, routeKey string, count int
 		utils.LogSuperError(fmt.Errorf("failed to set QoS: %w", err))
 		return nil
 	}
-
 	msgs, err := ch.Consume(
-		queue.Name, // queue
-		"",         // consumer
-		false,      // auto ack
-		false,      // exclusive
-		false,      // no local
-		false,      // no wait
-		nil,        // args
+		queue.Name,  // queue
+		consumerTag, // consumer
+		false,       // auto ack
+		false,       // exclusive
+		false,       // no local
+		false,       // no wait
+		nil,         // args
 	)
 	if err != nil {
 		utils.LogSuperError(fmt.Errorf("rabbitMQ Consume error: %w", err))
 		return nil
 	}
+	defer ch.Close()
+	defer ch.Cancel(consumerTag, false)
 
 	values := make([][]byte, 0, count)
 	for i := 0; i < count; i++ {
@@ -280,6 +281,7 @@ func (r *RabbitMQClient) GetMsgs(exchange, queueName, routeKey string, count int
 		case msg, ok := <-msgs:
 			if !ok { // 如果通道关闭，提前退出
 				cancel()
+
 				return values
 			}
 			msg.Ack(false)

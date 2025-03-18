@@ -84,3 +84,15 @@ func (c *CreationClient) GetPublicCreationList(ctx context.Context, req *generat
 
 	return response, nil
 }
+
+func (c *CreationClient) SearchCreation(ctx context.Context, req *generated.SearchCreationRequest) (*generated.GetCreationListResponse, error) {
+	// 创建客户端
+	client := generated.NewCreationServiceClient(c.connection)
+
+	response, err := client.SearchCreation(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("could not greet: %v", err)
+	}
+
+	return response, nil
+}

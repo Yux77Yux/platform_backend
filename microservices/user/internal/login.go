@@ -75,7 +75,7 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 		go tools.LogError(traceId, fullName, err)
 	}
 
-	if result == nil {
+	if len(result) <= 0 {
 		user, err := db.UserGetInfoInTransaction(ctx, user_id)
 		if err != nil {
 			if errMap.IsServerError(err) {
@@ -98,6 +98,13 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 			UserAvatar:  user.GetUserAvatar(),
 			UserRole:    user.GetUserRole(),
 		}
+		go func(user *generated.User, ctx context.Context) {
+			traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
+			err := messaging.SendMessage(ctx, EXCHANGE_STORE_USER, KEY_STORE_USER, user)
+			if err != nil {
+				tools.LogError(traceId, fullName, err)
+			}
+		}(user, ctx)
 	} else {
 		user_info = &generated.UserLogin{
 			UserDefault: &common.UserDefault{
@@ -107,15 +114,8 @@ func Login(ctx context.Context, req *generated.LoginRequest) (*generated.LoginRe
 			UserAvatar: result["user_avatar"],
 			UserRole:   user_part_info.GetUserRole(),
 		}
-	}
 
-	go func(user_info *generated.UserLogin, ctx context.Context) {
-		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err := messaging.SendMessage(ctx, EXCHANGE_STORE_USER, KEY_STORE_USER, user_info)
-		if err != nil {
-			tools.LogError(traceId, fullName, err)
-		}
-	}(user_info, ctx)
+	}
 
 	response.UserLogin = user_info
 	response.Msg = &common.ApiResponse{

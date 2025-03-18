@@ -307,3 +307,48 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 	}
 	return response, nil
 }
+
+func SearchCreation(ctx context.Context, req *generated.SearchCreationRequest) (*generated.GetCreationListResponse, error) {
+	response := new(generated.GetCreationListResponse)
+	title := req.GetTitle()
+	page := req.GetPage()
+	if page == 0 {
+		page = 1
+	}
+
+	infos, count, err := db.SearchCreations(ctx, title, page)
+	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
+			Details: err.Error(),
+		}
+		return response, nil
+	}
+
+	filter := make([]*generated.CreationInfo, 0, len(infos))
+	for _, info := range infos {
+		creation := info.GetCreation()
+		base := creation.GetBaseInfo()
+		if base.GetStatus() != generated.CreationStatus_PUBLISHED {
+			continue
+		}
+		filter = append(filter, info)
+	}
+
+	response.CreationInfoGroup = filter
+	response.Count = count
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
+}

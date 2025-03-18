@@ -69,10 +69,7 @@ func BatchUpdateProcessor(ctx context.Context, msg *anypb.Any) error {
 		return fmt.Errorf("BatchUpdateProcessor error: %w", err)
 	}
 	reviews := req.GetReviews()
-	for _, review := range reviews {
-		go dispatcher.HandleRequest(review, dispatch.Update)
-	}
-	return nil
+	return db.UpdateReviews(ctx, reviews)
 }
 
 func UpdateProcessor(ctx context.Context, msg *anypb.Any) error {

@@ -13,6 +13,7 @@ type SqlMethod interface {
 	GetUserCreations(ctx context.Context, req *generated.GetUserCreationsRequest) ([]*generated.CreationInfo, int32, error)
 	GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generated.CreationInfo, error)
 	UpdateCreationStatusInTransaction(ctx context.Context, creation *generated.CreationUpdateStatus) error
+	SearchCreations(ctx context.Context, title string, page int32) ([]*generated.CreationInfo, int32, error)
 }
 
 type MessageQueueMethod interface {

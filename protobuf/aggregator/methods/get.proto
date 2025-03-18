@@ -31,3 +31,14 @@ message GetCardsResponse {
   common.ApiResponse msg = 1;
   repeated aggregator.messages.CreationCard cards = 2;
 }
+
+message SearchCreationsRequest {
+  string title = 1;
+  int32 page = 2;
+}
+
+message SearchCreationsResponse {
+  common.ApiResponse msg = 1;
+  int32 count = 2;
+  repeated aggregator.messages.CreationCard cards = 3;
+}

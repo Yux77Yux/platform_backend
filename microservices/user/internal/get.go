@@ -18,7 +18,7 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 		go tools.LogError(traceId, fullName, err)
 	}
-	if result != nil {
+	if len(result) > 0 {
 		user_info, err := tools.MapUserByString(result)
 		if err != nil {
 			response.Msg = &common.ApiResponse{
@@ -37,7 +37,6 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 		return response, nil
 	}
 
-	// redis未存有，则从数据库取信息
 	user_info, err := db.UserGetInfoInTransaction(ctx, user_id)
 	if err != nil {
 		if errMap.IsServerError(err) {
@@ -55,8 +54,6 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 		}
 		return response, nil
 	}
-
-	user_info.UserDefault.UserId = user_id
 	go func(user_info *generated.User, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 		err := messaging.SendMessage(ctx, EXCHANGE_STORE_USER, KEY_STORE_USER, user_info)
@@ -64,6 +61,8 @@ func GetUser(ctx context.Context, req *generated.GetUserRequest) (*generated.Get
 			tools.LogError(traceId, fullName, err)
 		}
 	}(user_info, ctx)
+
+	user_info.UserDefault.UserId = user_id
 
 	response.User = user_info
 	response.Msg = &common.ApiResponse{

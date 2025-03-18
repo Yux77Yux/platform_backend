@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"fmt"
 	"strconv"
 
 	"log"
@@ -21,8 +22,14 @@ func MapUserByString(result map[string]string) (*generated.User, error) {
 }
 
 func MapUser(result map[string]interface{}) (*generated.User, error) {
-	statusStr := result["user_status"].(string)
-	genderStr := result["user_gender"].(string)
+	statusStr, ok := result["user_status"].(string)
+	if !ok {
+		return nil, fmt.Errorf("MapUser user_status error")
+	}
+	genderStr, ok := result["user_gender"].(string)
+	if !ok {
+		return nil, fmt.Errorf("MapUser user_gender error")
+	}
 
 	status := generated.UserStatus(generated.UserStatus_value[statusStr])
 	gender := generated.UserGender(generated.UserGender_value[genderStr])

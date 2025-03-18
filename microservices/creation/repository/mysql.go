@@ -472,10 +472,7 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 		return nil, nil
 	}
 
-	// 返回的卡片信息
-	cards := make([]*generated.Creation, 0, count)
-	// 返回的卡片统计信息
-	creationEngagements := make([]*generated.CreationEngagement, 0, count)
+	cardsMap := make(map[int64]*generated.CreationInfo)
 	// 查作品信息
 	// []int64 转 []string
 	sqlStrs := make([]string, count)
@@ -544,7 +541,8 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 			c_status := generated.CreationStatus(generated.CreationStatus_value[status])
 
 			// 存储 卡片基本信息切片
-			creation := &generated.Creation{
+			cardsMap[id] = &generated.CreationInfo{}
+			cardsMap[id].Creation = &generated.Creation{
 				CreationId: id,
 				BaseInfo: &generated.CreationUpload{
 					AuthorId:   author_id,
@@ -557,7 +555,6 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 				},
 				UploadTime: timestamppb.New(upload_time),
 			}
-			cards = append(cards, creation)
 			valuesC = append(valuesC, id)
 		}
 
@@ -595,12 +592,11 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 			}
 
 			// 存储 作品卡片的统计信息
-			creationEngagement := &generated.CreationEngagement{
+			cardsMap[creation_id].CreationEngagement = &generated.CreationEngagement{
 				CreationId:  creation_id,
 				Views:       views,
 				PublishTime: timestamppb.New(publish_time.Time),
 			}
-			creationEngagements = append(creationEngagements, creationEngagement)
 		}
 
 		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
@@ -609,15 +605,10 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 		}
 	}
 
-	creationInfos := make([]*generated.CreationInfo, 0, len(ids))
+	creationInfos := make([]*generated.CreationInfo, 0, len(cardsMap))
 	// 统合
-	for i := 0; i < len(ids); i = i + 1 {
-		creationInfo := &generated.CreationInfo{
-			Creation:           cards[i],
-			CreationEngagement: creationEngagements[i],
-		}
-		creationInfo.Creation.CreationId = ids[i]
-		creationInfos = append(creationInfos, creationInfo)
+	for _, info := range cardsMap {
+		creationInfos = append(creationInfos, info)
 	}
 	return creationInfos, nil
 }
@@ -887,4 +878,161 @@ func (c *SqlMethodStruct) UpdateCreationCount(ctx context.Context, creationId in
 		values...,
 	)
 	return err
+}
+
+func (c *SqlMethodStruct) SearchCreations(ctx context.Context, title string, page int32) ([]*generated.CreationInfo, int32, error) {
+	const LIMIT = 20
+	offset := (page - 1) * LIMIT
+
+	// 主页,相似列表,分区
+	query := `SELECT
+			id,
+			src,
+			thumbnail,
+			duration,
+			upload_time
+		FROM db_creation_1.Creation 
+		WHERE title like %?%
+		AND status = 'PUBLISHED' 
+		LIMIT ?
+		OFFSET ?`
+
+	queryCount := `SELECT
+		count(*)
+	FROM db_creation_1.Creation 
+	WHERE title like %?%
+	AND status = 'PUBLISHED' `
+
+	sqlStr := make([]string, 0, LIMIT)
+	creationInfos := make([]*generated.CreationInfo, 0, 20)
+	creationIds := make([]any, 0, 20)
+	var count int32
+	select {
+	case <-ctx.Done():
+		return nil, -1, errMap.GetStatusError(ctx.Err())
+	default:
+		var num int32
+		err := c.db.QueryRowContext(
+			ctx,
+			queryCount,
+		).Scan(&num)
+		if err != nil {
+			return nil, -1, errMap.MapMySQLErrorToStatus(err)
+		}
+		if num <= 0 {
+			return nil, 0, nil
+		}
+		count = int32(math.Ceil(float64(num) / float64(LIMIT)))
+
+		rows, err := c.db.QueryContext(
+			ctx,
+			query,
+			title,
+			LIMIT,
+			offset,
+		)
+		if err != nil {
+			return nil, -1, err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var (
+				creationId  int64
+				src         string
+				thumbnail   string
+				authorId    int64
+				duration    int32
+				upload_time time.Time
+			)
+			// 从当前行读取值，依次填充到变量中
+			err := rows.Scan(&creationId, &src, &thumbnail, &authorId, &duration, &upload_time)
+			if err != nil {
+				return nil, -1, errMap.MapMySQLErrorToStatus(err)
+			}
+
+			// 存储 卡片基本信息切片
+			creationInfo := &generated.CreationInfo{
+				Creation: &generated.Creation{
+					CreationId: creationId,
+					BaseInfo: &generated.CreationUpload{
+						AuthorId:  authorId,
+						Src:       src,
+						Thumbnail: thumbnail,
+						Title:     title,
+						Duration:  duration,
+					},
+					UploadTime: timestamppb.New(upload_time),
+				},
+			}
+			creationIds = append(creationIds, creationId)
+			creationInfos = append(creationInfos, creationInfo)
+			sqlStr = append(sqlStr, "?")
+		}
+
+		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
+		if err = rows.Err(); err != nil {
+			return nil, -1, errMap.MapMySQLErrorToStatus(err)
+		}
+
+		// 结束第一次查询
+		if err = rows.Close(); err != nil {
+			return nil, -1, errMap.MapMySQLErrorToStatus(err)
+		}
+
+		if len(sqlStr) <= 0 {
+			return nil, 0, nil
+		}
+
+		queryCardEngagement := fmt.Sprintf(`
+		SELECT
+			views,
+			likes,
+			saves,
+			publish_time
+		FROM db_creation_engagment_1.CreationEngagement
+		WHERE creation_id IN (%s)`, strings.Join(sqlStr, ","))
+
+		// 查 统计数
+		rows, err = c.db.QueryContext(
+			ctx,
+			queryCardEngagement,
+			creationIds...,
+		)
+		if err != nil {
+			return nil, -1, err
+		}
+		defer rows.Close()
+
+		i := -1
+		for rows.Next() {
+			i++
+			var (
+				views        int32
+				likes        int32
+				saves        int32
+				publish_time sql.NullTime
+			)
+			// 从当前行读取值，依次填充到变量中
+			err := rows.Scan(&views, &likes, &saves, &publish_time)
+			if err != nil {
+				return nil, -1, errMap.MapMySQLErrorToStatus(err)
+			}
+
+			// 存储 作品卡片的统计信息
+			creationEngagement := &generated.CreationEngagement{
+				CreationId:  creationInfos[i].Creation.CreationId,
+				Views:       views,
+				PublishTime: timestamppb.New(publish_time.Time),
+			}
+			creationInfos[i].CreationEngagement = creationEngagement
+		}
+
+		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
+		if err = rows.Err(); err != nil {
+			return nil, -1, errMap.MapMySQLErrorToStatus(err)
+		}
+	}
+
+	return creationInfos, count, nil
 }
