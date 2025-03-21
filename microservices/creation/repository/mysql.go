@@ -476,10 +476,11 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 	// 查作品信息
 	// []int64 转 []string
 	sqlStrs := make([]string, count)
-	values := make([]any, count)
+	values := make([]any, count*2)
 	for i, val := range ids {
 		sqlStrs[i] = "?"
 		values[i] = val
+		values[count+i] = val
 	}
 	// 拼接
 	str := strings.Join(sqlStrs, ",")
@@ -490,7 +491,7 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 			views,
 			publish_time
 		FROM db_creation_engagment_1.CreationEngagement 
-		WHERE creation_id IN (%s)`, str)
+		WHERE creation_id IN (%s) `, str)
 
 	query := fmt.Sprintf(`SELECT
 			id,
@@ -503,7 +504,8 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 			category_id,
 			upload_time
 		FROM db_creation_1.Creation 
-		WHERE id IN (%s)`, str)
+		WHERE id IN (%s) 
+		ORDER BY FIELD(id, %s)`, str, str)
 
 	select {
 	case <-ctx.Done():
@@ -715,7 +717,8 @@ func (c *SqlMethodStruct) UpdateCreationInTransaction(ctx context.Context, creat
 		bio       = creation.GetBio()
 		src       = creation.GetSrc()
 		duration  = creation.GetDuration()
-		userId    = creation.GetAuthorId()
+		status    = creation.GetStatus().String()
+		authorId  = creation.GetAuthorId()
 		AND       = " "
 	)
 	const (
@@ -724,10 +727,11 @@ func (c *SqlMethodStruct) UpdateCreationInTransaction(ctx context.Context, creat
 		setBio       = "bio = ?"
 		setSrc       = "src = ?"
 		setDuration  = "duration = ?"
+		setStatus    = "status = ?"
 	)
 
 	values := make([]any, 0, 8)
-	sqlStr := make([]string, 0, 5)
+	sqlStr := make([]string, 0, 6)
 	if thumbnail != "" {
 		sqlStr = append(sqlStr, setThumbnail)
 		values = append(values, thumbnail)
@@ -748,11 +752,15 @@ func (c *SqlMethodStruct) UpdateCreationInTransaction(ctx context.Context, creat
 		sqlStr = append(sqlStr, setDuration)
 		values = append(values, duration)
 	}
+	if status == generated.CreationStatus_PENDING.String() {
+		sqlStr = append(sqlStr, setStatus)
+		values = append(values, status)
+	}
 
 	values = append(values, creation.GetCreationId())
-	if userId != -403 {
+	if authorId != -403 {
 		AND = " AND author_id = ? "
-		values = append(values, userId)
+		values = append(values, authorId)
 	}
 
 	if len(sqlStr) <= 0 {
@@ -762,22 +770,15 @@ func (c *SqlMethodStruct) UpdateCreationInTransaction(ctx context.Context, creat
 	query := fmt.Sprintf(`
 		UPDATE db_creation_1.Creation
 		SET 
-			status = 'PENDING',
 			%s
 		WHERE 
 			id = ? 
 		%s`, strings.Join(sqlStr, ","), AND)
-	affected, err := c.db.ExecContext(ctx, query, values...)
+	_, err := c.db.ExecContext(ctx, query, values...)
 	if err != nil {
 		return err
 	}
-	num, err := affected.RowsAffected()
-	if err != nil {
-		return errMap.MapMySQLErrorToStatus(err)
-	}
-	if num <= 0 {
-		return grpcStatus.Errorf(codes.NotFound, "not match the author")
-	}
+
 	return nil
 }
 
@@ -825,7 +826,7 @@ func (c *SqlMethodStruct) PublishCreationInTransaction(ctx context.Context, crea
     		WHEN publish_time IS NULL THEN ? 
     		ELSE publish_time 
 		END
-		WHERE id = ?`
+		WHERE creation_id = ?`
 	_, err := c.db.ExecContext(
 		ctx,
 		query,

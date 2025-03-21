@@ -47,6 +47,7 @@ type CacheInterface interface {
 	RevRangeByScoreZSet(ctx context.Context, kind, unique, min, max string, offset, count int64) ([]string, error)
 	GetCountZSet(ctx context.Context, kind, unique string) (int64, error)
 	GetScoreCountZSet(ctx context.Context, kind, unique, min, max string) (int64, error)
+	AddZSetIfNotExist(ctx context.Context, kind string, unique string, member string) error
 
 	Pipeline() redis.Pipeliner
 	TxPipeline() redis.Pipeliner
@@ -66,6 +67,6 @@ type CacheMethod interface {
 	GetCreationList(ctx context.Context, creationIds []int64) ([]*generated.CreationInfo, []int64, error)
 	UpdateCreation(ctx context.Context, creation *generated.CreationUpdated) error
 	UpdateCreationStatus(ctx context.Context, creation *generated.CreationUpdateStatus) error
-	getAuthorIdMap(ctx context.Context, creationIds []int64) (map[int64]string, error)
 	UpdateCreationCount(ctx context.Context, actions []*common.UserAction) error
+	AddPublicCreations(ctx context.Context, creationId int64) error
 }

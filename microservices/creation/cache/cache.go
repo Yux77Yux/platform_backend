@@ -19,6 +19,10 @@ type CacheMethodStruct struct {
 }
 
 // POST
+func (c *CacheMethodStruct) AddPublicCreations(ctx context.Context, creationId int64) error {
+	return c.CacheClient.AddZSetIfNotExist(ctx, "Public", "Creations", strconv.FormatInt(creationId, 10))
+}
+
 func (c *CacheMethodStruct) CreationAddInCache(ctx context.Context, creationInfo *generated.CreationInfo) error {
 	creation := creationInfo.GetCreation()
 
@@ -213,7 +217,7 @@ func (c *CacheMethodStruct) mapToCreationInfo(results map[string]string, creatio
 func (c *CacheMethodStruct) GetSimilarCreationList(ctx context.Context, creation_id int64) ([]int64, error) {
 	strs, err := c.CacheClient.RevRangeZSet(ctx, "SimilarCreation", strconv.FormatInt(creation_id, 10), 0, 149)
 	if err != nil {
-		tools.LogError("", "cache GetSpaceCreationList", err)
+		tools.LogError("", "cache GetSimilarCreationList", err)
 		return nil, err
 	}
 
@@ -444,6 +448,17 @@ func (c *CacheMethodStruct) getAuthorIdMap(ctx context.Context, creationIds []in
 	return authorMap, nil
 }
 
+func GetScore(action common.Operate) float64 {
+	switch action {
+	case common.Operate_COLLECT:
+		return 3
+	case common.Operate_LIKE:
+		return 2
+	default:
+		return 1
+	}
+}
+
 func (c *CacheMethodStruct) UpdateCreationCount(ctx context.Context, actions []*common.UserAction) error {
 	// 通过redis获取authorId，如果作品不存在redis，说明作品未发布所以未缓存至Redis（作品未设置过期）
 	length := len(actions)
@@ -453,7 +468,8 @@ func (c *CacheMethodStruct) UpdateCreationCount(ctx context.Context, actions []*
 		if creationIdBody == nil {
 			return fmt.Errorf("error: common.CreationId is null")
 		}
-		creationIds[i] = creationIdBody.GetId()
+		creationId := creationIdBody.GetId()
+		creationIds[i] = creationId
 	}
 
 	authorIdMap, err := c.getAuthorIdMap(ctx, creationIds)
@@ -462,8 +478,14 @@ func (c *CacheMethodStruct) UpdateCreationCount(ctx context.Context, actions []*
 	}
 
 	pipeline := c.CacheClient.Pipeline()
+
 	for i, action := range actions {
 		creationId := creationIds[i]
+		increase := GetScore(action.GetOperate())
+		pipeline.ZIncr(ctx, "ZSet_Public_Creations", &redis.Z{
+			Member: creationId,
+			Score:  increase,
+		})
 
 		key := fmt.Sprintf("Hash_CreationInfo_%d", creationId)
 		authorIdStr := authorIdMap[creationId]

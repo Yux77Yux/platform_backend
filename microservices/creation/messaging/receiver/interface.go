@@ -32,6 +32,7 @@ type CacheMethod interface {
 	AddSpaceCreations(ctx context.Context, authorId, creationId int64, publishTime *timestamppb.Timestamp) error
 	UpdateCreationStatus(ctx context.Context, creation *generated.CreationUpdateStatus) error
 	UpdateCreationCount(ctx context.Context, actions []*common.UserAction) error
+	AddPublicCreations(ctx context.Context, creationId int64) error
 }
 
 type DispatchInterface interface {

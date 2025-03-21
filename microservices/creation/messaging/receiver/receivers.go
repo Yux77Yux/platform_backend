@@ -5,6 +5,7 @@ package receiver
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"google.golang.org/protobuf/types/known/anypb"
@@ -20,13 +21,13 @@ func storeCreationProcessor(ctx context.Context, msg *anypb.Any) error {
 	// 反序列化
 	err := msg.UnmarshalTo(req)
 	if err != nil {
-		return fmt.Errorf("storeCreationProcessor error: %w", err)
+		return err
 	}
 
 	// 写入缓存
 	err = cache.CreationAddInCache(ctx, req)
 	if err != nil {
-		return fmt.Errorf("cache CreationAddInCache occur error: %w", err)
+		return err
 	}
 
 	return nil
@@ -37,19 +38,24 @@ func updateCreationDbProcessor(ctx context.Context, msg *anypb.Any) error {
 	err := msg.UnmarshalTo(req)
 	// 反序列化
 	if err != nil {
-		return fmt.Errorf("updateCreationDbProcessor error: %w", err)
+		return err
 	}
 
 	// 更新数据库
 	err = db.UpdateCreationInTransaction(ctx, req)
 	if err != nil {
-		err = fmt.Errorf("db UpdateCreationInTransaction occur error: %w", err)
 		return err
 	}
 
-	reqId := req.GetCreationId()
+	status := req.GetStatus()
+	// 不需要通知审核服务则返回
+	if status != generated.CreationStatus_PENDING {
+		return nil
+	}
+
+	creationId := req.GetCreationId()
 	return messaging.SendMessage(ctx, EXCHANGE_PEND_CREATION, KEY_PEND_CREATION, &common.CreationId{
-		Id: reqId,
+		Id: creationId,
 	})
 }
 
@@ -90,7 +96,7 @@ func updateCreationStatusProcessor(ctx context.Context, msg *anypb.Any) error {
 
 	reqId := req.GetCreationId()
 	status := req.GetStatus()
-	// 已经是发布状态
+	// 已经是发布状态，这里的_PUBLISHED只能由审核员选择
 	if status == generated.CreationStatus_PUBLISHED {
 		// 更改发布时间
 		publishedTime := timestamppb.Now()
@@ -109,20 +115,29 @@ func updateCreationStatusProcessor(ctx context.Context, msg *anypb.Any) error {
 			return err
 		}
 
+		// 将作品加入可观看视频
+		err = cache.AddPublicCreations(ctx, reqId)
+		if err != nil {
+			log.Printf("add public %v", err)
+			return err
+		}
+
 		// 获取作者id
 		authorId, err := db.GetAuthorIdInTransaction(ctx, reqId)
 		if err != nil {
+			log.Printf("GetAuthorIdInTransaction %v", err)
 			return err
 		}
 
 		// 将作品id加入空间
 		err = cache.AddSpaceCreations(ctx, authorId, reqId, publishedTime)
 		if err != nil {
+			log.Printf("AddSpaceCreations %v", err)
 			return err
 		}
 	}
 
-	// 作者想发布
+	// 作者选择发布，这里的PENDING是作者能控制的
 	if status == generated.CreationStatus_PENDING {
 		return messaging.SendMessage(ctx, EXCHANGE_PEND_CREATION, KEY_PEND_CREATION, &common.CreationId{
 			Id: reqId,
@@ -168,7 +183,6 @@ func addInteractionCount(ctx context.Context, msg *anypb.Any) error {
 	err = cache.UpdateCreationCount(ctx, actions)
 	if err != nil {
 		// 入死信，没做
-
 		return err
 	}
 
