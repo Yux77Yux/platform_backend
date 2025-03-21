@@ -241,7 +241,7 @@ func (c *CacheMethodStruct) GetSimilarCreationList(ctx context.Context, creation
 func (c *CacheMethodStruct) GetSpaceCreationList(ctx context.Context, user_id int64, page int32, typeStr string) ([]int64, int32, error) {
 	const LIMIT = 25
 	start := int64((page - 1) * LIMIT)
-	stop := start + 24
+	stop := start + LIMIT - 1
 
 	pipe := c.CacheClient.Pipeline()
 
@@ -268,13 +268,13 @@ func (c *CacheMethodStruct) GetSpaceCreationList(ctx context.Context, user_id in
 		return nil, -1, err
 	}
 
-	ids := make([]int64, count)
-	for i, str := range strs {
+	ids := make([]int64, 0, LIMIT)
+	for _, str := range strs {
 		id, err := strconv.ParseInt(str, 10, 64)
 		if err != nil {
 			return nil, -1, err
 		}
-		ids[i] = id
+		ids = append(ids, id)
 	}
 
 	pagesNum := int32(math.Ceil(float64(count) / float64(LIMIT)))

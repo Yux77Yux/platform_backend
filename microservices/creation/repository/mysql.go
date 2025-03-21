@@ -485,14 +485,6 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 	// 拼接
 	str := strings.Join(sqlStrs, ",")
 
-	queryCardEngagement := fmt.Sprintf(`
-		SELECT
-			creation_id,
-			views,
-			publish_time
-		FROM db_creation_engagment_1.CreationEngagement 
-		WHERE creation_id IN (%s) `, str)
-
 	query := fmt.Sprintf(`SELECT
 			id,
 			author_id,
@@ -507,6 +499,16 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 		WHERE id IN (%s) 
 		ORDER BY FIELD(id, %s)`, str, str)
 
+	queryCardEngagement := fmt.Sprintf(`
+		SELECT
+			creation_id,
+			views,
+			likes,
+			saves,
+			publish_time
+		FROM db_creation_engagment_1.CreationEngagement 
+		WHERE creation_id IN (%s) 
+		ORDER BY FIELD(creation_id, %s)`, str, str)
 	select {
 	case <-ctx.Done():
 		return nil, errMap.GetStatusError(ctx.Err())
@@ -521,7 +523,6 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 		}
 		defer rows.Close()
 
-		valuesC := make([]any, 0, count)
 		for rows.Next() {
 			var (
 				id          int64
@@ -543,21 +544,21 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 			c_status := generated.CreationStatus(generated.CreationStatus_value[status])
 
 			// 存储 卡片基本信息切片
-			cardsMap[id] = &generated.CreationInfo{}
-			cardsMap[id].Creation = &generated.Creation{
-				CreationId: id,
-				BaseInfo: &generated.CreationUpload{
-					AuthorId:   author_id,
-					Src:        src,
-					Thumbnail:  thumbnail,
-					Title:      title,
-					Status:     c_status,
-					Duration:   duration,
-					CategoryId: category_id,
+			cardsMap[id] = &generated.CreationInfo{
+				Creation: &generated.Creation{
+					CreationId: id,
+					BaseInfo: &generated.CreationUpload{
+						AuthorId:   author_id,
+						Src:        src,
+						Thumbnail:  thumbnail,
+						Title:      title,
+						Status:     c_status,
+						Duration:   duration,
+						CategoryId: category_id,
+					},
+					UploadTime: timestamppb.New(upload_time),
 				},
-				UploadTime: timestamppb.New(upload_time),
 			}
-			valuesC = append(valuesC, id)
 		}
 
 		// 检查是否有额外的错误（比如数据读取完成后的关闭错误）
@@ -569,12 +570,11 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 		if err = rows.Close(); err != nil {
 			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
-
 		// 查 统计数
 		rows, err = c.db.QueryContext(
 			ctx,
 			queryCardEngagement,
-			valuesC...,
+			values...,
 		)
 		if err != nil {
 			return nil, err
@@ -585,10 +585,12 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 			var (
 				creation_id  int64
 				views        int32
+				likes        int32
+				saves        int32
 				publish_time sql.NullTime
 			)
 			// 从当前行读取值，依次填充到变量中
-			err := rows.Scan(&creation_id, &views, &publish_time)
+			err := rows.Scan(&creation_id, &views, &likes, &saves, &publish_time)
 			if err != nil {
 				return nil, errMap.MapMySQLErrorToStatus(err)
 			}
@@ -597,6 +599,8 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 			cardsMap[creation_id].CreationEngagement = &generated.CreationEngagement{
 				CreationId:  creation_id,
 				Views:       views,
+				Likes:       likes,
+				Saves:       saves,
 				PublishTime: timestamppb.New(publish_time.Time),
 			}
 		}
@@ -609,8 +613,10 @@ func (c *SqlMethodStruct) GetCreationCardInTransaction(ctx context.Context, ids 
 
 	creationInfos := make([]*generated.CreationInfo, 0, len(cardsMap))
 	// 统合
-	for _, info := range cardsMap {
-		creationInfos = append(creationInfos, info)
+	for _, id := range ids {
+		if info, exist := cardsMap[id]; exist {
+			creationInfos = append(creationInfos, info)
+		}
 	}
 	return creationInfos, nil
 }

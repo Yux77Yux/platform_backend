@@ -174,6 +174,35 @@ func GetFollowers(ctx context.Context, req *generated.GetFollowRequest) (*genera
 	return response, nil
 }
 
+func ExistFollowee(ctx context.Context, req *generated.ExistFolloweeRequest) (*generated.ExistFolloweeResponse, error) {
+	response := new(generated.ExistFolloweeResponse)
+	follow := req.GetFollow()
+	exist, err := db.ExistsFollowee(ctx, follow.GetFollowerId(), follow.GetFolloweeId())
+	if err != nil {
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
+		}
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
+			Details: err.Error(),
+		}
+		return response, nil
+	}
+
+	response.Exist = exist
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
+	}
+	return response, nil
+}
+
 func GetUsers(ctx context.Context, req *generated.GetUsersRequest) (*generated.GetUsersResponse, error) {
 	response := new(generated.GetUsersResponse)
 	ids := req.GetIds()

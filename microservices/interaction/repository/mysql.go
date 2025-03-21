@@ -53,7 +53,7 @@ func (c *SqlMethodStruct) GetActionTag(ctx context.Context, req *generated.BaseI
 }
 
 func (c *SqlMethodStruct) GetCollections(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
-	offset := (page - 1) * 30
+	offset := (page - 1) * 25
 	query := `
 		SELECT 
 			creation_id,
@@ -62,7 +62,7 @@ func (c *SqlMethodStruct) GetCollections(ctx context.Context, userId int64, page
 		WHERE user_id = ?
 		AND action_tag & 4 = 4
 		ORDER BY updated_at,creation_id DESC
-		LIMIT 30 OFFSET ?`
+		LIMIT 25 OFFSET ?`
 
 	var interactions []*generated.Interaction
 
@@ -79,7 +79,7 @@ func (c *SqlMethodStruct) GetCollections(ctx context.Context, userId int64, page
 		for rows.Next() {
 			var (
 				creation_id int64
-				save_at     time.Time
+				save_at     sql.NullTime
 			)
 			err := rows.Scan(&creation_id, &save_at)
 			if err != nil {
@@ -87,7 +87,7 @@ func (c *SqlMethodStruct) GetCollections(ctx context.Context, userId int64, page
 			}
 			interactions = append(interactions, &generated.Interaction{
 				Base:   &generated.BaseInteraction{CreationId: creation_id},
-				SaveAt: timestamppb.New(save_at),
+				SaveAt: timestamppb.New(save_at.Time),
 			})
 		}
 	}
@@ -96,7 +96,7 @@ func (c *SqlMethodStruct) GetCollections(ctx context.Context, userId int64, page
 }
 
 func (c *SqlMethodStruct) GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
-	offset := (page - 1) * 30
+	offset := (page - 1) * 25
 	query := `
 		SELECT 
 			creation_id,
@@ -105,7 +105,7 @@ func (c *SqlMethodStruct) GetHistories(ctx context.Context, userId int64, page i
 		WHERE user_id = ?
 		AND action_tag & 1 = 1
 		ORDER BY updated_at,creation_id DESC
-		LIMIT 30 OFFSET ?`
+		LIMIT 25 OFFSET ?`
 
 	var interactions []*generated.Interaction
 
@@ -140,7 +140,7 @@ func (c *SqlMethodStruct) GetHistories(ctx context.Context, userId int64, page i
 
 // 用于推荐系统返回
 func (c *SqlMethodStruct) GetOtherUserHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
-	const limit = 5000
+	const limit = 1000
 	offset := (page - 1) * limit
 	query := `
 		SELECT 
@@ -151,7 +151,7 @@ func (c *SqlMethodStruct) GetOtherUserHistories(ctx context.Context, userId int6
 		WHERE user_id < ? 
 		OR user_id > ?
 		ORDER BY updated_at,creation_id DESC
-		LIMIT 5000 offset ?`
+		LIMIT 1000 offset ?`
 
 	var interactions []*generated.Interaction
 
@@ -226,7 +226,11 @@ func (c *SqlMethodStruct) UpdateInteractions(ctx context.Context, req []*generat
         	WHEN VALUES(updated_at) IS NOT NULL THEN VALUES(updated_at)
         	ELSE updated_at
 		END,
-    		save_at = VALUES(save_at);`, strings.Join(sqlStr, ","))
+    		save_at = CASE
+			WHEN VALUES(action_tag) = 4 THEN VALUES(save_at)
+			WHEN VALUES(action_tag) = 3 THEN NULL
+			ELSE save_at
+		END`, strings.Join(sqlStr, ","))
 
 	select {
 	case <-ctx.Done():

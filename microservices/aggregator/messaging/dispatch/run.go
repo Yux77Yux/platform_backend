@@ -27,7 +27,7 @@ func Run() DispatchInterface {
 		chainMap: make(map[string]ChainInterface),
 	}
 
-	_dispatch.chainMap[AddView] = InitialAddViewChain()
+	_dispatch.chainMap[IncreaseView] = InitialAddViewChain()
 
 	return _dispatch
 }

@@ -28,7 +28,7 @@ func InitialFollowChain() *FollowChain {
 	}
 	_chain.listenerPool = sync.Pool{
 		New: func() any {
-			return &FollowCacheListener{
+			return &FollowListener{
 				timeoutDuration: 10 * time.Second,
 				updateInterval:  3 * time.Second,
 				chain:           _chain,

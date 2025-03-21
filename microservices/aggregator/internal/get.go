@@ -136,6 +136,7 @@ func Collections(ctx context.Context, req *generated.CollectionsRequest) (*gener
 		return response, nil
 	}
 
+	page := req.GetPage()
 	// 从 用户数据服务 调取相似列表
 	interaction_client, err := client.GetInteractionClient()
 	if err != nil {
@@ -149,6 +150,7 @@ func Collections(ctx context.Context, req *generated.CollectionsRequest) (*gener
 	}
 	interactionResponse, err := interaction_client.GetCollections(ctx, &interaction.GetCollectionsRequest{
 		UserId: userId,
+		Page:   page,
 	})
 	if err != nil {
 		var msg *common.ApiResponse
@@ -188,18 +190,9 @@ func Collections(ctx context.Context, req *generated.CollectionsRequest) (*gener
 		return response, nil
 	}
 	creationIds := make([]int64, length)
-	creationMap := make(map[int64]*creation.CreationInfo)
 	for i, _interaction := range interactions {
 		id := _interaction.Base.GetCreationId()
 		creationIds[i] = id
-		creationMap[id] = &creation.CreationInfo{
-			Creation: &creation.Creation{
-				CreationId: id,
-			},
-			CreationEngagement: &creation.CreationEngagement{
-				CreationId: id,
-			},
-		}
 	}
 
 	userMap, creationInfos, err := getUserMap(ctx, creationIds)
@@ -221,30 +214,30 @@ func Collections(ctx context.Context, req *generated.CollectionsRequest) (*gener
 		return response, nil
 	}
 
+	creationMap := make(map[int64]*creation.CreationInfo)
 	for _, info := range creationInfos {
 		creation := info.GetCreation()
 		creationId := creation.GetCreationId()
-
-		if creation, exists := creationMap[creationId]; exists {
-			creationMap[creationId] = creation
-		}
+		creationMap[creationId] = info
 	}
 
-	cards := make([]*generated.CreationCard, length)
-	for i := 0; i < length; i++ {
-		info := creationMap[creationIds[i]]
+	cards := make([]*generated.CreationCard, 0, length)
+	for _, interaction := range interactions {
+		creationId := interaction.Base.GetCreationId()
+		info := creationMap[creationId]
+
 		creation := info.GetCreation()
 		authorId := creation.GetBaseInfo().GetAuthorId()
 
 		card := &generated.CreationCard{
 			Creation:           creation,
 			CreationEngagement: info.GetCreationEngagement(),
-			TimeAt:             interactions[i].GetSaveAt(),
+			TimeAt:             interaction.GetSaveAt(),
 		}
 		if user, exists := userMap[authorId]; exists {
 			card.User = user
 		}
-		cards[i] = card
+		cards = append(cards, card)
 	}
 
 	response.Cards = cards
@@ -424,9 +417,13 @@ func getUserMap(ctx context.Context, creationIds []int64) (map[int64]*common.Use
 	if length <= 0 {
 		return nil, nil, nil
 	}
-	userIds := make([]int64, length)
-	for i, info := range creationInfos {
-		userIds[i] = info.GetCreation().GetBaseInfo().GetAuthorId()
+	userIdMap := make(map[int64]struct{})
+	for _, info := range creationInfos {
+		userIdMap[info.GetCreation().GetBaseInfo().GetAuthorId()] = struct{}{}
+	}
+	userIds := make([]int64, 0, len(userIdMap))
+	for id := range userIdMap {
+		userIds = append(userIds, id)
 	}
 
 	user_client, err := client.GetUserClient()
@@ -457,7 +454,8 @@ func getUserMap(ctx context.Context, creationIds []int64) (map[int64]*common.Use
 	limit := len(users)
 	userMap := make(map[int64]*common.UserDefault, limit)
 	for _, user := range users {
-		userMap[user.GetUserDefault().GetUserId()] = user.GetUserDefault()
+		userDef := user.GetUserDefault()
+		userMap[userDef.GetUserId()] = userDef
 	}
 
 	return userMap, creationInfos, nil

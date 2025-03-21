@@ -234,7 +234,7 @@ func (s *SqlMethodStruct) Follow(ctx context.Context, subs []*generated.Follow) 
 		INSERT INTO db_user_1.Follow (follower_id, followee_id)
 		VALUES %s 
 		ON DUPLICATE KEY UPDATE
-		follower_id = follower_id;`, strings.Join(sqlStr, ","))
+		created_at = CURRENT_TIMESTAMP;`, strings.Join(sqlStr, ","))
 
 	_, err := s.db.ExecContext(
 		ctx,
@@ -248,6 +248,29 @@ func (s *SqlMethodStruct) Follow(ctx context.Context, subs []*generated.Follow) 
 }
 
 // GET
+func (s *SqlMethodStruct) ExistsFollowee(ctx context.Context, followerId, followeeId int64) (bool, error) {
+	var created_at sql.NullTime
+	query := `
+		SELECT created_at 
+		FROM db_user_1.Follow 
+		WHERE (follower_id,followee_id) 
+		IN ((?,?))`
+	err := s.db.QueryRowContext(
+		ctx,
+		query,
+		followerId,
+		followeeId,
+	).Scan(&created_at)
+	if err != nil {
+		return false, errMap.MapMySQLErrorToStatus(err)
+	}
+
+	if !created_at.Valid {
+		return false, nil
+	}
+	return true, nil
+}
+
 func (s *SqlMethodStruct) Exists(ctx context.Context, isEmail bool, usernameOrEmail string) (bool, error) {
 	str := "username"
 	if isEmail {
@@ -332,6 +355,8 @@ func (s *SqlMethodStruct) UserGetInfoInTransaction(ctx context.Context, id int64
 			UserBday:      timestamppb.New(bday),
 			UserCreatedAt: timestamppb.New(created_at),
 			UserUpdatedAt: timestamppb.New(updated_at),
+			Followers:     followers,
+			Followees:     followees,
 		}, nil
 	}
 }
@@ -996,9 +1021,10 @@ func (s *SqlMethodStruct) ViewFollowee(ctx context.Context, subs []*generated.Fo
 // Del
 func (s *SqlMethodStruct) CancelFollow(ctx context.Context, f *generated.Follow) error {
 	query := `
-		DELETE FROM db_user_1.Follow 
-		WHERE follower_id = ?
-	 	AND followee_id = ?`
+		UPDATE db_user_1.Follow 
+		SET created_at = NULL
+		WHERE (follower_id,followee_id) 
+		IN ((?,?))`
 	_, err := s.db.Exec(
 		query,
 		f.FollowerId,

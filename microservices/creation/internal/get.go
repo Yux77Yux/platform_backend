@@ -167,7 +167,7 @@ func GetPublicCreationList(ctx context.Context, req *generated.GetCreationListRe
 	response := new(generated.GetCreationListResponse)
 
 	ids := req.GetIds()
-	creations, err := db.GetCreationCardInTransaction(ctx, ids)
+	infos, err := db.GetCreationCardInTransaction(ctx, ids)
 	if err != nil {
 		if errMap.IsServerError(err) {
 			response.Msg = &common.ApiResponse{
@@ -185,15 +185,17 @@ func GetPublicCreationList(ctx context.Context, req *generated.GetCreationListRe
 		return response, nil
 	}
 
-	length := len(ids)
-	filteredCreations := make([]*generated.CreationInfo, 0, length)
-	for _, info := range creations {
-		if info.GetCreation().GetBaseInfo().GetStatus() == generated.CreationStatus_PUBLISHED {
-			filteredCreations = append(filteredCreations, info)
+	filter := make([]*generated.CreationInfo, 0, len(infos))
+	for _, info := range infos {
+		creation := info.GetCreation()
+		base := creation.GetBaseInfo()
+		if base.GetStatus() != generated.CreationStatus_PUBLISHED {
+			continue
 		}
+		filter = append(filter, info)
 	}
 
-	response.CreationInfoGroup = filteredCreations
+	response.CreationInfoGroup = filter
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",

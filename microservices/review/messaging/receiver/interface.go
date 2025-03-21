@@ -14,6 +14,7 @@ type HandlerFunc = pkgMQ.HandlerFunc
 type SqlMethod interface {
 	UpdateReview(ctx context.Context, review *generated.Review) error
 	UpdateReviews(ctx context.Context, reviews []*generated.Review) error
+	GetTarget(ctx context.Context, id int64) (int64, *generated.TargetType, error)
 }
 
 type MessageQueueMethod = pkgMQ.MessageQueueMethod

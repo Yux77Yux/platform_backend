@@ -148,18 +148,25 @@ func (c *CacheMethodStruct) StoreUserInfo(ctx context.Context, users []*generate
 func (c *CacheMethodStruct) Follow(ctx context.Context, subs []*generated.Follow) error {
 	now := float64(timestamppb.Now().Seconds)
 	for _, follow := range subs {
+		followerId := follow.GetFollowerId()
+		followeeId := follow.GetFolloweeId()
+
 		pipe := c.CacheClient.TxPipeline()
-		pipe.ZAdd(ctx, fmt.Sprintf("ZSet_Time_Followees_%d", follow.FollowerId), &redis.Z{
+
+		pipe.HIncrBy(ctx, fmt.Sprintf("Hash_UserInfo_%d", followerId), "followees", 1)
+		pipe.HIncrBy(ctx, fmt.Sprintf("Hash_UserInfo_%d", followeeId), "followers", 1)
+
+		pipe.ZAdd(ctx, fmt.Sprintf("ZSet_Time_Followees_%d", followerId), &redis.Z{
 			Score:  now,
 			Member: follow.FolloweeId,
 		})
 
-		pipe.ZAdd(ctx, fmt.Sprintf("ZSet_View_Followees_%d", follow.FollowerId), &redis.Z{
+		pipe.ZAdd(ctx, fmt.Sprintf("ZSet_View_Followees_%d", followerId), &redis.Z{
 			Score:  0,
 			Member: follow.FolloweeId,
 		})
 
-		pipe.ZAdd(ctx, fmt.Sprintf("ZSet_Followers_%d", follow.FolloweeId), &redis.Z{
+		pipe.ZAdd(ctx, fmt.Sprintf("ZSet_Followers_%d", followeeId), &redis.Z{
 			Score:  now,
 			Member: follow.FollowerId,
 		})
@@ -348,6 +355,10 @@ func (c *CacheMethodStruct) GetUserCards(ctx context.Context, userIds []int64) (
 	return users, nil
 }
 
+func (c *CacheMethodStruct) ExistFollowee(ctx context.Context, followeeId, followerId int64) (bool, error) {
+	return false, nil
+}
+
 func (c *CacheMethodStruct) GetFolloweesByTime(ctx context.Context, userId int64, page int32) ([]int64, error) {
 	const LIMIT = 20
 	start := int64((page - 1) * LIMIT)
@@ -414,10 +425,13 @@ func (c *CacheMethodStruct) GetFollowers(ctx context.Context, userId int64, page
 // Del
 func (c *CacheMethodStruct) CancelFollow(ctx context.Context, follow *generated.Follow) error {
 	pipe := c.CacheClient.TxPipeline()
-
-	pipe.ZRem(ctx, fmt.Sprintf("ZSet_Time_Followees_%d", follow.FollowerId), follow.FolloweeId)
-	pipe.ZRem(ctx, fmt.Sprintf("ZSet_View_Followees_%d", follow.FollowerId), follow.FolloweeId)
-	pipe.ZRem(ctx, fmt.Sprintf("ZSet_Followers_%d", follow.FolloweeId), follow.FollowerId)
+	followerId := follow.GetFollowerId()
+	followeeId := follow.GetFolloweeId()
+	pipe.HIncrBy(ctx, fmt.Sprintf("Hash_UserInfo_%d", followerId), "followees", -1)
+	pipe.HIncrBy(ctx, fmt.Sprintf("Hash_UserInfo_%d", followeeId), "followers", -1)
+	pipe.ZRem(ctx, fmt.Sprintf("ZSet_Time_Followees_%d", followerId), followeeId)
+	pipe.ZRem(ctx, fmt.Sprintf("ZSet_View_Followees_%d", followerId), followeeId)
+	pipe.ZRem(ctx, fmt.Sprintf("ZSet_Followers_%d", followeeId), followerId)
 
 	_, err := pipe.Exec(ctx)
 	if err != nil && err != redis.Nil {

@@ -37,11 +37,18 @@ service UserService {
   // DEL
   rpc CancelFollow(user.methods.FollowRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      delete: "/api/user/follow/{follow.follower_id}/{follow.followee_id}"
+      patch: "/api/user/follow"
+      body: "*"
     };
   }
 
   // GET
+  rpc ExistFollowee(user.methods.ExistFolloweeRequest) returns (user.methods.ExistFolloweeResponse) {
+    option (google.api.http) = {
+      get: "/api/user/follow/get/{follow.followee_id}/{follow.follower_id}"
+    };
+  }
+
   rpc Login(user.methods.LoginRequest) returns (user.methods.LoginResponse);
 
   rpc GetFolloweesByTime(user.methods.GetFollowRequest) returns (user.methods.GetFollowResponse) {
@@ -62,7 +69,7 @@ service UserService {
     };
   }
 
-  rpc GetUser(user.methods.GetUserRequest) returns (user.methods.GetUserResponse){
+  rpc GetUser(user.methods.GetUserRequest) returns (user.methods.GetUserResponse) {
     option (google.api.http) = {
       get: "/api/user/{user_id}"
     };

@@ -30,3 +30,7 @@ func (s *Server) GetFolloweesByViews(ctx context.Context, req *generated.GetFoll
 func (s *Server) GetFollowers(ctx context.Context, req *generated.GetFollowRequest) (*generated.GetFollowResponse, error) {
 	return internal.GetFollowers(ctx, req)
 }
+
+func (s *Server) ExistFollowee(ctx context.Context, req *generated.ExistFolloweeRequest) (*generated.ExistFolloweeResponse, error) {
+	return internal.ExistFollowee(ctx, req)
+}

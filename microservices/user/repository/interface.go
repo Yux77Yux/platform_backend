@@ -29,4 +29,5 @@ type SqlMethod interface {
 	DelReviewer(ctx context.Context, reviewerId int64) (string, string, error)
 	ViewFollowee(ctx context.Context, subs []*generated.Follow) error
 	CancelFollow(ctx context.Context, f *generated.Follow) error
+	ExistsFollowee(ctx context.Context, followerId, followeeId int64) (bool, error)
 }

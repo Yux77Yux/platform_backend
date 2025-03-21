@@ -2,8 +2,8 @@ package receiver
 
 var (
 	ExchangesConfig = map[string]string{
-		"PublishComment": "direct",
-		"DeleteComment":  "direct",
+		EXCHANGE_PUBLISH_COMMENT: "direct",
+		EXCHANGE_DELETE_COMMENT:  "direct",
 	}
 )
 

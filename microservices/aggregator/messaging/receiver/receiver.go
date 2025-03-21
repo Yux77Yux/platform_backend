@@ -10,9 +10,10 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
+	"github.com/Yux77Yux/platform_backend/microservices/aggregator/messaging/dispatch"
 )
 
-func addViewProcessor(ctx context.Context, msg *anypb.Any) error {
+func increaseViewProcessor(ctx context.Context, msg *anypb.Any) error {
 	req := new(common.ViewCreation)
 	err := msg.UnmarshalTo(req)
 	if err != nil {
@@ -52,7 +53,7 @@ func addViewProcessor(ctx context.Context, msg *anypb.Any) error {
 		},
 		Operate: common.Operate_VIEW,
 	}
-	go dispatcher.HandleRequest(action, AddView)
+	go dispatcher.HandleRequest(action, dispatch.IncreaseView)
 
 	return nil
 }

@@ -13,5 +13,3 @@ docker network create --driver bridge comments-net
 docker network create --driver bridge review-net
 
 然后依次在各个目录执行 docker-compose up -d
-
-

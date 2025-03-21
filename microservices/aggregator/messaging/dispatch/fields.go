@@ -11,15 +11,13 @@ const (
 )
 
 const (
-	AddView = "AddView"
+	IncreaseView = "IncreaseView"
 )
 
 var (
-	EXCHANGE_ADD_VIEW                     = event.Exchange_EXCHANGE_ADD_VIEW.String()
 	EXCHANGE_UPDATE_CREATION_ACTION_COUNT = event.Exchange_EXCHANGE_UPDATE_CREATION_ACTION_COUNT.String()
 )
 
 var (
-	KEY_ADD_VIEW                     = event.RoutingKey_KEY_ADD_VIEW.String()
 	KEY_UPDATE_CREATION_ACTION_COUNT = event.RoutingKey_KEY_UPDATE_CREATION_ACTION_COUNT.String()
 )

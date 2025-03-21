@@ -217,6 +217,9 @@ func GetRecommendBaseCreation(ctx context.Context, req *generated.GetRecommendRe
 	}
 
 	go func(reset bool, id int64, ctx context.Context) {
+		if !reset {
+			return
+		}
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 		err = messaging.SendMessage(ctx, EXCHANGE_COMPUTE_CREATION, KEY_COMPUTE_CREATION, &common.CreationId{
 			Id: id,

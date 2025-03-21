@@ -89,7 +89,7 @@ func GetMsg(response any, traceId string) (bool, string, error) {
 	}
 
 	v = v.Elem()
-	if v.Type() == reflect.TypeOf(&emptypb.Empty{}) {
+	if v.Type() == reflect.TypeOf(&emptypb.Empty{}) || v.Type() == reflect.TypeOf(emptypb.Empty{}) {
 		return false, "", nil
 	}
 
@@ -97,7 +97,7 @@ func GetMsg(response any, traceId string) (bool, string, error) {
 	if !msgField.IsValid() {
 		// Msg 字段不存在（结构体里根本没这个字段）
 		log.Printf("msgField %v", response)
-		return true, "", fmt.Errorf("error: 未找到 Msg 字段")
+		return true, "", nil
 	}
 
 	if msgField.Kind() != reflect.Ptr {

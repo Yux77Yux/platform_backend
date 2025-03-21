@@ -4,6 +4,7 @@ package user.methods;
 
 option go_package = "github.com/Yux77Yux/platform_backend/generated/user";
 
+import "user/messages/follow.proto";
 import "user/messages/user.proto";
 import "user/messages/user_login.proto";
 import "user/messages/user_credentials.proto";
@@ -29,6 +30,15 @@ message GetUsersRequest{
 
 message GetUsersResponse {
   repeated common.UserCreationComment users = 1;
+  common.ApiResponse msg = 2;
+}
+
+message ExistFolloweeRequest {
+  user.messages.Follow follow = 1;
+}
+
+message ExistFolloweeResponse {
+  bool exist = 1;
   common.ApiResponse msg = 2;
 }
 

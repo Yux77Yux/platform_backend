@@ -134,6 +134,9 @@ func batchUpdateDbProcessor(ctx context.Context, msg *anypb.Any) error {
 	if err != nil {
 		return err
 	}
-	go dispatcher.HandleRequest(req, dispatch.DbBatchInteraction)
+	anyOp := req.GetOperateInteractions()
+	for _, op := range anyOp {
+		go dispatcher.HandleRequest(op, dispatch.DbInteraction)
+	}
 	return nil
 }

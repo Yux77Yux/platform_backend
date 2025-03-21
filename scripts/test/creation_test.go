@@ -71,7 +71,7 @@ func TestPublishVideo(t *testing.T) {
 	totalRequests := int32(0)
 	errCh := make(chan *CreationInfo_ER, totalRequests)
 	okCh := make(chan *CreationInfo_OK, totalRequests)
-	concurrencyLimit := int32(19)
+	concurrencyLimit := int32(4)
 	var okWg, errWg sync.WaitGroup
 
 	// 初始化错误通道
@@ -132,6 +132,7 @@ func TestPublishVideo(t *testing.T) {
 	for _, video := range GetVideosOkMapIdInDb {
 		creationId := video.CreationId
 
+		atomic.AddInt32(&totalRequests, 1)
 		wg.Add(1)
 		sem <- struct{}{} // 信号量申请，超出则阻塞
 		go func(video *CreationInfo_OK) {
@@ -142,7 +143,6 @@ func TestPublishVideo(t *testing.T) {
 			// 拿accessToken
 			ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 			authorId := video.AuthorId
-			atomic.AddInt32(&totalRequests, 1)
 			response, err := api.Refresh(ctx, LoginOKMapIdInDb[authorId].RefreshToken)
 			cancel()
 			if err != nil {
@@ -288,7 +288,7 @@ func TestGetDbVideo(t *testing.T) {
 	totalRequests := int32(0)
 	errCh := make(chan *CreationInfo_ER, totalRequests)
 	okCh := make(chan *CreationInfo_OK, totalRequests)
-	concurrencyLimit := int32(4)
+	concurrencyLimit := int32(2)
 	var okWg, errWg sync.WaitGroup
 
 	// 初始化错误通道
@@ -347,6 +347,8 @@ func TestGetDbVideo(t *testing.T) {
 	sem := make(chan struct{}, concurrencyLimit) // 信号量控制并发数
 	startTime := time.Now()                      // 记录整个测试开始时间
 	for _, user := range LoginOkMap {
+
+		atomic.AddInt32(&totalRequests, 1)
 		wg.Add(1)
 		sem <- struct{}{} // 信号量申请，超出则阻塞
 		go func(user *Login_OK) {
@@ -356,7 +358,6 @@ func TestGetDbVideo(t *testing.T) {
 			}()
 			// 拿accessToken
 			ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
-			atomic.AddInt32(&totalRequests, 1)
 			response, err := api.Refresh(ctx, user.RefreshToken)
 			cancel()
 			if err != nil {
@@ -554,10 +555,10 @@ func UplodaVideoInit() {
 }
 func TestUplodaVideo(t *testing.T) {
 	UplodaVideoInit()
-	totalRequests := len(Videos)
-	errCh := make(chan *Creation_ER, totalRequests)
-	okCh := make(chan *Creation_OK, totalRequests)
-	concurrencyLimit := int32(3)
+	totalRequests := int32(0)
+	errCh := make(chan *Creation_ER, len(Videos))
+	okCh := make(chan *Creation_OK, len(Videos))
+	concurrencyLimit := int32(8)
 	var okWg, errWg sync.WaitGroup
 
 	// 初始化错误通道
@@ -618,6 +619,9 @@ func TestUplodaVideo(t *testing.T) {
 	for _, video := range Videos {
 		if _, exist := UploadOkMap[video.Id]; exist {
 			continue
+		}
+		if newNum := atomic.AddInt32(&totalRequests, 1); newNum%32 == 0 {
+			time.Sleep(time.Second * 16)
 		}
 
 		wg.Add(1)

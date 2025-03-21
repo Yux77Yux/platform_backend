@@ -21,6 +21,7 @@ func GetUserBehavior(userID int64) *Behavior {
 	)
 
 	ctx := context.Background()
+	// 取存档，若无存档则取历史记录
 	history, err := cache.GetHistories(ctx, userID, 1)
 	if err != nil {
 		tools.LogError("", "recommend GetUserBehavior", err)

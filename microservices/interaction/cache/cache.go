@@ -25,12 +25,19 @@ func (c *CacheMethodStruct) ToBaseInteraction(results []redis.Z) ([]*generated.I
 	count := len(results)
 	res := make([]*generated.Interaction, count)
 	for i, val := range results {
-		id, err := strconv.ParseInt(val.Member.(string), 10, 64)
+		idStr, ok := val.Member.(string)
+		if !ok {
+			err := fmt.Errorf("val.Member is not a string, actual type: %T, value: %v", val.Member, val.Member)
+			log.Printf("err %v", err)
+			return nil, err
+		}
+		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
 			return nil, err
 		}
 		times := int64(math.Round(val.Score))
 		timestamp := timestamppb.New(time.Unix(times, 0))
+		res[i] = &generated.Interaction{}
 		res[i].Base = &generated.BaseInteraction{
 			CreationId: id,
 		}
@@ -51,7 +58,7 @@ func (c *CacheMethodStruct) GetHistories(ctx context.Context, userId int64, page
 	if err != nil {
 		return nil, err
 	}
-
+	log.Printf("%v", results)
 	res, err := c.ToBaseInteraction(results)
 	if err != nil {
 		return nil, err
@@ -65,9 +72,9 @@ func (c *CacheMethodStruct) GetHistories(ctx context.Context, userId int64, page
 
 // 收藏夹
 func (c *CacheMethodStruct) GetCollections(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
-	const scope = 30
+	const scope = 25
 	start := int64((page - 1) * scope)
-	stop := start + scope
+	stop := start + scope - 1
 	userIdStr := strconv.FormatInt(userId, 10)
 
 	results, err := c.CacheClient.RevRangeZSetWithScore(ctx, "User_Collections", userIdStr, start, stop)
@@ -87,9 +94,9 @@ func (c *CacheMethodStruct) GetCollections(ctx context.Context, userId int64, pa
 
 // Like
 func (c *CacheMethodStruct) GetLikes(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
-	const scope = 30
+	const scope = 25
 	start := int64((page - 1) * scope)
-	stop := start + scope
+	stop := start + scope - 1
 	userIdStr := strconv.FormatInt(userId, 10)
 
 	result, err := c.CacheClient.RevRangeZSetWithScore(ctx, "User_Likes", userIdStr, start, stop)
@@ -126,11 +133,6 @@ func (c *CacheMethodStruct) GetUsers(ctx context.Context, creationId int64) ([]i
 		res[i] = id
 	}
 	return res, nil
-}
-
-type ActionResult struct {
-	err        error
-	action_tag int32
 }
 
 // 展示页·点赞收藏情况

@@ -38,7 +38,6 @@ func (c *InteractionClient) Close() error {
 }
 
 func (c *InteractionClient) GetActionTag(ctx context.Context, req *generated.GetCreationInteractionRequest) (*generated.GetCreationInteractionResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewInteractionServiceClient(c.connection)
 
@@ -51,7 +50,6 @@ func (c *InteractionClient) GetActionTag(ctx context.Context, req *generated.Get
 }
 
 func (c *InteractionClient) GetHistories(ctx context.Context, req *generated.GetHistoriesRequest) (*generated.GetInteractionsResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewInteractionServiceClient(c.connection)
 
@@ -64,7 +62,6 @@ func (c *InteractionClient) GetHistories(ctx context.Context, req *generated.Get
 }
 
 func (c *InteractionClient) GetCollections(ctx context.Context, req *generated.GetCollectionsRequest) (*generated.GetInteractionsResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewInteractionServiceClient(c.connection)
 
@@ -77,7 +74,6 @@ func (c *InteractionClient) GetCollections(ctx context.Context, req *generated.G
 }
 
 func (c *InteractionClient) GetRecommendBaseUser(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewInteractionServiceClient(c.connection)
 
@@ -90,7 +86,6 @@ func (c *InteractionClient) GetRecommendBaseUser(ctx context.Context, req *gener
 }
 
 func (c *InteractionClient) GetRecommendBaseCreation(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewInteractionServiceClient(c.connection)
 
@@ -103,7 +98,6 @@ func (c *InteractionClient) GetRecommendBaseCreation(ctx context.Context, req *g
 }
 
 func (c *InteractionClient) PostInteraction(ctx context.Context, req *generated.PostInteractionRequest) (*generated.PostInteractionResponse, error) {
-	defer c.connection.Close()
 	// 创建客户端
 	client := generated.NewInteractionServiceClient(c.connection)
 

@@ -167,7 +167,7 @@ func Follow(ctx context.Context, req *generated.FollowRequest) (*generated.Follo
 	response := new(generated.FollowResponse)
 	follow := req.GetFollow()
 	token := req.GetAccessToken().GetValue()
-	pass, userId, err := auth.Auth("post", "user_credentials", token)
+	pass, userId, err := auth.Auth("post", "user", token)
 	if err != nil {
 		response.Msg = &common.ApiResponse{
 			Code:    "500",
@@ -194,7 +194,7 @@ func Follow(ctx context.Context, req *generated.FollowRequest) (*generated.Follo
 	}(follow, ctx)
 
 	response.Msg = &common.ApiResponse{
-		Status: common.ApiResponse_SUCCESS,
+		Status: common.ApiResponse_PENDING,
 		Code:   "202",
 	}
 	return response, nil

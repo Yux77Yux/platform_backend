@@ -19,6 +19,7 @@ func JoinCommentProcessor(_ context.Context, msg *anypb.Any) error {
 	if err != nil {
 		return err
 	}
+
 	// 传递至责任链
 	dispatcher.HandleRequest(req, dispatch.Insert)
 	return nil

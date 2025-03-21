@@ -20,6 +20,14 @@ func GetNewReviews(ctx context.Context, id int64, Type review.TargetType) (*revi
 	return _client.GetNewReviews(ctx, req)
 }
 
+func GetReviews(ctx context.Context, req *review.GetReviewsRequest) (*review.GetReviewsResponse, error) {
+	_client, err := client.GetReviewClient()
+	if err != nil {
+		return nil, err
+	}
+	return _client.GetReviews(ctx, req)
+}
+
 func UpdateReview(ctx context.Context, token *common.AccessToken, _review *review.Review) (*review.UpdateReviewResponse, error) {
 	_client, err := client.GetReviewClient()
 	if err != nil {

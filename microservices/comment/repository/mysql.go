@@ -255,7 +255,7 @@ func (m *SqlMethodStruct) GetInitialTopCommentsInTransaction(ctx context.Context
 				c.root = 0
 			AND 
 				c.status = 'PUBLISHED'
-			ORDER BY c.created_at,c.id DESC
+			ORDER BY c.created_at DESC, c.id
 			LIMIT %d`, LIMIT)
 
 		total  int32  = -1
@@ -373,7 +373,7 @@ func (m *SqlMethodStruct) GetTopCommentsInTransaction(ctx context.Context, creat
 				c.root = 0
 			AND 
 				c.status = 'PUBLISHED'
-			ORDER BY c.created_at.c.id DESC
+			ORDER BY c.created_at DESC, c.id 
 			LIMIT %d 
 			OFFSET ?`, LIMIT)
 
@@ -459,6 +459,7 @@ func (m *SqlMethodStruct) GetSecondCommentsInTransaction(ctx context.Context, cr
 				c.root = ?
 			AND 
 				c.status = 'PUBLISHED'
+			ORDER BY c.created_at DESC,c.id 
 			LIMIT %d 
 			OFFSET ?`, LIMIT)
 	)

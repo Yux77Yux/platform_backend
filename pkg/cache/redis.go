@@ -486,6 +486,11 @@ func (r *RedisClient) AddZSet(ctx context.Context, kind string, unique string, m
 	return r.redisClient.ZAdd(ctx, key, &redis.Z{Score: score, Member: member}).Err()
 }
 
+func (r *RedisClient) AddZSetIfNotExist(ctx context.Context, kind string, unique string, member string) error {
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
+	return r.redisClient.ZAdd(ctx, key, &redis.Z{Score: 0, Member: member}).Err()
+}
+
 // 修改，当没有该成员则不会更新
 func (r *RedisClient) ModifyScoreZSet(ctx context.Context, kind string, unique string, member string, score float64) error {
 	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)

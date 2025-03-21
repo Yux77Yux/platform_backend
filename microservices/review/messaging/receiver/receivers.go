@@ -80,6 +80,14 @@ func UpdateProcessor(ctx context.Context, msg *anypb.Any) error {
 		return err
 	}
 
+	targetId, targetType, err := db.GetTarget(ctx, review.New.GetId())
+	if err != nil {
+		return err
+	}
+
+	review.New.TargetId = targetId
+	review.New.TargetType = *targetType
+
 	err = db.UpdateReview(ctx, review)
 	if err != nil {
 		return err

@@ -6,17 +6,15 @@ import (
 )
 
 var (
-	service_address string = ":8080"
+	service_address = ":8080"
 
+	aggregator_client  *AggregatorClient
 	user_client        *UserClient
 	auth_client        *AuthClient
 	creation_client    *CreationClient
 	interaction_client *InteractionClient
 	comment_client     *CommentClient
 	review_client      *ReviewClient
-	aggregator_client  *AggregatorClient
-
-	initOnce sync.Once
 )
 
 func Close() {
@@ -25,8 +23,20 @@ func Close() {
 	creation_client.Close()
 	interaction_client.Close()
 	comment_client.Close()
-	review_client.Close()
 	aggregator_client.Close()
+	review_client.Close()
+}
+
+func GetAggregatorClient() (*AggregatorClient, error) {
+	if aggregator_client != nil {
+		return aggregator_client, nil
+	}
+	aggregator_client, err := NewAggregatorClient()
+	if err != nil {
+		log.Printf("error: creation client %v", err)
+		return nil, err
+	}
+	return aggregator_client, nil
 }
 
 func GetCreationClient() (*CreationClient, error) {
@@ -97,87 +107,78 @@ func GetAuthClient() (*AuthClient, error) {
 	return auth_client, nil
 }
 
-func GetAggregatorClient() (*AggregatorClient, error) {
-	if aggregator_client != nil {
-		return aggregator_client, nil
-	}
-	aggregator_client, err := NewAggregatorClient()
-	if err != nil {
-		log.Printf("error: Aggregator client %v", err)
-	}
-	return aggregator_client, nil
-}
-
 // 使用了envoy，所以使用envoy地址即可
-func init() {
-	initOnce.Do(func() {
-		var wg sync.WaitGroup
+func Run() func() {
+	var wg sync.WaitGroup
 
-		wg.Add(7)
+	wg.Add(7)
 
-		go func() {
-			defer wg.Done()
-			var err error
-			user_client, err = NewUserClient()
-			if err != nil {
-				log.Printf("error: user client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		aggregator_client, err = NewAggregatorClient()
+		if err != nil {
+			log.Printf("error: aggregator client %v", err)
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			var err error
-			auth_client, err = NewAuthClient()
-			if err != nil {
-				log.Printf("error: auth client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		user_client, err = NewUserClient()
+		if err != nil {
+			log.Printf("error: user client %v", err)
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			var err error
-			creation_client, err = NewCreationClient()
-			if err != nil {
-				log.Printf("error: creation client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		auth_client, err = NewAuthClient()
+		if err != nil {
+			log.Printf("error: auth client %v", err)
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			var err error
-			interaction_client, err = NewInteractionClient()
-			if err != nil {
-				log.Printf("error: interaction client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		creation_client, err = NewCreationClient()
+		if err != nil {
+			log.Printf("error: creation client %v", err)
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			var err error
-			aggregator_client, err = NewAggregatorClient()
-			if err != nil {
-				log.Printf("error: aggregator client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		interaction_client, err = NewInteractionClient()
+		if err != nil {
+			log.Printf("error: interaction client %v", err)
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			var err error
-			comment_client, err = NewCommentClient()
-			if err != nil {
-				log.Printf("error: comment client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		comment_client, err = NewCommentClient()
+		if err != nil {
+			log.Printf("error: comment client %v", err)
+		}
+	}()
 
-		go func() {
-			defer wg.Done()
-			var err error
-			review_client, err = NewReviewClient()
-			if err != nil {
-				log.Printf("error: review client %v", err)
-			}
-		}()
+	go func() {
+		defer wg.Done()
+		var err error
+		review_client, err = NewReviewClient()
+		if err != nil {
+			log.Printf("error: review client %v", err)
+		}
+	}()
 
-		wg.Wait() // 等待所有 gRPC 客户端初始化完成
-	})
+	wg.Wait() // 等待所有 gRPC 客户端初始化完成
+
+	return func() {
+		Close()
+	}
 }

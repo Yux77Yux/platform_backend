@@ -104,8 +104,8 @@ func WatchCreation(ctx context.Context, req *generated.WatchCreationRequest) (*g
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 		err := messaging.SendMessage(
 			ctx,
-			EXCHANGE_ADD_VIEW,
-			KEY_ADD_VIEW,
+			EXCHANGE_INCREASE_VIEW,
+			KEY_INCREASE_VIEW,
 			&common.ViewCreation{
 				Id:   id,
 				Ipv4: ipv4,

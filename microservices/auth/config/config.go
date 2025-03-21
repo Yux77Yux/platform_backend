@@ -18,10 +18,11 @@ var RoleScopeMapping = map[string][]string{
 		"update:creation:own", // 更新自己的作品
 		"delete:creation:own", // 删除自己的作品
 
+		"post:user:own",   // 关注别人
 		"get:user:public", // 查看公开的USER资料
 		"get:user:own",    // 查看自己的资料
 		"update:user:own", // 更新自己的资料
-		"delete:user:own", // 更新自己的资料
+		"delete:user:own", // 取消关注
 
 		"get:interaction:own",
 		"post:interaction:own",   // 行为数据

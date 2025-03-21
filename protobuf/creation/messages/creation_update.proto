@@ -14,6 +14,7 @@ message CreationUpdated {
   int64 author_id = 5;
   string src = 6;
   int32 duration = 7;
+  creation.messages.CreationStatus status = 8;
 }
 
 message CreationUpdateStatus {

@@ -123,11 +123,7 @@ func (chain *InsertChain) FindListener(data protoreflect.ProtoMessage) ListenerI
 	next := chain.Head.next
 	prev := chain.Tail.prev
 	for {
-		log.Printf("finding")
-		log.Printf("prev: %d \n", prev.creationId)
-		log.Printf("next: %d \n", next.creationId)
 		if prev == chain.Head {
-			log.Println("new 一个")
 			break
 		}
 		if next.creationId == creationId {
@@ -173,7 +169,6 @@ func (chain *InsertChain) CreateListener(data protoreflect.ProtoMessage) Listene
 
 	atomic.AddInt32(&chain.Count, 1)
 
-	log.Println("新挂的")
 	newListener.StartListening() // 启动监听
 	return newListener
 }

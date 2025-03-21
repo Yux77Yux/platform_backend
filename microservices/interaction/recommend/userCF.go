@@ -30,7 +30,7 @@ func Recommend(ctx context.Context, userID int64) ([]int64, error) {
 	targetUser := GetUserBehavior(userID)
 	otherUsers, err := GetOtherUsers(ctx)
 	if err != nil {
-		log.Printf("error: %v", err)
+		log.Printf("error: GetOtherUsers %v", err)
 		return nil, err
 	}
 

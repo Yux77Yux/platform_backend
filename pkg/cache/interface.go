@@ -70,6 +70,7 @@ type RedisMethods interface {
 	RevRangeByScoreZSet(ctx context.Context, kind, unique, min, max string, offset, count int64) ([]string, error)
 	GetCountZSet(ctx context.Context, kind, unique string) (int64, error)
 	GetScoreCountZSet(ctx context.Context, kind, unique, min, max string) (int64, error)
+	AddZSetIfNotExist(ctx context.Context, kind string, unique string, member string) error
 
 	SetBit(ctx context.Context, kind string, unique string, offset int64, value bool) error
 	GetBit(ctx context.Context, kind string, unique string, offset int64) (bool, error)

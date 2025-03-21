@@ -18,6 +18,7 @@ type SqlMethod interface {
 	GetFolloweesByViews(ctx context.Context, userId int64, page int32) ([]*common.UserCreationComment, error)
 	UserVerifyInTranscation(ctx context.Context, user_credential *generated.UserCredentials) (*generated.UserCredentials, error)
 	CancelFollow(ctx context.Context, f *generated.Follow) error
+	ExistsFollowee(ctx context.Context, followerId, followeeId int64) (bool, error)
 }
 
 type MessageQueueMethod interface {

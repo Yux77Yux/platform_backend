@@ -47,9 +47,9 @@ func UpdateSpaceInit() {
 }
 func TestUpdateSpace(t *testing.T) {
 	UpdateSpaceInit()
-	totalRequests := len(LoginOkMap)
-	errCh := make(chan *User_ER, totalRequests)
-	okCh := make(chan *Id, totalRequests)
+	totalRequests := int32(0)
+	errCh := make(chan *User_ER, len(LoginOkMap))
+	okCh := make(chan *Id, len(LoginOkMap))
 	concurrencyLimit := int32(3)
 	var okWg, errWg sync.WaitGroup
 
@@ -107,6 +107,11 @@ func TestUpdateSpace(t *testing.T) {
 	sem := make(chan struct{}, concurrencyLimit) // 信号量控制并发数
 	startTime := time.Now()                      // 记录整个测试开始时间
 	for _, user := range LoginOkMap {
+		atomic.AddInt32(&totalRequests, 1)
+		// if newNum := atomic.AddInt32(&totalRequests, 1); newNum%28 == 0 {
+		// 	time.Sleep(time.Second * 16)
+		// }
+
 		wg.Add(1)
 		sem <- struct{}{} // 信号量申请，超出则阻塞
 		go func(user *Login_OK) {
@@ -235,9 +240,9 @@ func UpdateAvatarInit() {
 }
 func TestUpdateAvatar(t *testing.T) {
 	UpdateAvatarInit()
-	totalRequests := len(LoginOkMap)
-	errCh := make(chan *User_ER, totalRequests)
-	okCh := make(chan *Id, totalRequests)
+	totalRequests := int32(0)
+	errCh := make(chan *User_ER, len(LoginOkMap))
+	okCh := make(chan *Id, len(LoginOkMap))
 	var okWg, errWg sync.WaitGroup
 	concurrencyLimit := int32(3)
 
@@ -295,6 +300,10 @@ func TestUpdateAvatar(t *testing.T) {
 	sem := make(chan struct{}, concurrencyLimit) // 信号量控制并发数
 	startTime := time.Now()                      // 记录整个测试开始时间
 	for _, user := range LoginOkMap {
+		atomic.AddInt32(&totalRequests, 1)
+		// if newNum :=; newNum%28 == 0 {
+		// 	time.Sleep(time.Second * 16)
+		// }
 		wg.Add(1)
 		sem <- struct{}{} // 信号量申请，超出则阻塞
 		go func(user *Login_OK) {
@@ -449,7 +458,7 @@ func LoginInit() {
 		defer wg.Done()
 		filename := "E:/xuexi/platform/platform_backend/scripts/result/register_ok.jsonl"
 
-		f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
+		f, err := os.OpenFile(filename, os.O_RDONLY, 0644)
 		if err != nil {
 			log.Fatalf("无法创建临时文件 %s: %v", filename, err)
 		}
@@ -469,10 +478,10 @@ func LoginInit() {
 }
 func TestLogin(t *testing.T) {
 	LoginInit()
-	totalRequests := len(RegisterOkMap)
+	totalRequests := int32(0)
 	errCh := make(chan *Login_ER, totalRequests)
 	okCh := make(chan *Login_OK, totalRequests)
-	concurrencyLimit := int32(3)
+	concurrencyLimit := int32(5)
 	var okWg, errWg sync.WaitGroup
 
 	go func() {
@@ -529,6 +538,9 @@ func TestLogin(t *testing.T) {
 	sem := make(chan struct{}, concurrencyLimit) // 信号量控制并发数
 	startTime := time.Now()                      // 记录整个测试开始时间
 	for _, user := range RegisterOkMap {
+		if newNum := atomic.AddInt32(&totalRequests, 1); newNum%28 == 0 {
+			time.Sleep(time.Second * 16)
+		}
 		wg.Add(1)
 		sem <- struct{}{} // 信号量申请，超出则阻塞
 		go func(user *Register_OK) {
@@ -674,7 +686,7 @@ func TestRegisterDuration(t *testing.T) {
 func TestRegister(t *testing.T) {
 	RegisterInit()
 	totalRequests := int32(0)
-	concurrencyLimit := 3
+	concurrencyLimit := 1
 	errCh := make(chan *Register_ER, 5)
 	okCh := make(chan *Register_OK, 5)
 	var okWg, errWg sync.WaitGroup
@@ -732,15 +744,21 @@ func TestRegister(t *testing.T) {
 	startTime := time.Now()                      // 记录整个测试开始时间
 
 	for _, user := range Users {
+		log.Printf("%v", user)
 		if _, exist := RegisterOkMap[user.Id]; exist {
+			log.Printf("跳过了")
 			continue
 		}
 		atomic.AddInt32(&totalRequests, 1)
+		if atomic.LoadInt32(&totalRequests)%30 == 0 {
+			time.Sleep(time.Second * 16)
+		}
 		wg.Add(1)
 		sem <- struct{}{} // 信号量申请，超出则阻塞
 
 		go func(user *User) {
 			defer func() {
+				log.Printf("结束")
 				wg.Done()
 				<-sem // 释放信号量
 			}()
@@ -779,6 +797,7 @@ func TestRegister(t *testing.T) {
 		}(user)
 	}
 	endTime := time.Now() // 记录整个测试结束时间
+	wg.Wait()
 	okWg.Wait()
 	errWg.Wait()
 	close(errCh)

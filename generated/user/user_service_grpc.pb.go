@@ -24,6 +24,7 @@ const (
 	UserService_Follow_FullMethodName              = "/user.UserService/Follow"
 	UserService_Register_FullMethodName            = "/user.UserService/Register"
 	UserService_CancelFollow_FullMethodName        = "/user.UserService/CancelFollow"
+	UserService_ExistFollowee_FullMethodName       = "/user.UserService/ExistFollowee"
 	UserService_Login_FullMethodName               = "/user.UserService/Login"
 	UserService_GetFolloweesByTime_FullMethodName  = "/user.UserService/GetFolloweesByTime"
 	UserService_GetFolloweesByViews_FullMethodName = "/user.UserService/GetFolloweesByViews"
@@ -48,6 +49,7 @@ type UserServiceClient interface {
 	// DEL
 	CancelFollow(ctx context.Context, in *FollowRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// GET
+	ExistFollowee(ctx context.Context, in *ExistFolloweeRequest, opts ...grpc.CallOption) (*ExistFolloweeResponse, error)
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	GetFolloweesByTime(ctx context.Context, in *GetFollowRequest, opts ...grpc.CallOption) (*GetFollowResponse, error)
 	GetFolloweesByViews(ctx context.Context, in *GetFollowRequest, opts ...grpc.CallOption) (*GetFollowResponse, error)
@@ -108,6 +110,16 @@ func (c *userServiceClient) CancelFollow(ctx context.Context, in *FollowRequest,
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, UserService_CancelFollow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ExistFollowee(ctx context.Context, in *ExistFolloweeRequest, opts ...grpc.CallOption) (*ExistFolloweeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExistFolloweeResponse)
+	err := c.cc.Invoke(ctx, UserService_ExistFollowee_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -235,6 +247,7 @@ type UserServiceServer interface {
 	// DEL
 	CancelFollow(context.Context, *FollowRequest) (*emptypb.Empty, error)
 	// GET
+	ExistFollowee(context.Context, *ExistFolloweeRequest) (*ExistFolloweeResponse, error)
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	GetFolloweesByTime(context.Context, *GetFollowRequest) (*GetFollowResponse, error)
 	GetFolloweesByViews(context.Context, *GetFollowRequest) (*GetFollowResponse, error)
@@ -272,6 +285,9 @@ func (UnimplementedUserServiceServer) Register(context.Context, *RegisterRequest
 }
 func (UnimplementedUserServiceServer) CancelFollow(context.Context, *FollowRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CancelFollow not implemented")
+}
+func (UnimplementedUserServiceServer) ExistFollowee(context.Context, *ExistFolloweeRequest) (*ExistFolloweeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExistFollowee not implemented")
 }
 func (UnimplementedUserServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
@@ -395,6 +411,24 @@ func _UserService_CancelFollow_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServiceServer).CancelFollow(ctx, req.(*FollowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ExistFollowee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExistFolloweeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ExistFollowee(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ExistFollowee_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ExistFollowee(ctx, req.(*ExistFolloweeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -619,6 +653,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CancelFollow",
 			Handler:    _UserService_CancelFollow_Handler,
+		},
+		{
+			MethodName: "ExistFollowee",
+			Handler:    _UserService_ExistFollowee_Handler,
 		},
 		{
 			MethodName: "Login",

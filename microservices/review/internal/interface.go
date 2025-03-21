@@ -10,7 +10,6 @@ import (
 
 type SqlMethod interface {
 	GetReviews(ctx context.Context, reviewId int64, reviewType generated.TargetType, status generated.ReviewStatus, page int32) ([]*generated.Review, int32, error)
-	GetTarget(ctx context.Context, id int64) (int64, *generated.TargetType, error)
 }
 
 type MessageQueueMethod interface {

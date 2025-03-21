@@ -41,7 +41,7 @@ func InitDb(readStr string, writeStr string) (SqlInterface, error) {
 	// dbs.replicaDB.SetMaxOpenConns(20)    // 最大打开连接数
 	// dbs.replicaDB.SetMaxIdleConns(10)    // 最大空闲连接数
 	// dbs.replicaDB.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
-	db.mainDB.SetMaxOpenConns(40)    // 最大打开连接数
+	db.mainDB.SetMaxOpenConns(100)   // 最大打开连接数
 	db.mainDB.SetMaxIdleConns(10)    // 最大空闲连接数
 	db.mainDB.SetConnMaxLifetime(20) // 连接的最大生命周期（秒）
 

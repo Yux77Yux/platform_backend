@@ -5,9 +5,9 @@ import (
 )
 
 var (
-	EXCHANGE_ADD_VIEW = event.Exchange_EXCHANGE_ADD_VIEW.String()
+	EXCHANGE_INCREASE_VIEW = event.Exchange_EXCHANGE_INCREASE_VIEW.String()
 )
 
 var (
-	KEY_ADD_VIEW = event.RoutingKey_KEY_ADD_VIEW.String()
+	KEY_INCREASE_VIEW = event.RoutingKey_KEY_INCREASE_VIEW.String()
 )
