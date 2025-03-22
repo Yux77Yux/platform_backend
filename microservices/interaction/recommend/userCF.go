@@ -29,8 +29,9 @@ func Recommend(ctx context.Context, userID int64) ([]int64, error) {
 	// 获取目标用户的行为数据
 	targetUser := GetUserBehavior(userID)
 	otherUsers, err := GetOtherUsers(ctx)
+	log.Printf("otherUsers %v", otherUsers)
+	log.Printf("otherUsers err %v", err)
 	if err != nil {
-		log.Printf("error: GetOtherUsers %v", err)
 		return nil, err
 	}
 

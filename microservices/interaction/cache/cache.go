@@ -58,7 +58,6 @@ func (c *CacheMethodStruct) GetHistories(ctx context.Context, userId int64, page
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("%v", results)
 	res, err := c.ToBaseInteraction(results)
 	if err != nil {
 		return nil, err
@@ -455,6 +454,8 @@ func (c *CacheMethodStruct) DelLike(ctx context.Context, data []*generated.BaseI
 // 拿到别人的历史记录
 func (c *CacheMethodStruct) ScanZSetsByHistories(ctx context.Context) ([]string, error) {
 	results, _, err := c.CacheClient.ScanZSet(ctx, "User_Histories", "*", 0, 2500)
+	log.Printf("ScanZSet %v", results)
+	log.Printf("ScanZSet err %v", err)
 	if err != nil {
 		return nil, err
 	}
