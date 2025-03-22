@@ -2,9 +2,11 @@ package search
 
 import (
 	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
 	"log"
+	"strconv"
 	"testing"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func gets() []map[string]any {
@@ -24,7 +26,7 @@ func gets() []map[string]any {
 
 	// 执行查询
 	query := `
-		SELECT id,author_id, title, bio
+		SELECT id, title, bio
 		FROM db_creation_1.Creation`
 
 	rows, err := db.Query(query)
@@ -35,18 +37,17 @@ func gets() []map[string]any {
 
 	values := make([]map[string]any, 0, 400)
 	for rows.Next() {
-		var authorId, creationId int64
+		var creationId int64
 		var title, bio string
 
-		err := rows.Scan(&creationId, &authorId, &title, &bio)
+		err := rows.Scan(&creationId, &title, &bio)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		value := make(map[string]any)
-		value["id"] = creationId
+		value["id"] = strconv.FormatInt(creationId, 10)
 		value["title"] = title
-		value["authorId"] = authorId
 		value["bio"] = bio
 		values = append(values, value)
 	}
@@ -66,7 +67,7 @@ func TestRun(t *testing.T) {
 	}
 
 	values := gets()
-	log.Printf("第一条数据示例: %+v", values[0])
+	log.Printf("第一条数据例: %+v", values[0])
 	if err := searchService.AddDocuments("creations", values); err != nil {
 		t.Fatal("AddDocuments error:", err)
 	}

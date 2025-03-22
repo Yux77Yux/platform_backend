@@ -5,6 +5,7 @@ package receiver
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"google.golang.org/protobuf/types/known/anypb"
@@ -127,7 +128,7 @@ func updateCreationStatusProcessor(ctx context.Context, msg *anypb.Any) error {
 		}
 		documents := []map[string]interface{}{
 			{
-				"id":    reqId,
+				"id":    strconv.FormatInt(reqId, 10),
 				"title": info.GetTitle(),
 				"bio":   info.GetBio(),
 			},

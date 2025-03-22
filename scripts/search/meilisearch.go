@@ -1,7 +1,6 @@
 package search
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/meilisearch/meilisearch-go"
@@ -44,45 +43,15 @@ func (s *SearchService) SearchWithPagination(index, query string, page, pageSize
 	totalPages := int32(math.Ceil(float64(count) / float64(pageSize)))
 	return ids, totalPages, nil
 }
-func (s *SearchService) AddDocuments(indexName string, documents []map[string]interface{}) error {
-	// 1. 创建或获取索引时显式指定主键（兼容旧版SDK）
-	index := s.Client.Index(indexName)
 
-	// 2. 确保索引存在并设置主键（需先判断索引是否存在）
-	exists, err := s.Client.GetIndex(indexName)
-	if err != nil {
-		// 如果索引不存在则创建（带主键）
-		_, err = s.Client.CreateIndex(&meilisearch.IndexConfig{
-			Uid:        indexName,
-			PrimaryKey: "id", // 关键设置
-		})
-		if err != nil {
-			return fmt.Errorf("CreateIndex failed: %v", err)
-		}
-	} else {
-		// 如果索引已存在但主键未设置，需先删除重建（旧版本不支持直接修改主键）
-		if exists.PrimaryKey != "id" {
-			if _, err := s.Client.DeleteIndex(indexName); err != nil {
-				return fmt.Errorf("DeleteIndex failed: %v", err)
-			}
-			if _, err := s.Client.CreateIndex(&meilisearch.IndexConfig{
-				Uid:        indexName,
-				PrimaryKey: "id",
-			}); err != nil {
-				return fmt.Errorf("RecreateIndex failed: %v", err)
-			}
-		}
-	}
-
-	// 3. 添加文档（需通过参数指定主键）
-	task, err := index.AddDocuments(documents, "id") // 第二个参数指定主键字段名
+func (s *SearchService) AddDocuments(index string, documents []map[string]interface{}) error {
+	// 获取异步任务ID
+	task, err := s.Client.Index(index).AddDocuments(documents)
 	if err != nil {
 		return err
 	}
 
-	// 4. 等待任务完成
-	if _, err := s.Client.WaitForTask(task.TaskUID); err != nil { // 旧版 WaitForTask 参数为任务ID
-		return err
-	}
-	return nil
+	// 等待任务完成
+	_, err = s.Client.WaitForTask(task.TaskUID)
+	return err
 }
