@@ -165,7 +165,33 @@ func GetRecommendBaseUser(ctx context.Context, req *generated.GetRecommendReques
 	response := new(generated.GetRecommendResponse)
 
 	userId := req.GetId()
-	interactions, count, err := cache.GetRecommendBaseUser(ctx, userId)
+	if userId == 0 {
+		ids, err := cache.GetPublicCreations(ctx, 6)
+		if err != nil {
+			if errMap.IsServerError(err) {
+				response.Msg = &common.ApiResponse{
+					Status:  common.ApiResponse_ERROR,
+					Code:    errMap.GrpcCodeToHTTPStatusString(err),
+					Details: err.Error(),
+				}
+				return response, err
+			}
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, nil
+		}
+		response.Creations = ids
+		response.Msg = &common.ApiResponse{
+			Status: common.ApiResponse_SUCCESS,
+			Code:   "200",
+		}
+		return response, nil
+	}
+
+	ids, count, err := cache.GetRecommendBaseUser(ctx, userId)
 	if err != nil {
 		if errMap.IsServerError(err) {
 			response.Msg = &common.ApiResponse{
@@ -184,7 +210,7 @@ func GetRecommendBaseUser(ctx context.Context, req *generated.GetRecommendReques
 	}
 
 	go func(count, userId int64, ctx context.Context) {
-		if count <= 17 {
+		if count <= 18 {
 			traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
 			err = messaging.SendMessage(ctx, EXCHANGE_COMPUTE_USER, KEY_COMPUTE_USER, &common.UserDefault{
 				UserId: userId,
@@ -195,7 +221,7 @@ func GetRecommendBaseUser(ctx context.Context, req *generated.GetRecommendReques
 		}
 	}(count, userId, ctx)
 
-	response.Creations = interactions
+	response.Creations = ids
 	response.Msg = &common.ApiResponse{
 		Status: common.ApiResponse_SUCCESS,
 		Code:   "200",
@@ -205,15 +231,23 @@ func GetRecommendBaseUser(ctx context.Context, req *generated.GetRecommendReques
 
 func GetRecommendBaseCreation(ctx context.Context, req *generated.GetRecommendRequest) (*generated.GetRecommendResponse, error) {
 	response := new(generated.GetRecommendResponse)
-
 	id := req.GetId()
 	creations, reset, err := cache.GetRecommendBaseItem(ctx, id)
 	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Status: common.ApiResponse_ERROR,
-			Code:   "500",
+		if errMap.IsServerError(err) {
+			response.Msg = &common.ApiResponse{
+				Status:  common.ApiResponse_ERROR,
+				Code:    errMap.GrpcCodeToHTTPStatusString(err),
+				Details: err.Error(),
+			}
+			return response, err
 		}
-		return response, err
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    errMap.GrpcCodeToHTTPStatusString(err),
+			Details: err.Error(),
+		}
+		return response, nil
 	}
 
 	go func(reset bool, id int64, ctx context.Context) {

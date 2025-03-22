@@ -2,7 +2,6 @@ package recommend
 
 import (
 	"context"
-	"log"
 
 	"github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
@@ -51,8 +50,6 @@ func GetUserBehavior(userID int64) *Behavior {
 
 func GetOtherUsers(ctx context.Context) ([]*Behavior, error) {
 	others, err := cache.ScanZSetsByHistories(ctx)
-	log.Printf("otherUsers %v", others)
-	log.Printf("otherUsers err %v", err)
 
 	if err != nil {
 		tools.LogError("", "recommend GetOtherUsers", err)
@@ -64,8 +61,6 @@ func GetOtherUsers(ctx context.Context) ([]*Behavior, error) {
 	}
 
 	otherMap, err := cache.GetAllInteractions(ctx, others)
-	log.Printf("otherMap %v", otherMap)
-	log.Printf("otherMap err %v", err)
 	if err != nil {
 		tools.LogError("", "recommend GetOtherUsers", err)
 		return nil, err

@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	generated "github.com/Yux77Yux/platform_backend/generated/aggregator"
 	common "github.com/Yux77Yux/platform_backend/generated/common"
@@ -15,22 +16,7 @@ import (
 func HomePage(ctx context.Context, req *generated.HomeRequest) (*generated.GetCardsResponse, error) {
 	response := new(generated.GetCardsResponse)
 	token := req.GetAccessToken().GetValue()
-	pass, userId, err := auth.Auth("get", "interaction", token)
-	if err != nil {
-		response.Msg = &common.ApiResponse{
-			Code:    "500",
-			Status:  common.ApiResponse_ERROR,
-			Details: err.Error(),
-		}
-		return response, err
-	}
-	if !pass {
-		response.Msg = &common.ApiResponse{
-			Code:   "403",
-			Status: common.ApiResponse_ERROR,
-		}
-		return response, nil
-	}
+	_, userId, _ := auth.Auth("get", "interaction", token)
 
 	// 从 用户数据服务 调取相似列表
 	interaction_client, err := client.GetInteractionClient()
@@ -463,6 +449,14 @@ func getUserMap(ctx context.Context, creationIds []int64) (map[int64]*common.Use
 
 func Search(ctx context.Context, req *generated.SearchCreationsRequest) (*generated.SearchCreationsResponse, error) {
 	response := new(generated.SearchCreationsResponse)
+	title := req.GetTitle()
+	if strings.TrimSpace(title) == "" {
+		response.Msg = &common.ApiResponse{
+			Code:   "400",
+			Status: common.ApiResponse_ERROR,
+		}
+		return response, nil
+	}
 
 	creation_client, err := client.GetCreationClient()
 	if err != nil {
@@ -474,7 +468,7 @@ func Search(ctx context.Context, req *generated.SearchCreationsRequest) (*genera
 		return response, err
 	}
 	creationResponse, err := creation_client.SearchCreation(ctx, &creation.SearchCreationRequest{
-		Title: req.GetTitle(),
+		Title: title,
 		Page:  req.GetPage(),
 	})
 	if err != nil {
@@ -498,9 +492,17 @@ func Search(ctx context.Context, req *generated.SearchCreationsRequest) (*genera
 	}
 
 	creationInfos := creationResponse.GetCreationInfoGroup()
-	userIdMap := make(map[int64]bool)
+	if len(creationInfos) <= 0 {
+		response.Count = creationResponse.GetCount()
+		response.Msg = &common.ApiResponse{
+			Code:   "404",
+			Status: common.ApiResponse_SUCCESS,
+		}
+		return response, nil
+	}
+	userIdMap := make(map[int64]struct{})
 	for _, info := range creationInfos {
-		userIdMap[info.GetCreation().GetBaseInfo().GetAuthorId()] = true
+		userIdMap[info.GetCreation().GetBaseInfo().GetAuthorId()] = struct{}{}
 	}
 	userIds := make([]int64, 0, len(userIdMap))
 	for id := range userIdMap {
@@ -534,7 +536,8 @@ func Search(ctx context.Context, req *generated.SearchCreationsRequest) (*genera
 	limit := len(users)
 	userMap := make(map[int64]*common.UserDefault, limit)
 	for _, user := range users {
-		userMap[user.GetUserDefault().GetUserId()] = user.GetUserDefault()
+		userDef := user.GetUserDefault()
+		userMap[userDef.GetUserId()] = userDef
 	}
 
 	length := len(creationInfos)
@@ -560,6 +563,93 @@ func Search(ctx context.Context, req *generated.SearchCreationsRequest) (*genera
 	response.Msg = &common.ApiResponse{
 		Code:   "200",
 		Status: common.ApiResponse_SUCCESS,
+	}
+	return response, nil
+}
+
+func SimilarCreations(ctx context.Context, req *generated.SimilarCreationsRequest) (*generated.GetCardsResponse, error) {
+	response := new(generated.GetCardsResponse)
+	id := req.GetCreationId()
+
+	// 从 用户数据服务 调取相似列表
+	interaction_client, err := client.GetInteractionClient()
+	if err != nil {
+		err = fmt.Errorf("error: interaction client %w", err)
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	interactionResponse, err := interaction_client.GetRecommendBaseCreation(ctx, &interaction.GetRecommendRequest{
+		Id: id,
+	})
+	if err != nil {
+		var msg *common.ApiResponse
+		if interactionResponse != nil {
+			msg = interactionResponse.GetMsg()
+		} else {
+			msg = &common.ApiResponse{
+				Code:    "500",
+				Status:  common.ApiResponse_ERROR,
+				Details: err.Error(),
+			}
+		}
+		response.Msg = msg
+		return response, err
+	}
+	msg := interactionResponse.GetMsg()
+	code := msg.GetCode()
+	status := msg.GetStatus()
+	if status != common.ApiResponse_SUCCESS {
+		response.Msg = interactionResponse.Msg
+		if code[0] == '5' {
+			return response, err
+		}
+		return response, nil
+	}
+
+	creationIds := interactionResponse.GetCreations()
+	userMap, creationInfos, err := getUserMap(ctx, creationIds)
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Code:    "500",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, err
+	}
+	if len(userMap) <= 0 || len(creationInfos) <= 0 {
+		err := fmt.Errorf("error: no member in data")
+		response.Msg = &common.ApiResponse{
+			Code:    "404",
+			Status:  common.ApiResponse_ERROR,
+			Details: err.Error(),
+		}
+		return response, nil
+	}
+
+	cards := make([]*generated.CreationCard, 0, len(creationInfos))
+	for _, info := range creationInfos {
+		creation := info.GetCreation()
+		authorId := creation.GetBaseInfo().GetAuthorId()
+		engagement := info.GetCreationEngagement()
+		card := &generated.CreationCard{
+			Creation:           creation,
+			CreationEngagement: engagement,
+			TimeAt:             engagement.GetPublishTime(),
+		}
+		if user, exists := userMap[authorId]; exists {
+			card.User = user
+		}
+		cards = append(cards, card)
+	}
+
+	response.Cards = cards
+	response.Msg = &common.ApiResponse{
+		Status: common.ApiResponse_SUCCESS,
+		Code:   "200",
 	}
 	return response, nil
 }

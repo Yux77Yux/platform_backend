@@ -16,7 +16,7 @@ type HandlerFunc = pkgMQ.HandlerFunc
 
 type SqlMethod interface {
 	GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.CreationInfo, error)
-	GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, error)
+	GetBaseInfo(ctx context.Context, creationId int64) (*generated.CreationUpload, error)
 	UpdateCreationInTransaction(ctx context.Context, creation *generated.CreationUpdated) error
 	UpdateCreationStatusInTransaction(ctx context.Context, creation *generated.CreationUpdateStatus) error
 	PublishCreationInTransaction(ctx context.Context, creationId int64, publishTime *timestamppb.Timestamp) error
@@ -37,4 +37,8 @@ type CacheMethod interface {
 
 type DispatchInterface interface {
 	HandleRequest(msg protoreflect.ProtoMessage, typeName string)
+}
+
+type SearchServiceInterface interface {
+	AddDocuments(index string, documents []map[string]interface{}) error
 }

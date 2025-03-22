@@ -9,6 +9,7 @@ import (
 	messaging "github.com/Yux77Yux/platform_backend/microservices/creation/messaging"
 	oss "github.com/Yux77Yux/platform_backend/microservices/creation/oss"
 	db "github.com/Yux77Yux/platform_backend/microservices/creation/repository"
+	search "github.com/Yux77Yux/platform_backend/microservices/creation/search"
 	service "github.com/Yux77Yux/platform_backend/microservices/creation/service"
 	tools "github.com/Yux77Yux/platform_backend/microservices/creation/tools"
 )
@@ -21,6 +22,13 @@ func Run(signal chan os.Signal) {
 		closeDataBase       func()
 		wg                  sync.WaitGroup
 	)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		search.Run()
+	}(&wg)
+
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()

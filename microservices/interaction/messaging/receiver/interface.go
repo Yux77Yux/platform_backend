@@ -22,6 +22,7 @@ type MessageQueueMethod interface {
 type CacheMethod interface {
 	SetRecommendBaseUser(ctx context.Context, id int64, ids []int64) error
 	SetRecommendBaseItem(ctx context.Context, id int64, ids []int64) error
+	GetPublicCreations(ctx context.Context, count int) ([]int64, error)
 }
 
 type DispatchInterface interface {

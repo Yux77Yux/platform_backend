@@ -15,6 +15,7 @@ import (
 )
 
 func computeSimilarProcessor(ctx context.Context, msg *anypb.Any) error {
+	const MIN_COUNT = 40
 	req := new(common.CreationId)
 
 	err := msg.UnmarshalTo(req)
@@ -28,6 +29,14 @@ func computeSimilarProcessor(ctx context.Context, msg *anypb.Any) error {
 		log.Printf("error: RecommendItemBased %v", err)
 		return err
 	}
+	count := len(results)
+	if count <= MIN_COUNT {
+		ids, err := cache.GetPublicCreations(ctx, MIN_COUNT-count)
+		if err != nil {
+			return err
+		}
+		results = append(results, ids...)
+	}
 
 	err = cache.SetRecommendBaseItem(ctx, id, results)
 	if err != nil {
@@ -37,6 +46,7 @@ func computeSimilarProcessor(ctx context.Context, msg *anypb.Any) error {
 }
 
 func computeUserProcessor(ctx context.Context, msg *anypb.Any) error {
+	const MIN_COUNT = 72
 	req := new(common.UserDefault)
 	err := msg.UnmarshalTo(req)
 	if err != nil {
@@ -46,8 +56,16 @@ func computeUserProcessor(ctx context.Context, msg *anypb.Any) error {
 	id := req.GetUserId()
 	results, err := recommend.Recommend(ctx, id)
 	if err != nil {
-		log.Printf("error: RecommendItemBased %v", err)
 		return err
+	}
+
+	count := len(results)
+	if count <= MIN_COUNT {
+		ids, err := cache.GetPublicCreations(ctx, MIN_COUNT-count)
+		if err != nil {
+			return err
+		}
+		results = append(results, ids...)
 	}
 
 	err = cache.SetRecommendBaseUser(ctx, id, results)

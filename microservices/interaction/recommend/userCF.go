@@ -2,7 +2,6 @@ package recommend
 
 import (
 	"context"
-	"log"
 	"math"
 )
 
@@ -29,8 +28,6 @@ func Recommend(ctx context.Context, userID int64) ([]int64, error) {
 	// 获取目标用户的行为数据
 	targetUser := GetUserBehavior(userID)
 	otherUsers, err := GetOtherUsers(ctx)
-	log.Printf("otherUsers %v", otherUsers)
-	log.Printf("otherUsers err %v", err)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +43,7 @@ func Recommend(ctx context.Context, userID int64) ([]int64, error) {
 
 		// 两个用户的相似度高于阈值，推荐作品,targetUser是推送目标
 		if similarity > 0.5 {
-			if len(recommendations) <= 200 {
+			if len(recommendations) == 200 {
 				break
 			}
 			for itemID := range otherUser.Weight {

@@ -57,6 +57,7 @@ type RedisMethods interface {
 	CountSet(ctx context.Context, kind string, unique string) (int64, error)
 	GetMembersSet(ctx context.Context, kind string, unique string) ([]string, error)
 
+	GetRandZSetMember(ctx context.Context, kind string, unique string, count int) ([]string, error)
 	ScanZSet(ctx context.Context, kind string, fliter string, cursor uint64, count int64) ([]string, uint64, error)
 	AddZSet(ctx context.Context, kind string, unique string, member string, score float64) error
 	ModifyScoreZSet(ctx context.Context, kind string, unique string, member string, score float64) error

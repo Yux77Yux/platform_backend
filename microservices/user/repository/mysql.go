@@ -373,12 +373,13 @@ func (s *SqlMethodStruct) GetUsers(ctx context.Context, userIds []int64) ([]*com
 
 	query := fmt.Sprintf(`
 		SELECT 
-			id,
-			name,
-			avatar,
-			bio
+			u.id,
+			u.name,
+			u.avatar,
+			u.bio,
+			(SELECT COUNT(*) FROM db_user_1.Follow WHERE followee_id = u.id) AS followers
 		FROM 
-			db_user_1.User
+			db_user_1.User u
 		WHERE id IN (%s)`, strings.Join(sqlStr, ","))
 
 	rows, err := s.db.QueryContext(ctx, query, values...)
@@ -390,8 +391,9 @@ func (s *SqlMethodStruct) GetUsers(ctx context.Context, userIds []int64) ([]*com
 	for rows.Next() {
 		var id int64
 		var name, avatar, bio string
+		var followers int32
 
-		if err := rows.Scan(&id, &name, &avatar, &bio); err != nil {
+		if err := rows.Scan(&id, &name, &avatar, &bio, &followers); err != nil {
 			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 		users = append(users, &common.UserCreationComment{
@@ -401,6 +403,7 @@ func (s *SqlMethodStruct) GetUsers(ctx context.Context, userIds []int64) ([]*com
 			},
 			UserAvatar: avatar,
 			UserBio:    bio,
+			Followers:  followers,
 		})
 	}
 

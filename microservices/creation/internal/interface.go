@@ -24,3 +24,7 @@ type CacheMethod interface {
 	GetCreationInfo(ctx context.Context, creation_id int64) (*generated.CreationInfo, error)
 	GetSpaceCreationList(ctx context.Context, user_id int64, page int32, typeStr string) ([]int64, int32, error)
 }
+
+type SearchServiceInterface interface {
+	SearchWithPagination(index, query string, page, pageSize int) ([]int64, int32, error)
+}

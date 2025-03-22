@@ -264,20 +264,22 @@ func (c *SqlMethodStruct) GetDetailInTransaction(ctx context.Context, creationId
 	return creation, nil
 }
 
-// 返回作者ID
-func (c *SqlMethodStruct) GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, error) {
+// 返回基本信息
+func (c *SqlMethodStruct) GetBaseInfo(ctx context.Context, creationId int64) (*generated.CreationUpload, error) {
 	queryCreation := `
-		SELECT author_id
+		SELECT author_id,title,bio
 		FROM db_creation_1.Creation 
 		WHERE id = ?`
 
 	var (
 		author_id int64
+		title     string
+		bio       string
 	)
 
 	select {
 	case <-ctx.Done():
-		return -1, errMap.GetStatusError(ctx.Err())
+		return nil, errMap.GetStatusError(ctx.Err())
 	default:
 		// 查作品信息
 		err := c.db.QueryRowContext(
@@ -287,12 +289,19 @@ func (c *SqlMethodStruct) GetAuthorIdInTransaction(ctx context.Context, creation
 		).Scan(
 			// 字段读取
 			&author_id,
+			&title,
+			&bio,
 		)
 		if err != nil {
-			return 0, errMap.MapMySQLErrorToStatus(err)
+			return nil, errMap.MapMySQLErrorToStatus(err)
 		}
 	}
-	return author_id, nil
+	info := &generated.CreationUpload{
+		AuthorId: author_id,
+		Title:    title,
+		Bio:      bio,
+	}
+	return info, nil
 }
 
 // Card型
@@ -890,16 +899,19 @@ func (c *SqlMethodStruct) UpdateCreationCount(ctx context.Context, creationId in
 func (c *SqlMethodStruct) SearchCreations(ctx context.Context, title string, page int32) ([]*generated.CreationInfo, int32, error) {
 	const LIMIT = 20
 	offset := (page - 1) * LIMIT
+	title = "%" + title + "%"
 
 	// 主页,相似列表,分区
 	query := `SELECT
 			id,
 			src,
 			thumbnail,
+			author_id,
 			duration,
+			status,
 			upload_time
 		FROM db_creation_1.Creation 
-		WHERE title like %?%
+		WHERE title LIKE ? COLLATE utf8mb4_general_ci
 		AND status = 'PUBLISHED' 
 		LIMIT ?
 		OFFSET ?`
@@ -907,7 +919,7 @@ func (c *SqlMethodStruct) SearchCreations(ctx context.Context, title string, pag
 	queryCount := `SELECT
 		count(*)
 	FROM db_creation_1.Creation 
-	WHERE title like %?%
+	WHERE title LIKE ? COLLATE utf8mb4_general_ci
 	AND status = 'PUBLISHED' `
 
 	sqlStr := make([]string, 0, LIMIT)
@@ -922,6 +934,7 @@ func (c *SqlMethodStruct) SearchCreations(ctx context.Context, title string, pag
 		err := c.db.QueryRowContext(
 			ctx,
 			queryCount,
+			title,
 		).Scan(&num)
 		if err != nil {
 			return nil, -1, errMap.MapMySQLErrorToStatus(err)
@@ -950,10 +963,11 @@ func (c *SqlMethodStruct) SearchCreations(ctx context.Context, title string, pag
 				thumbnail   string
 				authorId    int64
 				duration    int32
+				statusStr   string
 				upload_time time.Time
 			)
 			// 从当前行读取值，依次填充到变量中
-			err := rows.Scan(&creationId, &src, &thumbnail, &authorId, &duration, &upload_time)
+			err := rows.Scan(&creationId, &src, &thumbnail, &authorId, &duration, &statusStr, &upload_time)
 			if err != nil {
 				return nil, -1, errMap.MapMySQLErrorToStatus(err)
 			}
@@ -967,6 +981,7 @@ func (c *SqlMethodStruct) SearchCreations(ctx context.Context, title string, pag
 						Src:       src,
 						Thumbnail: thumbnail,
 						Title:     title,
+						Status:    generated.CreationStatus(generated.CreationStatus_value[statusStr]),
 						Duration:  duration,
 					},
 					UploadTime: timestamppb.New(upload_time),

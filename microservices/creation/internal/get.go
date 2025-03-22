@@ -311,6 +311,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 }
 
 func SearchCreation(ctx context.Context, req *generated.SearchCreationRequest) (*generated.GetCreationListResponse, error) {
+	const LIMIT = 20
 	response := new(generated.GetCreationListResponse)
 	title := req.GetTitle()
 	page := req.GetPage()
@@ -318,7 +319,17 @@ func SearchCreation(ctx context.Context, req *generated.SearchCreationRequest) (
 		page = 1
 	}
 
-	infos, count, err := db.SearchCreations(ctx, title, page)
+	ids, count, err := search_client.SearchWithPagination("creations", title, int(page), int(LIMIT))
+	if err != nil {
+		response.Msg = &common.ApiResponse{
+			Status:  common.ApiResponse_ERROR,
+			Code:    "500",
+			Details: err.Error(),
+		}
+		return response, err
+	}
+
+	infos, err := db.GetCreationCardInTransaction(ctx, ids)
 	if err != nil {
 		if errMap.IsServerError(err) {
 			response.Msg = &common.ApiResponse{

@@ -1,11 +1,16 @@
 package receiver
 
 var (
-	dispatcher DispatchInterface
-	db         SqlMethod
-	messaging  MessageQueueMethod
-	cache      CacheMethod
+	dispatcher    DispatchInterface
+	db            SqlMethod
+	messaging     MessageQueueMethod
+	cache         CacheMethod
+	search_client SearchServiceInterface
 )
+
+func InitSearch(_client SearchServiceInterface) {
+	search_client = _client
+}
 
 func InitDb(_db SqlMethod) {
 	db = _db

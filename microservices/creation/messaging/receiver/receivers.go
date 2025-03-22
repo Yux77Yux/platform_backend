@@ -5,7 +5,6 @@ package receiver
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"google.golang.org/protobuf/types/known/anypb"
@@ -118,21 +117,30 @@ func updateCreationStatusProcessor(ctx context.Context, msg *anypb.Any) error {
 		// 将作品加入可观看视频
 		err = cache.AddPublicCreations(ctx, reqId)
 		if err != nil {
-			log.Printf("add public %v", err)
 			return err
 		}
 
-		// 获取作者id
-		authorId, err := db.GetAuthorIdInTransaction(ctx, reqId)
+		// 获取部分信息
+		info, err := db.GetBaseInfo(ctx, reqId)
 		if err != nil {
-			log.Printf("GetAuthorIdInTransaction %v", err)
+			return err
+		}
+		documents := []map[string]interface{}{
+			{
+				"id":    reqId,
+				"title": info.GetTitle(),
+				"bio":   info.GetBio(),
+			},
+		}
+		err = search_client.AddDocuments("creations", documents)
+		if err != nil {
 			return err
 		}
 
+		authorId := info.GetAuthorId()
 		// 将作品id加入空间
 		err = cache.AddSpaceCreations(ctx, authorId, reqId, publishedTime)
 		if err != nil {
-			log.Printf("AddSpaceCreations %v", err)
 			return err
 		}
 	}

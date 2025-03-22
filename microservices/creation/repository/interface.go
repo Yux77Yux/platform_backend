@@ -13,7 +13,7 @@ type SqlInterface = pkgDb.SqlInterface
 type SqlMethod interface {
 	CreationAddInTransaction(ctx context.Context, creation *generated.Creation) error
 	GetDetailInTransaction(ctx context.Context, creationId int64) (*generated.CreationInfo, error)
-	GetAuthorIdInTransaction(ctx context.Context, creationId int64) (int64, error)
+	GetBaseInfo(ctx context.Context, creationId int64) (*generated.CreationUpload, error)
 	GetUserCreations(ctx context.Context, req *generated.GetUserCreationsRequest) ([]*generated.CreationInfo, int32, error)
 	GetCreationCardInTransaction(ctx context.Context, ids []int64) ([]*generated.CreationInfo, error)
 	DeleteCreationInTransaction(ctx context.Context, id int64) error

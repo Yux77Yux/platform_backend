@@ -25,4 +25,5 @@ type CacheMethod interface {
 	GetRecommendBaseItem(ctx context.Context, id int64) ([]int64, bool, error)
 	DelHistories(ctx context.Context, data []*generated.BaseInteraction) error
 	DelCollections(ctx context.Context, data []*generated.BaseInteraction) error
+	GetPublicCreations(ctx context.Context, count int) ([]int64, error)
 }

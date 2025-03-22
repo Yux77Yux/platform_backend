@@ -188,8 +188,25 @@ func (c *CacheMethodStruct) GetInteraction(ctx context.Context, interaction *gen
 // CountSet
 // GetMembersSet
 
+// 数量不够随机拿已经发布的作品
+func (c *CacheMethodStruct) GetPublicCreations(ctx context.Context, count int) ([]int64, error) {
+	idStrs, err := c.CacheClient.GetRandZSetMember(ctx, "Public", "Creations", count)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int64, 0, len(idStrs))
+	for _, idStr := range idStrs {
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
 func (c *CacheMethodStruct) GetRecommendBaseUser(ctx context.Context, id int64) ([]int64, int64, error) {
-	const popCount = 16
+	const popCount = 6
 	pipe := c.CacheClient.Pipeline()
 
 	sliceCmd := pipe.SPopN(ctx, fmt.Sprintf("Set_RecommendBaseUser_%d", id), popCount)
@@ -222,7 +239,7 @@ func (c *CacheMethodStruct) GetRecommendBaseUser(ctx context.Context, id int64) 
 }
 
 func (c *CacheMethodStruct) GetRecommendBaseItem(ctx context.Context, id int64) ([]int64, bool, error) {
-	const popCount = 50
+	const popCount = 10
 	pipe := c.CacheClient.Pipeline()
 
 	sliceCmd := pipe.SRandMemberN(ctx, fmt.Sprintf("Set_RecommendBaseItem_%d", id), popCount)
@@ -235,11 +252,17 @@ func (c *CacheMethodStruct) GetRecommendBaseItem(ctx context.Context, id int64) 
 
 	strs, err := sliceCmd.Result()
 	if err != nil {
+		if err == redis.Nil {
+			return nil, true, nil
+		}
 		return nil, false, err
 	}
 
 	score, err := floatCmd.Result()
 	if err != nil {
+		if err == redis.Nil {
+			return nil, true, nil
+		}
 		return nil, false, err
 	}
 
@@ -454,8 +477,6 @@ func (c *CacheMethodStruct) DelLike(ctx context.Context, data []*generated.BaseI
 // 拿到别人的历史记录
 func (c *CacheMethodStruct) ScanZSetsByHistories(ctx context.Context) ([]string, error) {
 	results, _, err := c.CacheClient.ScanZSet(ctx, "User_Histories", "*", 0, 2500)
-	log.Printf("ScanZSet %v", results)
-	log.Printf("ScanZSet err %v", err)
 	if err != nil {
 		return nil, err
 	}

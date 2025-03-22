@@ -404,7 +404,7 @@ func (r *RedisClient) GetElementsList(ctx context.Context, kind string, unique s
 
 // SScan
 func (r *RedisClient) ScanSet(ctx context.Context, kind string, fliter string, cursor uint64, count int64) ([]string, uint64, error) {
-	key := fmt.Sprintf("Set_%s_", kind)
+	key := fmt.Sprintf("Set_%s_%s", kind, fliter)
 	result, newCursor, err := r.redisClient.SScan(ctx, key, cursor, fliter, count).Result()
 	if err != nil {
 		return nil, 0, err
@@ -469,15 +469,43 @@ func (r *RedisClient) GetPopNSet(ctx context.Context, kind string, unique string
 
 // 没做 ZInter交集 ZDiff差集 ZPopMax弹出最高分数成员 ZPopMin弹出最低分数成员 ZCard获取成员总数
 
+func (r *RedisClient) GetRandZSetMember(ctx context.Context, kind string, unique string, count int) ([]string, error) {
+	key := fmt.Sprintf("ZSet_%s_%s", kind, unique)
+	return r.redisClient.ZRandMember(ctx, key, count, false).Result()
+}
+
 // ZScan
 func (r *RedisClient) ScanZSet(ctx context.Context, kind string, fliter string, cursor uint64, count int64) ([]string, uint64, error) {
-	key := fmt.Sprintf("ZSet_%s_", kind)
-	result, newCursor, err := r.redisClient.ZScan(ctx, key, cursor, fliter, count).Result()
-	if err != nil {
-		return nil, 0, err
+	match := fmt.Sprintf("ZSet_%s_%s", kind, fliter)
+	var (
+		zsetKeys   []string
+		keys       []string
+		nextCursor uint64
+		err        error
+	)
+
+	for {
+		// 扫描数据库中的所有键
+		scanCmd := r.redisClient.Scan(ctx, cursor, match, 300)
+		keys, nextCursor, err = scanCmd.Result()
+		if err != nil {
+			return nil, 0, err
+		}
+
+		for _, _key := range keys {
+			keyType, err := r.redisClient.Type(ctx, _key).Result()
+			if err == nil && keyType == "zset" {
+				zsetKeys = append(zsetKeys, _key)
+			}
+		}
+
+		if nextCursor == 0 {
+			break
+		}
+		cursor = nextCursor
 	}
 
-	return result, newCursor, nil
+	return zsetKeys, nextCursor, nil
 }
 
 // 正常添加, 若重复添加则不会添加
