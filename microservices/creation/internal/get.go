@@ -311,7 +311,7 @@ func GetUserCreations(ctx context.Context, req *generated.GetUserCreationsReques
 }
 
 func SearchCreation(ctx context.Context, req *generated.SearchCreationRequest) (*generated.GetCreationListResponse, error) {
-	const LIMIT = 20
+	const LIMIT = 15
 	response := new(generated.GetCreationListResponse)
 	title := req.GetTitle()
 	page := req.GetPage()

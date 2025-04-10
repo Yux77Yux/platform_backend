@@ -1,10 +1,14 @@
 package cache
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
+	"mime/multipart"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -280,6 +284,129 @@ func (c *CacheMethodStruct) GetRecommendBaseItem(ctx context.Context, id int64) 
 	}
 
 	return ids, reset, nil
+}
+
+type Archive struct {
+	TimeAt float64 `json:"timeAt"`
+	Id     string  `json:"id"`
+}
+
+func (c *CacheMethodStruct) SetUsingArchive(ctx context.Context, id int64, order string) error {
+	userIdStr := strconv.FormatInt(id, 10)
+	return c.CacheClient.SetString(ctx, "Archive_Using", userIdStr, order)
+}
+
+func (c *CacheMethodStruct) GetUsingArchive(ctx context.Context, id int64) (string, map[int]bool, error) {
+	userIdStr := strconv.FormatInt(id, 10)
+	one, err := c.CacheClient.ExistsString(ctx, "Archive", fmt.Sprintf("%d_1", id))
+	if err != nil {
+		return "", nil, err
+	}
+	two, err := c.CacheClient.ExistsString(ctx, "Archive", fmt.Sprintf("%d_2", id))
+	if err != nil {
+		return "", nil, err
+	}
+	using, err := c.CacheClient.GetString(ctx, "Archive_Using", userIdStr)
+	if err != nil {
+		return "", nil, err
+	}
+	return using, map[int]bool{1: one, 2: two}, nil
+}
+
+func (c *CacheMethodStruct) GetArchiveData(ctx context.Context, id int64) ([]*generated.Interaction, error) {
+	order, _, err := c.GetUsingArchive(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	userIdStr := strconv.FormatInt(id, 10)
+
+	var result []redis.Z
+	if order == "0" {
+		result, err = c.CacheClient.RevRangeZSetWithScore(ctx, "User_Histories", userIdStr, 0, 30)
+	} else {
+		result, err = c.CacheClient.RevRangeZSetWithScore(ctx, "Archive", fmt.Sprintf("%d_%s", id, order), 0, 30)
+	}
+	if err != nil {
+		return nil, err
+	}
+	res, err := c.ToBaseInteraction(result)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range res {
+		res[i].Base.UserId = id
+	}
+	return res, nil
+}
+
+func (c *CacheMethodStruct) GetArchive(ctx context.Context, id int64, order string) (*os.File, error) {
+	var (
+		result []redis.Z
+		err    error
+	)
+	if order == "0" {
+		userIdStr := strconv.FormatInt(id, 10)
+		result, err = c.CacheClient.RevRangeZSetWithScore(ctx, "User_Histories", userIdStr, 0, -1)
+	} else {
+		result, err = c.CacheClient.RevRangeZSetWithScore(ctx, "Archive", fmt.Sprintf("%d_%s", id, order), 0, -1)
+		if err != nil {
+			return nil, err
+		}
+	}
+	archive := make([]Archive, len(result))
+	for i, val := range result {
+		archive[i].Id = val.Member.(string)
+		archive[i].TimeAt = val.Score
+	}
+
+	tmpFile, err := os.CreateTemp("", "download-*.txt")
+	if err != nil {
+		return nil, err
+	}
+	defer os.Remove(tmpFile.Name()) // 确保函数退出时删除临时文件
+
+	// 将 fileContent 写入临时文件
+	writer := bufio.NewWriter(tmpFile)
+	for _, line := range result {
+		b, err := json.Marshal(line)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := writer.Write(append(b, '\n')); err != nil {
+			return nil, err
+		}
+	}
+	writer.Flush()
+	tmpFile.Seek(0, 0)
+
+	return tmpFile, nil
+}
+
+func (c *CacheMethodStruct) SetArchive(ctx context.Context, id int64, order string, file multipart.File) error {
+	pipe := c.CacheClient.Pipeline()
+	key := fmt.Sprintf("ZSet_Archive_%d_%s", id, order)
+	pipe.Del(ctx, key)
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		var p Archive
+		if err := json.Unmarshal(scanner.Bytes(), &p); err != nil {
+			log.Fatalf("error: json %s", err.Error())
+		}
+		pipe.ZAdd(ctx, key, &redis.Z{
+			Member: p.Id,
+			Score:  p.TimeAt,
+		})
+	}
+
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		return fmt.Errorf("pipeline execution failed: %w", err)
+	}
+
+	return nil
 }
 
 // 查看是否过期，是否重新计算

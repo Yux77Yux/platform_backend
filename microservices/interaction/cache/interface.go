@@ -2,6 +2,8 @@ package cache
 
 import (
 	"context"
+	"mime/multipart"
+	"os"
 
 	"github.com/go-redis/redis/v8"
 
@@ -11,6 +13,10 @@ import (
 type CacheInterface interface {
 	Open(connStr string, password string) error
 	Close() error
+
+	SetString(ctx context.Context, kind string, unique string, value interface{}) error
+	GetString(ctx context.Context, kind string, unique string) (string, error)
+	ExistsString(ctx context.Context, kind string, unique string) (bool, error)
 
 	ScanSet(ctx context.Context, kind string, fliter string, cursor uint64, count int64) ([]string, uint64, error)
 	AddToSet(ctx context.Context, kind string, unique string, values ...interface{}) error
@@ -72,4 +78,10 @@ type CacheMethod interface {
 	GetAllInteractions(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error)
 	GetAllItemUsers(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error)
 	GetPublicCreations(ctx context.Context, count int) ([]int64, error)
+
+	GetArchiveData(ctx context.Context, id int64) ([]*generated.Interaction, error)
+	GetArchive(ctx context.Context, id int64, order string) (*os.File, error)
+	SetArchive(ctx context.Context, id int64, order string, file multipart.File) error
+	SetUsingArchive(ctx context.Context, id int64, order string) error
+	GetUsingArchive(ctx context.Context, id int64) (string, map[int]bool, error)
 }

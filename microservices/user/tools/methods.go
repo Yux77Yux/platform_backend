@@ -22,7 +22,7 @@ func CheckStringLength(obj string, min, max int) error {
 }
 
 func IsValidEmail(email string) bool {
-	const pattern = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+	const pattern = `(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$|^$)`
 	return utils.CheckString(email, pattern)
 }
 

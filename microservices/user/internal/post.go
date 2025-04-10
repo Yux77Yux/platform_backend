@@ -19,7 +19,7 @@ func addCredential(ctx context.Context, user_credentials *generated.UserCredenti
 	err := tools.CheckStringLength(username, USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH)
 	usernameExist := err == nil
 	emailExist := tools.IsValidEmail(email)
-	if !usernameExist && !emailExist {
+	if !usernameExist || !emailExist {
 		return _err
 	}
 
@@ -29,7 +29,7 @@ func addCredential(ctx context.Context, user_credentials *generated.UserCredenti
 		return _err
 	}
 
-	// 用户名通过
+	// 用户名通过正则
 	if usernameExist {
 		existErr := fmt.Errorf("error: Sorry, that username you've entered is unavailable. Please pick a different one")
 		exist, err := cache.ExistsUsername(ctx, username)
@@ -53,7 +53,7 @@ func addCredential(ctx context.Context, user_credentials *generated.UserCredenti
 		}
 	}
 
-	// 邮箱通过
+	// 邮箱通过正则
 	if emailExist {
 		existErr := fmt.Errorf("error: Sorry, that email you've entered is unavailable. Please pick a different one")
 		exist, err := cache.ExistsEmail(ctx, email)
@@ -140,17 +140,9 @@ func Register(ctx context.Context, req *generated.RegisterRequest) (*generated.R
 	user_credentials := req.GetUserCredentials()
 	err := addCredential(ctx, user_credentials)
 	if err != nil {
-		if errMap.IsServerError(err) {
-			response.Msg = &common.ApiResponse{
-				Status:  common.ApiResponse_ERROR,
-				Code:    errMap.GrpcCodeToHTTPStatusString(err),
-				Details: err.Error(),
-			}
-			return response, err
-		}
 		response.Msg = &common.ApiResponse{
 			Status:  common.ApiResponse_ERROR,
-			Code:    errMap.GrpcCodeToHTTPStatusString(err),
+			Code:    "400",
 			Details: err.Error(),
 		}
 		return response, nil

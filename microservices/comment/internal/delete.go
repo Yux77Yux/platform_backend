@@ -28,7 +28,7 @@ func DeleteComment(ctx context.Context, req *generated.DeleteCommentRequest) err
 	}
 	go func(afterAuth *common.AfterAuth, ctx context.Context) {
 		traceId, fullName := tools.GetMetadataValue(ctx, "trace-id"), tools.GetMetadataValue(ctx, "full-name")
-		err = messaging.SendMessage(ctx, EXCHANGE_PUBLISH_COMMENT, KEY_PUBLISH_COMMENT, afterAuth)
+		err = messaging.SendMessage(ctx, EXCHANGE_DELETE_COMMENT, KEY_DELETE_COMMENT, afterAuth)
 		if err != nil {
 			tools.LogError(traceId, fullName, err)
 		}

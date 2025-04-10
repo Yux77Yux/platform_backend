@@ -96,7 +96,7 @@ func (r *RedisClient) DelKey(ctx context.Context, kind string, unique string) er
 
 func (r *RedisClient) SetString(ctx context.Context, kind string, unique string, value interface{}) error {
 	key := fmt.Sprintf("String_%s_%s", kind, unique)
-	return r.redisClient.SetNX(ctx, key, value, 0).Err()
+	return r.redisClient.Set(ctx, key, value, 0).Err()
 }
 
 func (r *RedisClient) ModifyString(ctx context.Context, kind string, unique string, value interface{}) error {
@@ -106,12 +106,7 @@ func (r *RedisClient) ModifyString(ctx context.Context, kind string, unique stri
 
 func (r *RedisClient) GetString(ctx context.Context, kind string, unique string) (string, error) {
 	key := fmt.Sprintf("String_%s_%s", kind, unique)
-	value, err := r.redisClient.Get(ctx, key).Result()
-	if err != nil {
-		return "", err
-	}
-
-	return value, nil
+	return r.redisClient.Get(ctx, key).Result()
 }
 
 func (r *RedisClient) ExistsString(ctx context.Context, kind string, unique string) (bool, error) {

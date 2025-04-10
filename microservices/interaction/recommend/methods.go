@@ -2,6 +2,7 @@ package recommend
 
 import (
 	"context"
+	"time"
 
 	"github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
@@ -20,9 +21,10 @@ func GetUserBehavior(userID int64) *Behavior {
 		viewWeight = 1
 	)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	// 取存档，若无存档则取历史记录
-	history, err := cache.GetHistories(ctx, userID, 1)
+	history, err := cache.GetArchiveData(ctx, userID)
 	if err != nil {
 		tools.LogError("", "recommend GetUserBehavior", err)
 	}

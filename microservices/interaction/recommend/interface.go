@@ -13,4 +13,5 @@ type CacheMethod interface {
 	ScanZSetsByHistories(ctx context.Context) ([]string, error)
 	GetAllItemUsers(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error)
 	GetAllInteractions(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error)
+	GetArchiveData(ctx context.Context, id int64) ([]*generated.Interaction, error)
 }
