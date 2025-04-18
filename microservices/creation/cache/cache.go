@@ -132,6 +132,9 @@ func (c *CacheMethodStruct) GetCreationInfo(ctx context.Context, creation_id int
 		tools.LogError("", "cache GetCreationInfo", err)
 		return nil, err
 	}
+	if len(results) <= 2 {
+		return nil, nil
+	}
 	creationInfo, err := tools.MapCreationInfoByString(results)
 	if err != nil {
 		return nil, err

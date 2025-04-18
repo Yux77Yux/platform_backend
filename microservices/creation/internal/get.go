@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 
 	common "github.com/Yux77Yux/platform_backend/generated/common"
 	generated "github.com/Yux77Yux/platform_backend/generated/creation"
@@ -28,6 +29,7 @@ func GetCreation(ctx context.Context, req *generated.GetCreationRequest) (*gener
 
 	if creation == nil {
 		creation, err = db.GetDetailInTransaction(ctx, creationId)
+		fmt.Printf("cc %v\n", creation)
 		if err != nil {
 			response.Msg = &common.ApiResponse{
 				Status:  common.ApiResponse_ERROR,

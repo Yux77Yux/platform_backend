@@ -53,9 +53,9 @@ func (c *CacheMethodStruct) ToBaseInteraction(results []redis.Z) ([]*generated.I
 
 // 历史记录
 func (c *CacheMethodStruct) GetHistories(ctx context.Context, userId int64, page int32) ([]*generated.Interaction, error) {
-	const scope = 30
+	const scope = 25
 	start := int64((page - 1) * scope)
-	stop := start + scope
+	stop := start + scope - 1
 
 	userIdStr := strconv.FormatInt(userId, 10)
 	results, err := c.CacheClient.RevRangeZSetWithScore(ctx, "User_Histories", userIdStr, start, stop)
@@ -287,8 +287,9 @@ func (c *CacheMethodStruct) GetRecommendBaseItem(ctx context.Context, id int64) 
 }
 
 type Archive struct {
-	TimeAt float64 `json:"timeAt"`
-	Id     string  `json:"id"`
+	VideoId string  `json:"video"`
+	Time    string  `json:"time"`
+	Stamp   float64 `json:"timestamp"`
 }
 
 func (c *CacheMethodStruct) SetUsingArchive(ctx context.Context, id int64, order string) error {
@@ -297,19 +298,30 @@ func (c *CacheMethodStruct) SetUsingArchive(ctx context.Context, id int64, order
 }
 
 func (c *CacheMethodStruct) GetUsingArchive(ctx context.Context, id int64) (string, map[int]bool, error) {
-	userIdStr := strconv.FormatInt(id, 10)
-	one, err := c.CacheClient.ExistsString(ctx, "Archive", fmt.Sprintf("%d_1", id))
-	if err != nil {
+	// 开启管道
+	pipe := c.CacheClient.Pipeline()
+
+	oneCmd := pipe.Exists(ctx, fmt.Sprintf("ZSet_Archive_%d_1", id))
+	twoCmd := pipe.Exists(ctx, fmt.Sprintf("ZSet_Archive_%d_2", id))
+	usingCmd := pipe.Get(ctx, fmt.Sprintf("String_Archive_Using_%d", id))
+
+	// 执行所有命令
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
 		return "", nil, err
 	}
-	two, err := c.CacheClient.ExistsString(ctx, "Archive", fmt.Sprintf("%d_2", id))
-	if err != nil {
+
+	// 获取结果
+	one := oneCmd.Val() > 0
+	two := twoCmd.Val() > 0
+
+	using, err := usingCmd.Result()
+	if err == redis.Nil {
+		using = "0"
+	} else if err != nil {
 		return "", nil, err
 	}
-	using, err := c.CacheClient.GetString(ctx, "Archive_Using", userIdStr)
-	if err != nil {
-		return "", nil, err
-	}
+
 	return using, map[int]bool{1: one, 2: two}, nil
 }
 
@@ -327,9 +339,10 @@ func (c *CacheMethodStruct) GetArchiveData(ctx context.Context, id int64) ([]*ge
 	} else {
 		result, err = c.CacheClient.RevRangeZSetWithScore(ctx, "Archive", fmt.Sprintf("%d_%s", id, order), 0, 30)
 	}
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		return nil, err
 	}
+
 	res, err := c.ToBaseInteraction(result)
 	if err != nil {
 		return nil, err
@@ -351,14 +364,15 @@ func (c *CacheMethodStruct) GetArchive(ctx context.Context, id int64, order stri
 		result, err = c.CacheClient.RevRangeZSetWithScore(ctx, "User_Histories", userIdStr, 0, -1)
 	} else {
 		result, err = c.CacheClient.RevRangeZSetWithScore(ctx, "Archive", fmt.Sprintf("%d_%s", id, order), 0, -1)
-		if err != nil {
-			return nil, err
-		}
 	}
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
 	archive := make([]Archive, len(result))
 	for i, val := range result {
-		archive[i].Id = val.Member.(string)
-		archive[i].TimeAt = val.Score
+		archive[i].VideoId = val.Member.(string)
+		archive[i].Stamp = val.Score
 	}
 
 	tmpFile, err := os.CreateTemp("", "download-*.txt")
@@ -370,7 +384,15 @@ func (c *CacheMethodStruct) GetArchive(ctx context.Context, id int64, order stri
 	// 将 fileContent 写入临时文件
 	writer := bufio.NewWriter(tmpFile)
 	for _, line := range result {
-		b, err := json.Marshal(line)
+		score := line.Score
+		ts := time.Unix(int64(score), 0)
+
+		data := &Archive{
+			VideoId: line.Member.(string),
+			Time:    ts.Format("2006-01-02 15:04:05"),
+			Stamp:   score,
+		}
+		b, err := json.Marshal(data)
 		if err != nil {
 			return nil, err
 		}
@@ -396,8 +418,8 @@ func (c *CacheMethodStruct) SetArchive(ctx context.Context, id int64, order stri
 			log.Fatalf("error: json %s", err.Error())
 		}
 		pipe.ZAdd(ctx, key, &redis.Z{
-			Member: p.Id,
-			Score:  p.TimeAt,
+			Member: p.VideoId,
+			Score:  p.Stamp,
 		})
 	}
 
@@ -460,6 +482,14 @@ func (c *CacheMethodStruct) UpdateHistories(ctx context.Context, data []*generat
 		userId := base.GetUserId()
 		creationId := base.GetCreationId()
 		timestampScore := option.GetUpdatedAt().GetSeconds()
+
+		// 往存档内添加
+		if using, _, err := c.GetUsingArchive(ctx, userId); err == nil && using != "0" {
+			pipe.ZAdd(ctx, fmt.Sprintf("ZSet_Archive_%d_%s", userId, using), &redis.Z{
+				Score:  float64(timestampScore),
+				Member: creationId,
+			})
+		}
 
 		// 用户的历史记录 基于用户协同过滤
 		keyUser := fmt.Sprintf("ZSet_User_Histories_%d", userId)
@@ -687,25 +717,32 @@ func (c *CacheMethodStruct) GetAllInteractions(ctx context.Context, idStrs []str
 	return histories, nil
 }
 
-func (c *CacheMethodStruct) GetAllItemUsers(ctx context.Context, idStrs []string) (map[int64]map[int64]float64, error) {
+func (c *CacheMethodStruct) GetAllItemUsers(ctx context.Context, ids []int64) (map[int64]map[int64]float64, error) {
 	const (
 		viewWeight = 1
 	)
+	idStrs, err := c.getUsersHistory(ctx, ids)
+	if err != nil {
+		if err == redis.Nil {
+			return nil, nil
+		}
+		return nil, err
+	}
 	pipe := c.CacheClient.Pipeline()
 
 	// 用来存储 pipeline 请求的结果
 	historyCmds := make([]*redis.StringSliceCmd, len(idStrs))
 
 	// 依次遍历作品 ID，把请求加入 pipeline
-	for i, str := range idStrs {
-		historyKey := fmt.Sprintf("ZSet_Item_Histories_%s", str) // 观看记录 (ZSet)
+	for i, str := range ids {
+		historyKey := fmt.Sprintf("ZSet_User_Histories_%s", str) // 观看记录 (ZSet)
 
 		// 用 ZRange 取 ZSet，避免用 SMembers 读错数据类型
 		historyCmds[i] = pipe.ZRevRange(ctx, historyKey, 0, 199)
 	}
 
 	// 统一执行 Pipeline
-	_, err := pipe.Exec(ctx)
+	_, err = pipe.Exec(ctx)
 	if err != nil && err != redis.Nil {
 		log.Printf("error: pipeline Exec %v", err)
 		return nil, err
@@ -714,7 +751,7 @@ func (c *CacheMethodStruct) GetAllItemUsers(ctx context.Context, idStrs []string
 	// 先初始化 map，避免 nil map 导致 panic
 	Item_Users := make(map[int64]map[int64]float64)
 	// 解析 pipeline 结果
-	for i, str := range idStrs {
+	for i, id := range ids {
 		vSet, err := historyCmds[i].Result()
 		if err != nil {
 			log.Printf("error: ZSet_Item_Histories_ %v", err)
@@ -730,12 +767,148 @@ func (c *CacheMethodStruct) GetAllItemUsers(ctx context.Context, idStrs []string
 			}
 			creationWeight[userId] = viewWeight
 		}
-		creationId, err := strconv.ParseInt(str, 10, 64)
-		if err != nil {
-			log.Printf("error: ParseInt %v", err)
-		}
-		Item_Users[creationId] = creationWeight
+
+		Item_Users[id] = creationWeight
 	}
 
 	return Item_Users, nil
+}
+
+func (c *CacheMethodStruct) GetAllUsersHistory(ctx context.Context, ids []int64) (map[int64]map[int64]float64, error) {
+	const (
+		viewWeight = 1
+	)
+	idStrs, err := c.getItemsHistory(ctx, ids)
+	if err != nil {
+		if err == redis.Nil {
+			return nil, nil
+		}
+		return nil, err
+	}
+	pipe := c.CacheClient.Pipeline()
+
+	// 用来存储 pipeline 请求的结果
+	historyCmds := make([]*redis.StringSliceCmd, len(idStrs))
+
+	// 依次遍历作品 ID，把请求加入 pipeline
+	for i, str := range ids {
+		historyKey := fmt.Sprintf("ZSet_Item_Histories_%s", str) // 观看记录 (ZSet)
+
+		// 用 ZRange 取 ZSet，避免用 SMembers 读错数据类型
+		historyCmds[i] = pipe.ZRevRange(ctx, historyKey, 0, 199)
+	}
+
+	// 统一执行 Pipeline
+	_, err = pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		log.Printf("error: pipeline Exec %v", err)
+		return nil, err
+	}
+
+	// 先初始化 map，避免 nil map 导致 panic
+	Item_Users := make(map[int64]map[int64]float64)
+	// 解析 pipeline 结果
+	for i, id := range ids {
+		vSet, err := historyCmds[i].Result()
+		if err != nil {
+			log.Printf("error: ZSet_Item_Histories_ %v", err)
+			return nil, err
+		}
+
+		creationWeight := make(map[int64]float64)
+		// 计算观看的权
+		for _, userIdStr := range vSet {
+			userId, err := strconv.ParseInt(userIdStr, 10, 64)
+			if err != nil {
+				log.Printf("error: ParseInt %v", err)
+			}
+			creationWeight[userId] = viewWeight
+		}
+
+		Item_Users[id] = creationWeight
+	}
+
+	return Item_Users, nil
+}
+
+func (c *CacheMethodStruct) getUsersHistory(ctx context.Context, ids []int64) (map[string]struct{}, error) {
+	pipe := c.CacheClient.Pipeline()
+
+	// 用来存储 pipeline 请求的结果
+	historyCmds := make([]*redis.StringSliceCmd, len(ids))
+
+	// 依次遍历用户 ID，把请求加入 pipeline
+	for i, id := range ids {
+		historyKey := fmt.Sprintf("ZSet_User_Histories_%d", id) // 观看记录 (ZSet)
+
+		// 用 ZRange 取 ZSet，避免用 SMembers 读错数据类型
+		historyCmds[i] = pipe.ZRevRange(ctx, historyKey, 0, 199)
+	}
+
+	// 统一执行 Pipeline
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		log.Printf("error: pipeline Exec %v", err)
+		return nil, err
+	}
+
+	// 先初始化 map，避免 nil map 导致 panic
+	creationsMap := make(map[string]struct{})
+	// 解析 pipeline 结果
+	for _, cmd := range historyCmds {
+		vSet, err := cmd.Result()
+		if err != nil {
+			return nil, err
+		}
+
+		// 计算观看的权
+		for _, str := range vSet {
+			if _, exist := creationsMap[str]; !exist {
+				creationsMap[str] = struct{}{}
+			}
+		}
+	}
+
+	return creationsMap, nil
+}
+
+func (c *CacheMethodStruct) getItemsHistory(ctx context.Context, ids []int64) (map[string]struct{}, error) {
+	pipe := c.CacheClient.Pipeline()
+
+	// 用来存储 pipeline 请求的结果
+	historyCmds := make([]*redis.StringSliceCmd, len(ids))
+
+	// 依次遍历作品 ID，把请求加入 pipeline
+	for i, id := range ids {
+		historyKey := fmt.Sprintf("ZSet_Item_Histories_%d", id) // 观看记录 (ZSet)
+
+		// 用 ZRange 取 ZSet，避免用 SMembers 读错数据类型
+		historyCmds[i] = pipe.ZRevRange(ctx, historyKey, 0, 199)
+	}
+
+	// 统一执行 Pipeline
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		log.Printf("error: pipeline Exec %v", err)
+		return nil, err
+	}
+
+	// 先初始化 map，避免 nil map 导致 panic
+	usersMap := make(map[string]struct{})
+	// 解析 pipeline 结果
+	for _, cmd := range historyCmds {
+		vSet, err := cmd.Result()
+		if err != nil {
+			return nil, err
+		}
+
+		// 计算观看的权
+		for _, str := range vSet {
+			if _, exist := usersMap[str]; !exist {
+				usersMap[str] = struct{}{}
+			}
+		}
+	}
+
+	return usersMap, nil
 }

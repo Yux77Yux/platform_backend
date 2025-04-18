@@ -21,8 +21,12 @@ func CancelFollow(ctx context.Context, req *generated.FollowRequest) error {
 	follow.FollowerId = userId
 
 	err = db.CancelFollow(ctx, follow)
-
 	if errMap.IsServerError(err) {
+		return err
+	}
+
+	err = cache.CancelFollow(ctx, follow)
+	if err != nil {
 		return err
 	}
 

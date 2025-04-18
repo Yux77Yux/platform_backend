@@ -19,17 +19,6 @@ func MapCreationInfoByString(result map[string]string) (*generated.CreationInfo,
 }
 
 func MapCreationInfo(result map[string]interface{}) (*generated.CreationInfo, error) {
-	requiredKeys := []string{
-		"author_id", "src", "thumbnail", "title", "bio", "duration", "upload_time", "status",
-		"views", "saves", "likes", "publish_time",
-		"category_id", "category_name", "category_parent",
-	}
-	for _, key := range requiredKeys {
-		if val, ok := result[key]; !ok || val == "" {
-			return nil, nil
-		}
-	}
-
 	statusStr, ok := result["status"].(string)
 	if !ok {
 		return nil, errors.New("missing or invalid 'status'")
@@ -49,9 +38,13 @@ func MapCreationInfo(result map[string]interface{}) (*generated.CreationInfo, er
 		}
 	}
 
-	uploadTime, err := EnsureTimestampPB(result["upload_time"])
-	if err != nil {
-		return nil, fmt.Errorf("error parsing 'upload_time': %w", err)
+	var uploadTime *timestamppb.Timestamp
+	if v, exists := result["upload_time"]; exists && v != nil {
+		var err error
+		publishTime, err = EnsureTimestampPB(v)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing 'upload_time': %w", err)
+		}
 	}
 
 	authorId, err := parseInt64(result["author_id"], "author_id")

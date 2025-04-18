@@ -2,7 +2,7 @@ package recommend
 
 import (
 	"context"
-	"time"
+	"math"
 
 	"github.com/Yux77Yux/platform_backend/microservices/interaction/tools"
 )
@@ -16,13 +16,11 @@ type Behavior struct {
 
 // 基于用户的协同过滤
 // 获取用户的行为数据
-func GetUserBehavior(userID int64) *Behavior {
+func GetUserBehavior(ctx context.Context, userID int64) *Behavior {
 	const (
 		viewWeight = 1
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	// 取存档，若无存档则取历史记录
 	history, err := cache.GetArchiveData(ctx, userID)
 	if err != nil {
@@ -45,30 +43,19 @@ func GetUserBehavior(userID int64) *Behavior {
 	Behavior := &Behavior{
 		Id:     userID,
 		Weight: userWeight,
-		norm:   normUser,
+		norm:   math.Sqrt(normUser),
 	}
 	return Behavior
 }
 
-func GetOtherUsers(ctx context.Context) ([]*Behavior, error) {
-	others, err := cache.ScanZSetsByHistories(ctx)
-
-	if err != nil {
-		tools.LogError("", "recommend GetOtherUsers", err)
-		return nil, err
-	}
-	length := len(others)
-	if length <= 0 {
-		return nil, nil
-	}
-
-	otherMap, err := cache.GetAllInteractions(ctx, others)
+func GetOtherUsers(ctx context.Context, ids []int64) ([]*Behavior, error) {
+	otherMap, err := cache.GetAllItemUsers(ctx, ids)
 	if err != nil {
 		tools.LogError("", "recommend GetOtherUsers", err)
 		return nil, err
 	}
 
-	behaviorSlice := make([]*Behavior, 0, length)
+	behaviorSlice := make([]*Behavior, 0, len(ids))
 	for id, val := range otherMap {
 		var normUser float64
 		// 计算 模
@@ -78,7 +65,7 @@ func GetOtherUsers(ctx context.Context) ([]*Behavior, error) {
 		behavior := &Behavior{
 			Id:     id,
 			Weight: val,
-			norm:   normUser,
+			norm:   math.Sqrt(normUser),
 		}
 		behaviorSlice = append(behaviorSlice, behavior)
 	}
@@ -98,6 +85,7 @@ func GetCreationViewer(ctx context.Context, creationId int64) *Behavior {
 	}
 
 	itemWeight := make(map[int64]float64)
+	// 如果存在于历史记录中
 	for _, userId := range itemUsers {
 		itemWeight[userId] = viewWeight
 	}
@@ -112,22 +100,18 @@ func GetCreationViewer(ctx context.Context, creationId int64) *Behavior {
 	Behavior := &Behavior{
 		Id:     creationId,
 		Weight: itemWeight,
-		norm:   norm,
+		norm:   math.Sqrt(norm),
 	}
 	return Behavior
 }
 
-func GetOtherCreationViewer(ctx context.Context) ([]*Behavior, error) {
-	others, err := cache.ScanZSetsByCreationId(ctx)
+func GetOtherCreationViewer(ctx context.Context, userIds []int64) ([]*Behavior, error) {
+	otherMap, err := cache.GetAllUsersHistory(ctx, userIds)
 	if err != nil {
 		return nil, err
 	}
-	length := len(others)
 
-	otherMap, err := cache.GetAllItemUsers(ctx, others)
-	if err != nil {
-		return nil, err
-	}
+	length := len(userIds)
 	behaviorSlice := make([]*Behavior, 0, length)
 	for id, val := range otherMap {
 		var norm float64
@@ -138,7 +122,7 @@ func GetOtherCreationViewer(ctx context.Context) ([]*Behavior, error) {
 		behavior := &Behavior{
 			Id:     id,
 			Weight: val,
-			norm:   norm,
+			norm:   math.Sqrt(norm),
 		}
 		behaviorSlice = append(behaviorSlice, behavior)
 	}

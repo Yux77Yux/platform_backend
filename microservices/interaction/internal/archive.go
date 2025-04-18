@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -24,8 +25,10 @@ func Archive(w http.ResponseWriter, r *http.Request) {
 }
 func SaveArchive(w http.ResponseWriter, r *http.Request) {
 	type RequestBody struct {
-		Order       int    `json:"order"`
-		AccessToken string `json:"accessToken"`
+		Order       int `json:"order"`
+		AccessToken struct {
+			Value string `json:"value"`
+		} `json:"accessToken"`
 	}
 	var body RequestBody
 	err := json.NewDecoder(r.Body).Decode(&body)
@@ -34,8 +37,8 @@ func SaveArchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken := body.AccessToken
-	pass, userId, err := auth.Auth("get", "interaction", accessToken)
+	token := body.AccessToken.Value
+	pass, userId, err := auth.Auth("get", "interaction", token)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		response := map[string]string{"err": err.Error()}
@@ -77,8 +80,21 @@ func UploadArchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken := r.FormValue("accessToken")
-	pass, userId, err := auth.Auth("post", "interaction", accessToken)
+	accessTokenStr := r.FormValue("accessToken")
+
+	type TokenWrapper struct {
+		Value string `json:"value"`
+	}
+
+	var tokenWrapper TokenWrapper
+	err = json.Unmarshal([]byte(accessTokenStr), &tokenWrapper)
+	if err != nil {
+		http.Error(w, "Invalid accessToken JSON", http.StatusBadRequest)
+		return
+	}
+
+	token := tokenWrapper.Value
+	pass, userId, err := auth.Auth("post", "interaction", token)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		response := map[string]string{"err": err.Error()}
@@ -86,14 +102,13 @@ func UploadArchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !pass {
-		w.WriteHeader(http.StatusForbidden)
 		response := map[string]string{"err": "not pass"}
 		json.NewEncoder(w).Encode(response)
 		return
 	}
 
 	order := r.FormValue("order")
-	file, _, err := r.FormFile("profile")
+	file, _, err := r.FormFile("archive")
 	if err != nil {
 		http.Error(w, "Failed to upload file", http.StatusBadRequest)
 		return
@@ -129,8 +144,10 @@ func ArchiveOrder(w http.ResponseWriter, r *http.Request) {
 }
 func SetArchiveOrder(w http.ResponseWriter, r *http.Request) {
 	type RequestBody struct {
-		Order       int    `json:"order"`
-		AccessToken string `json:"accessToken"`
+		Order       int `json:"order"`
+		AccessToken struct {
+			Value string `json:"value"`
+		} `json:"accessToken"`
 	}
 	var body RequestBody
 	err := json.NewDecoder(r.Body).Decode(&body)
@@ -139,8 +156,8 @@ func SetArchiveOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken := body.AccessToken
-	pass, userId, err := auth.Auth("update", "interaction", accessToken)
+	token := body.AccessToken.Value
+	pass, userId, err := auth.Auth("update", "interaction", token)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		response := map[string]string{"err": err.Error()}
@@ -193,6 +210,7 @@ func GetArchiveOrder(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	order, exist, err := cache.GetUsingArchive(ctx, id)
 	if err != nil {
+		log.Printf("redis err: %v \n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		response := map[string]string{"err": err.Error()}
 		json.NewEncoder(w).Encode(response)

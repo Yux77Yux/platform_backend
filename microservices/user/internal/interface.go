@@ -30,4 +30,5 @@ type CacheMethod interface {
 	ExistsUsername(ctx context.Context, username string) (bool, error)
 	GetUserInfo(ctx context.Context, user_id int64, fields []string) (map[string]string, error)
 	GetUserCredentials(ctx context.Context, userCrdentials *generated.UserCredentials) (*generated.UserCredentials, error)
+	CancelFollow(ctx context.Context, follow *generated.Follow) error
 }
