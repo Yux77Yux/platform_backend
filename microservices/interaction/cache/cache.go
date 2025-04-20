@@ -717,7 +717,7 @@ func (c *CacheMethodStruct) GetAllInteractions(ctx context.Context, idStrs []str
 	return histories, nil
 }
 
-func (c *CacheMethodStruct) GetAllItemUsers(ctx context.Context, ids []int64) (map[int64]map[int64]float64, error) {
+func (c *CacheMethodStruct) GetAnyItemUsers(ctx context.Context, ids []int64) (map[int64]map[int64]float64, error) {
 	const (
 		viewWeight = 1
 	)
@@ -774,7 +774,7 @@ func (c *CacheMethodStruct) GetAllItemUsers(ctx context.Context, ids []int64) (m
 	return Item_Users, nil
 }
 
-func (c *CacheMethodStruct) GetAllUsersHistory(ctx context.Context, ids []int64) (map[int64]map[int64]float64, error) {
+func (c *CacheMethodStruct) GetAnyUsersHistory(ctx context.Context, ids []int64) (map[int64]map[int64]float64, error) {
 	const (
 		viewWeight = 1
 	)

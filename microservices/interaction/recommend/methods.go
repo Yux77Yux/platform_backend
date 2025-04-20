@@ -49,7 +49,7 @@ func GetUserBehavior(ctx context.Context, userID int64) *Behavior {
 }
 
 func GetOtherUsers(ctx context.Context, ids []int64) ([]*Behavior, error) {
-	otherMap, err := cache.GetAllItemUsers(ctx, ids)
+	otherMap, err := cache.GetAnyItemUsers(ctx, ids)
 	if err != nil {
 		tools.LogError("", "recommend GetOtherUsers", err)
 		return nil, err
@@ -106,7 +106,7 @@ func GetCreationViewer(ctx context.Context, creationId int64) *Behavior {
 }
 
 func GetOtherCreationViewer(ctx context.Context, userIds []int64) ([]*Behavior, error) {
-	otherMap, err := cache.GetAllUsersHistory(ctx, userIds)
+	otherMap, err := cache.GetAnyUsersHistory(ctx, userIds)
 	if err != nil {
 		return nil, err
 	}
