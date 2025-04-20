@@ -721,7 +721,7 @@ func (c *CacheMethodStruct) GetAllItemUsers(ctx context.Context, ids []int64) (m
 	const (
 		viewWeight = 1
 	)
-	idStrs, err := c.getUsersHistory(ctx, ids)
+	idStrs, err := c.getItemsHistory(ctx, ids)
 	if err != nil {
 		if err == redis.Nil {
 			return nil, nil
@@ -778,7 +778,7 @@ func (c *CacheMethodStruct) GetAllUsersHistory(ctx context.Context, ids []int64)
 	const (
 		viewWeight = 1
 	)
-	idStrs, err := c.getItemsHistory(ctx, ids)
+	idStrs, err := c.getUsersHistory(ctx, ids)
 	if err != nil {
 		if err == redis.Nil {
 			return nil, nil
