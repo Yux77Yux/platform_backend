@@ -18,6 +18,7 @@
 
 - 使用 Go 语言仿b站开发后端，实现了一个视频网站所具备的主要功能。
 - 采用前后端分离模式开发，后端主要用gRPC协议与RabbitMQ作为 通信手段。
+- <a href="https://github.com/Yux77Yux/platform_frontend" rel="">前端项目</a>
 
 ### 项目结构
 - **log 日志文件**
